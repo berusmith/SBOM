@@ -13,6 +13,7 @@ import ReleaseDiff from "./pages/ReleaseDiff";
 import Settings from "./pages/Settings";
 import RiskOverview from "./pages/RiskOverview";
 import Policies from "./pages/Policies";
+import Help from "./pages/Help";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -43,6 +44,7 @@ export default function App() {
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/risk-overview" element={<RiskOverview />} />
                   <Route path="/policies" element={<Policies />} />
+                  <Route path="/help" element={<Help />} />
                 </Routes>
               </Layout>
             </RequireAuth>

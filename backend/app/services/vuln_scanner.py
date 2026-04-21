@@ -37,6 +37,7 @@ def _parse_vuln(vuln: dict) -> dict:
     cvss_score = _TEXT_TO_CVSS.get(db_sev)
 
     # fallback: try numeric score from severity array
+    cvss_v4_vector = None
     if cvss_score is None:
         for sev in vuln.get("severity", []):
             try:
@@ -45,10 +46,16 @@ def _parse_vuln(vuln: dict) -> dict:
             except (ValueError, TypeError):
                 pass
 
+    # extract CVSS v4 vector string if present
+    for sev in vuln.get("severity", []):
+        if sev.get("type") == "CVSS_V4":
+            cvss_v4_vector = sev.get("score")
+            break
+
     if severity is None:
         severity = _numeric_to_severity(cvss_score)
 
-    return {"cve_id": cve_id, "cvss_score": cvss_score, "severity": severity}
+    return {"cve_id": cve_id, "cvss_score": cvss_score, "severity": severity, "cvss_v4_vector": cvss_v4_vector}
 
 
 def _numeric_to_severity(score) -> str:

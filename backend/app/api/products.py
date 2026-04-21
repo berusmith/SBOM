@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.core.deps import require_admin
 from app.models.component import Component
 from app.models.product import Product
 from app.models.release import Release
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 
 @router.post("/{product_id}/releases", response_model=ReleaseResponse)
-def create_release(product_id: str, payload: ReleaseCreate, db: Session = Depends(get_db)):
+def create_release(product_id: str, payload: ReleaseCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -24,7 +25,7 @@ def create_release(product_id: str, payload: ReleaseCreate, db: Session = Depend
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: str, db: Session = Depends(get_db)):
+def delete_product(product_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -37,8 +38,57 @@ def list_releases(product_id: str, db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    releases = db.query(Release).filter(Release.product_id == product_id).all()
-    return {"product_name": product.name, "releases": releases}
+    releases = (
+        db.query(Release)
+        .options(selectinload(Release.components).selectinload(Component.vulnerabilities))
+        .filter(Release.product_id == product_id)
+        .order_by(Release.created_at)
+        .all()
+    )
+    result = []
+    for r in releases:
+        vulns = [v for c in r.components for v in c.vulnerabilities]
+        unresolved = [v for v in vulns if v.status not in ("fixed", "not_affected")]
+        result.append({
+            "id": r.id,
+            "version": r.version,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "has_sbom": bool(r.sbom_file_path),
+            "locked": r.locked or False,
+            "vuln_critical": sum(1 for v in unresolved if v.severity == "critical"),
+            "vuln_high": sum(1 for v in unresolved if v.severity == "high"),
+            "vuln_total": len(vulns),
+        })
+    return {"product_name": product.name, "releases": result}
+
+
+@router.get("/{product_id}/vuln-trend")
+def vuln_trend(product_id: str, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    releases = (
+        db.query(Release)
+        .options(selectinload(Release.components).selectinload(Component.vulnerabilities))
+        .filter(Release.product_id == product_id)
+        .order_by(Release.created_at)
+        .all()
+    )
+    result = []
+    for r in releases:
+        vulns = [v for c in r.components for v in c.vulnerabilities]
+        counts = {s: 0 for s in ("critical", "high", "medium", "low", "info")}
+        for v in vulns:
+            sev = v.severity or "info"
+            counts[sev] = counts.get(sev, 0) + 1
+        result.append({
+            "release_id": r.id,
+            "version": r.version,
+            "total": len(vulns),
+            **counts,
+        })
+    return result
 
 
 @router.get("/{product_id}/diff")

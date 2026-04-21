@@ -28,7 +28,7 @@ function CRACountdown() {
   const label = urgent ? "緊急" : warning ? "注意" : "提醒";
 
   return (
-    <div className={`border rounded-lg px-5 py-4 mb-6 flex items-center justify-between ${bg}`}>
+    <div className={`border rounded-lg px-5 py-4 mb-6 flex items-center justify-between flex-wrap gap-3 ${bg}`}>
       <div className="flex items-center gap-3">
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${textColor} border-current`}>{label}</span>
         <span className={`text-sm font-medium ${textColor}`}>
@@ -61,14 +61,21 @@ const STATUS = [
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
+  const [riskOverview, setRiskOverview] = useState([]);
+  const [topThreats, setTopThreats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get("/stats")
-      .then((r) => setStats(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.get("/stats"),
+      api.get("/stats/risk-overview"),
+      api.get("/stats/top-threats"),
+    ]).then(([s, r, t]) => {
+      setStats(s.data);
+      setRiskOverview(r.data);
+      setTopThreats(t.data);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-400 mt-8 text-center">載入中...</div>;
@@ -221,6 +228,115 @@ export default function Dashboard() {
               </span>
               <p className="text-sm text-gray-500 mt-1">平均修補天數</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Threat highlights */}
+      {topThreats && (
+        <div className="mt-4 bg-white rounded-lg shadow p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-700">威脅速報</h2>
+            {topThreats.active_kev_count > 0 && (
+              <span className="flex items-center gap-1.5 bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+                KEV {topThreats.active_kev_count} 筆未修補
+              </span>
+            )}
+          </div>
+          {topThreats.top_epss.length === 0 ? (
+            <p className="text-sm text-gray-400">無高 EPSS 漏洞</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-gray-400 border-b">
+                    <th className="pb-2 pr-4">CVE</th>
+                    <th className="pb-2 pr-4">EPSS</th>
+                    <th className="pb-2 pr-4">嚴重度</th>
+                    <th className="pb-2 pr-4">元件</th>
+                    <th className="pb-2">KEV</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {topThreats.top_epss.map((v) => {
+                    const sevColor = { critical: "text-red-600 bg-red-50", high: "text-orange-600 bg-orange-50", medium: "text-yellow-600 bg-yellow-50", low: "text-blue-600 bg-blue-50" }[v.severity] || "text-gray-500 bg-gray-50";
+                    return (
+                      <tr key={v.cve_id} className="hover:bg-gray-50">
+                        <td className="py-2 pr-4 font-mono text-xs text-gray-700">{v.cve_id}</td>
+                        <td className="py-2 pr-4">
+                          <span className={`font-semibold ${parseFloat(v.epss_score) >= 0.5 ? "text-red-600" : "text-orange-500"}`}>
+                            {(v.epss_score * 100).toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sevColor}`}>{v.severity}</span>
+                        </td>
+                        <td className="py-2 pr-4 text-gray-600 max-w-[160px] truncate">{v.component}</td>
+                        <td className="py-2">
+                          {v.is_kev && <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">KEV</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Risk overview table */}
+      {riskOverview.length > 0 && (
+        <div className="mt-4 bg-white rounded-lg shadow p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">客戶風險總覽</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b">
+                  <th className="pb-2 pr-4">客戶</th>
+                  <th className="pb-2 pr-4 text-center">產品</th>
+                  <th className="pb-2 pr-4 text-center">總漏洞</th>
+                  <th className="pb-2 pr-4 text-center">未修 Critical</th>
+                  <th className="pb-2 pr-4 text-center">未修 High</th>
+                  <th className="pb-2 pr-4 text-center">修補率</th>
+                  <th className="pb-2 text-center">風險評分</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {riskOverview.map((org) => {
+                  const scoreColor = org.risk_score >= 50 ? "bg-red-100 text-red-700" : org.risk_score >= 20 ? "bg-orange-100 text-orange-700" : org.risk_score > 0 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
+                  return (
+                    <tr
+                      key={org.org_id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => navigate("/organizations")}
+                    >
+                      <td className="py-2.5 pr-4 font-medium text-gray-800">{org.org_name}</td>
+                      <td className="py-2.5 pr-4 text-center text-gray-500">{org.products}</td>
+                      <td className="py-2.5 pr-4 text-center text-gray-600">{org.total_vulns}</td>
+                      <td className="py-2.5 pr-4 text-center">
+                        {org.unpatched_critical > 0
+                          ? <span className="font-bold text-red-600">{org.unpatched_critical}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        {org.unpatched_high > 0
+                          ? <span className="font-semibold text-orange-500">{org.unpatched_high}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-2.5 pr-4 text-center">
+                        <span className={org.patch_rate >= 80 ? "text-green-600 font-semibold" : org.patch_rate >= 40 ? "text-yellow-600" : "text-red-500"}>
+                          {org.patch_rate}%
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-center">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${scoreColor}`}>{org.risk_score}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

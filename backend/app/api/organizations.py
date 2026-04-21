@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_admin
 from app.models.organization import Organization
 from app.models.product import Product
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
@@ -17,7 +18,7 @@ class OrganizationUpdate(BaseModel):
 
 
 @router.post("", response_model=OrganizationResponse)
-def create_organization(payload: OrganizationCreate, db: Session = Depends(get_db)):
+def create_organization(payload: OrganizationCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     org = Organization(name=payload.name, license_status=payload.license_status)
     db.add(org)
     try:
@@ -35,7 +36,7 @@ def list_organizations(db: Session = Depends(get_db)):
 
 
 @router.post("/{org_id}/products", response_model=ProductResponse)
-def create_product(org_id: str, payload: ProductCreate, db: Session = Depends(get_db)):
+def create_product(org_id: str, payload: ProductCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -47,7 +48,7 @@ def create_product(org_id: str, payload: ProductCreate, db: Session = Depends(ge
 
 
 @router.patch("/{org_id}", response_model=OrganizationResponse)
-def update_organization(org_id: str, payload: OrganizationUpdate, db: Session = Depends(get_db)):
+def update_organization(org_id: str, payload: OrganizationUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -62,7 +63,7 @@ def update_organization(org_id: str, payload: OrganizationUpdate, db: Session = 
 
 
 @router.delete("/{org_id}", status_code=204)
-def delete_organization(org_id: str, db: Session = Depends(get_db)):
+def delete_organization(org_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")

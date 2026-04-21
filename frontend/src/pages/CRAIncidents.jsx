@@ -82,7 +82,8 @@ export default function CRAIncidents() {
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">事件標題</th>
@@ -138,6 +139,7 @@ export default function CRAIncidents() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

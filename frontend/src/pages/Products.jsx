@@ -98,7 +98,8 @@ export default function Products() {
         {products.length === 0 ? (
           <div className="p-8 text-center text-gray-400">尚無產品，點擊「新增產品」開始</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[360px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">產品名稱</th>
@@ -129,6 +130,7 @@ export default function Products() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

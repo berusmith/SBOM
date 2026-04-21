@@ -47,7 +47,7 @@ export default function ReleaseDiff() {
       </p>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: "元件新增", val: c.added.length,   color: "text-green-600" },
           { label: "元件移除", val: c.removed.length, color: "text-red-600" },
@@ -110,7 +110,8 @@ function Section({ title, color, children }) {
 
 function SimpleCompTable({ items }) {
   return (
-    <table className="w-full text-sm bg-white">
+    <div className="overflow-x-auto">
+    <table className="w-full text-sm bg-white min-w-[300px]">
       <thead className="bg-gray-50 text-gray-500 text-left">
         <tr><th className="px-4 py-2">元件名稱</th><th className="px-4 py-2">版本</th></tr>
       </thead>
@@ -123,12 +124,14 @@ function SimpleCompTable({ items }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
 function VulnTable({ items }) {
   return (
-    <table className="w-full text-sm bg-white">
+    <div className="overflow-x-auto">
+    <table className="w-full text-sm bg-white min-w-[480px]">
       <thead className="bg-gray-50 text-gray-500 text-left">
         <tr>
           <th className="px-4 py-2">CVE ID</th>
@@ -157,5 +160,6 @@ function VulnTable({ items }) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

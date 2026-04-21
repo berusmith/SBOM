@@ -62,6 +62,8 @@ export default function ReleaseDetail() {
   const [downloadingCsaf, setDownloadingCsaf] = useState(false);
   const [downloadingEvidence, setDownloadingEvidence] = useState(false);
   const [downloadingIec, setDownloadingIec] = useState(false);
+  const [downloadingIec42, setDownloadingIec42] = useState(false);
+  const [downloadingIec33, setDownloadingIec33] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanResult, setRescanResult] = useState(null);
@@ -361,7 +363,7 @@ export default function ReleaseDetail() {
           </span>
         )}
         {components.length > 0 && (
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <button
               onClick={handleRescan}
               disabled={rescanning}
@@ -395,7 +397,39 @@ export default function ReleaseDetail() {
               disabled={downloadingIec}
               className={`px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
             >
-              {downloadingIec ? "產生中..." : "IEC 62443 報告"}
+              {downloadingIec ? "產生中..." : "IEC 62443-4-1"}
+            </button>
+            <button
+              onClick={async () => {
+                setDownloadingIec42(true);
+                try {
+                  const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
+                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                  const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) { alert("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                finally { setDownloadingIec42(false); }
+              }}
+              disabled={downloadingIec42}
+              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec42 ? "bg-gray-400" : "bg-teal-700 hover:bg-teal-800"}`}
+            >
+              {downloadingIec42 ? "產生中..." : "IEC 62443-4-2"}
+            </button>
+            <button
+              onClick={async () => {
+                setDownloadingIec33(true);
+                try {
+                  const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
+                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                  const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) { alert("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                finally { setDownloadingIec33(false); }
+              }}
+              disabled={downloadingIec33}
+              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec33 ? "bg-gray-400" : "bg-cyan-700 hover:bg-cyan-800"}`}
+            >
+              {downloadingIec33 ? "產生中..." : "IEC 62443-3-3"}
             </button>
             <button
               onClick={handleDownloadEvidence}
@@ -492,7 +526,8 @@ export default function ReleaseDetail() {
           {components.length === 0 ? (
             <div className="p-8 text-center text-gray-400">尚未上傳 SBOM 檔案</div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[480px]">
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
                   <th className="px-4 py-3">元件名稱</th>
@@ -520,6 +555,7 @@ export default function ReleaseDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}
@@ -575,7 +611,8 @@ export default function ReleaseDetail() {
                   顯示 {displayedVulns.length} / {vulns.length} 筆
                 </span>
               </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
                   <th className="px-3 py-3 w-8">
@@ -641,7 +678,21 @@ export default function ReleaseDetail() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-gray-700">{v.component_name} {v.component_version}</td>
-                    <td className="px-4 py-2 text-gray-600">{v.cvss_score ?? "—"}</td>
+                    <td className="px-4 py-2 text-xs">
+                      {v.cvss_v4_score != null ? (
+                        <span className="flex items-center gap-1">
+                          <span className="font-medium text-gray-700">{v.cvss_v4_score}</span>
+                          <span className="px-1 rounded font-bold bg-purple-100 text-purple-700" style={{fontSize:"9px"}}>v4</span>
+                        </span>
+                      ) : v.cvss_v3_score != null ? (
+                        <span className="flex items-center gap-1">
+                          <span className="font-medium text-gray-700">{v.cvss_v3_score}</span>
+                          <span className="px-1 rounded font-bold bg-blue-100 text-blue-700" style={{fontSize:"9px"}}>v3</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">{v.cvss_score ?? "—"}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2">
                       {v.severity && (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity]}`}>
@@ -723,6 +774,7 @@ export default function ReleaseDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
             </>
           )}
         </div>

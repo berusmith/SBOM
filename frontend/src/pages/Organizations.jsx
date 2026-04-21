@@ -68,33 +68,35 @@ export default function Organizations() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-3">
+        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-col sm:flex-row gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="客戶名稱（公司名）"
             className="border rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "建立中..." : "確認"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowForm(false)}
-            className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100"
-          >
-            取消
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loading ? "建立中..." : "確認"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="flex-1 sm:flex-none text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border"
+            >
+              取消
+            </button>
+          </div>
         </form>
       )}
 
       {editOrg && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-96">
+          <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
             <h2 className="text-lg font-semibold mb-4">編輯客戶名稱</h2>
             <input
               value={editName}
@@ -116,7 +118,8 @@ export default function Organizations() {
         {orgs.length === 0 ? (
           <div className="p-8 text-center text-gray-400">尚無客戶，點擊「新增客戶」開始</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[400px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">客戶名稱</th>
@@ -165,6 +168,7 @@ export default function Organizations() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_admin
 from app.models.cra_incident import CRAIncident
 
 router = APIRouter(prefix="/api/cra", tags=["cra"])
@@ -46,13 +47,18 @@ ADVANCE_LABEL = {
 }
 
 
+_MAX_LOG_ENTRIES = 200
+
 def _append_log(incident: CRAIncident, action: str, note: str = "") -> None:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     entry = f"{ts} | {action}"
     if note:
         entry += f" | {note}"
-    existing = incident.audit_log or ""
-    incident.audit_log = (existing + "\n" + entry).strip()
+    lines = [e for e in (incident.audit_log or "").splitlines() if e]
+    lines.append(entry)
+    if len(lines) > _MAX_LOG_ENTRIES:
+        lines = lines[-_MAX_LOG_ENTRIES:]
+    incident.audit_log = "\n".join(lines)
 
 
 def _serialize(inc: CRAIncident) -> dict:
@@ -102,7 +108,7 @@ class CreateIncident(BaseModel):
 
 
 @router.post("/incidents", status_code=201)
-def create_incident(payload: CreateIncident, db: Session = Depends(get_db)):
+def create_incident(payload: CreateIncident, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     inc = CRAIncident(
         title=payload.title,
         description=payload.description,
@@ -143,7 +149,7 @@ class StartClockPayload(BaseModel):
 
 
 @router.post("/incidents/{incident_id}/start-clock")
-def start_clock(incident_id: str, payload: StartClockPayload, db: Session = Depends(get_db)):
+def start_clock(incident_id: str, payload: StartClockPayload, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     inc = db.query(CRAIncident).filter(CRAIncident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -170,7 +176,7 @@ class AdvancePayload(BaseModel):
 
 
 @router.post("/incidents/{incident_id}/advance")
-def advance(incident_id: str, payload: AdvancePayload, db: Session = Depends(get_db)):
+def advance(incident_id: str, payload: AdvancePayload, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     inc = db.query(CRAIncident).filter(CRAIncident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -223,7 +229,7 @@ class ClosePayload(BaseModel):
 
 
 @router.post("/incidents/{incident_id}/close-not-affected")
-def close_not_affected(incident_id: str, payload: ClosePayload, db: Session = Depends(get_db)):
+def close_not_affected(incident_id: str, payload: ClosePayload, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     inc = db.query(CRAIncident).filter(CRAIncident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -238,7 +244,7 @@ def close_not_affected(incident_id: str, payload: ClosePayload, db: Session = De
 
 
 @router.delete("/incidents/{incident_id}", status_code=204)
-def delete_incident(incident_id: str, db: Session = Depends(get_db)):
+def delete_incident(incident_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     inc = db.query(CRAIncident).filter(CRAIncident.id == incident_id).first()
     if not inc:
         raise HTTPException(status_code=404, detail="Incident not found")

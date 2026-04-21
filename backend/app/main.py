@@ -1,15 +1,37 @@
+import os
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.models import brand_config as _brand_config_model  # noqa: F401
 from app.models import policy_rule as _policy_rule_model  # noqa: F401
-from app.core.database import Base, engine
+from app.models import user as _user_model  # noqa: F401
+from app.core.database import Base, engine, SessionLocal
 from app.core.deps import get_current_user
 
 Base.metadata.create_all(bind=engine)
+
+# Seed initial admin user from env vars if users table is empty
+from app.models.user import User as _UserModel
+from app.core.security import hash_password as _hash_pw
+from app.core.config import settings as _cfg
+
+_seed_db = SessionLocal()
+try:
+    if _seed_db.query(_UserModel).count() == 0:
+        _seed_db.add(_UserModel(
+            username=_cfg.ADMIN_USERNAME,
+            hashed_password=_hash_pw(_cfg.ADMIN_PASSWORD),
+            role="admin",
+        ))
+        _seed_db.commit()
+finally:
+    _seed_db.close()
 
 # migrate existing tables — add columns that may not exist yet
 with engine.connect() as conn:
@@ -49,7 +71,7 @@ app = FastAPI(title="SBOM Management Platform", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[_cfg.ALLOWED_ORIGIN],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,8 +89,15 @@ app.include_router(cra.router, dependencies=_auth)
 app.include_router(search.router, dependencies=_auth)
 app.include_router(settings.router, dependencies=_auth)
 app.include_router(policies.router, dependencies=_auth)
+app.include_router(users.router, dependencies=_auth)
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# Serve React SPA in production (STATIC_DIR env var set by systemd)
+_static_dir = os.environ.get("STATIC_DIR", "")
+if _static_dir and Path(_static_dir).is_dir():
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

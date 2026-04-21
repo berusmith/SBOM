@@ -13,12 +13,14 @@ export default function Releases() {
   const [showDiff, setShowDiff] = useState(false);
   const [diffFrom, setDiffFrom] = useState("");
   const [diffTo, setDiffTo] = useState("");
+  const [trendData, setTrendData] = useState([]);
 
   const fetchData = () => {
     api.get(`/products/${productId}/releases`).then((res) => {
       setReleases(res.data.releases || []);
       setProductName(res.data.product_name || "");
     }).catch(() => {});
+    api.get(`/products/${productId}/vuln-trend`).then((res) => setTrendData(res.data)).catch(() => {});
   };
 
   useEffect(() => { fetchData(); }, [productId]);
@@ -80,22 +82,28 @@ export default function Releases() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex gap-3">
+        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-col sm:flex-row gap-2">
           <input
             value={version}
             onChange={(e) => setVersion(e.target.value)}
             placeholder="版本號（如：v1.0.1）"
             className="border rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
-            {loading ? "建立中..." : "確認"}
-          </button>
-          <button type="button" onClick={() => setShowForm(false)}
-            className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100">
-            取消
-          </button>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading}
+              className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+              {loading ? "建立中..." : "確認"}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)}
+              className="flex-1 sm:flex-none text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">
+              取消
+            </button>
+          </div>
         </form>
+      )}
+
+      {trendData.filter(d => d.total > 0).length >= 2 && (
+        <TrendChart data={trendData} />
       )}
 
       {showDiff && (
@@ -129,27 +137,47 @@ export default function Releases() {
         {releases.length === 0 ? (
           <div className="p-8 text-center text-gray-400">尚無版本，點擊「新增版本」開始</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[520px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">版本號</th>
                 <th className="px-4 py-3">建立時間</th>
                 <th className="px-4 py-3">SBOM</th>
+                <th className="px-4 py-3">漏洞</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {releases.map((r) => (
                 <tr key={r.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{r.version}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800">
+                    {r.version}
+                    {r.locked && <span className="ml-1.5 text-gray-400 text-xs">🔒</span>}
+                  </td>
                   <td className="px-4 py-3 text-gray-500">
                     {new Date(r.created_at).toLocaleDateString("zh-TW")}
                   </td>
                   <td className="px-4 py-3">
-                    {r.sbom_file_path ? (
+                    {r.has_sbom ? (
                       <span className="text-green-600 text-xs">已上傳</span>
                     ) : (
                       <span className="text-gray-400 text-xs">未上傳</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.vuln_total > 0 ? (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {r.vuln_critical > 0 && (
+                          <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700">C:{r.vuln_critical}</span>
+                        )}
+                        {r.vuln_high > 0 && (
+                          <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-700">H:{r.vuln_high}</span>
+                        )}
+                        <span className="text-xs text-gray-400">共{r.vuln_total}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
@@ -170,8 +198,71 @@ export default function Releases() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function TrendChart({ data }) {
+  const W = 460, H = 140;
+  const PL = 28, PR = 12, PT = 10, PB = 32;
+  const cW = W - PL - PR;
+  const cH = H - PT - PB;
+  const maxVal = Math.max(...data.map((d) => d.total), 1);
+
+  const xp = (i) => PL + (data.length < 2 ? cW / 2 : (i / (data.length - 1)) * cW);
+  const yp = (v) => PT + cH - (v / maxVal) * cH;
+
+  const makeLine = (field, color) => {
+    const pts = data.map((d, i) => `${xp(i)},${yp(d[field])}`).join(" ");
+    return <polyline key={field} points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />;
+  };
+
+  const yTicks = [0, Math.round(maxVal / 2), maxVal];
+
+  return (
+    <div className="bg-white rounded-lg shadow p-4 mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-700">漏洞趨勢</h3>
+        <div className="flex gap-4 text-xs text-gray-500">
+          {[["#ef4444","Critical"],["#fb923c","High"],["#60a5fa","Total"]].map(([c,l]) => (
+            <span key={l} className="flex items-center gap-1">
+              <svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke={c} strokeWidth="2" strokeLinecap="round"/></svg>
+              {l}
+            </span>
+          ))}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{height: "120px"}}>
+        {/* Y axis */}
+        <line x1={PL} y1={PT} x2={PL} y2={PT + cH} stroke="#e5e7eb" strokeWidth="1"/>
+        {/* Grid + Y labels */}
+        {yTicks.map((v) => (
+          <g key={v}>
+            <line x1={PL} y1={yp(v)} x2={W - PR} y2={yp(v)} stroke="#f3f4f6" strokeWidth="1"/>
+            <text x={PL - 4} y={yp(v) + 3} textAnchor="end" fontSize="7" fill="#9ca3af">{v}</text>
+          </g>
+        ))}
+        {/* X axis */}
+        <line x1={PL} y1={PT + cH} x2={W - PR} y2={PT + cH} stroke="#e5e7eb" strokeWidth="1"/>
+        {/* Lines */}
+        {makeLine("total", "#60a5fa")}
+        {makeLine("high", "#fb923c")}
+        {makeLine("critical", "#ef4444")}
+        {/* Dots + X labels */}
+        {data.map((d, i) => (
+          <g key={i}>
+            <circle cx={xp(i)} cy={yp(d.total)} r="2.5" fill="#60a5fa"/>
+            {d.high > 0 && <circle cx={xp(i)} cy={yp(d.high)} r="2" fill="#fb923c"/>}
+            {d.critical > 0 && <circle cx={xp(i)} cy={yp(d.critical)} r="2" fill="#ef4444"/>}
+            <text x={xp(i)} y={H - 4} textAnchor="middle" fontSize="7" fill="#6b7280">
+              {d.version.length > 9 ? d.version.slice(0, 9) + "…" : d.version}
+            </text>
+          </g>
+        ))}
+      </svg>
     </div>
   );
 }

@@ -2,16 +2,22 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import os
 import uuid
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
+from app.core.config import settings as _cfg
 from app.core.database import get_db
+from app.core.deps import require_admin
+
+logger = logging.getLogger(__name__)
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
 from app.models.product import Product
@@ -19,14 +25,21 @@ from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.models.brand_config import BrandConfig
-from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
+from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report
 from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Use env-configured path in production; auto-detect from source tree in dev
+UPLOAD_DIR = (
+    Path(_cfg.UPLOAD_DIR)
+    if _cfg.UPLOAD_DIR
+    else Path(__file__).resolve().parent.parent.parent / "uploads"
+)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+_active_enrichments: set[str] = set()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
@@ -58,6 +71,7 @@ def _enrich_epss(vulns: list, db) -> None:
 def upload_sbom(
     release_id: str,
     file: UploadFile = File(...),
+    _admin: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     release = db.query(Release).filter(Release.id == release_id).first()
@@ -66,20 +80,26 @@ def upload_sbom(
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳 SBOM")
 
-    content = file.file.read()
+    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+    content = file.file.read(MAX_SIZE + 1)
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="SBOM 檔案超過 50MB 上限")
 
-    # parse SBOM
+    # validate then parse SBOM
     try:
+        sbom_parser.validate(content, file.filename)
         parsed = sbom_parser.parse(content, file.filename)
-    except (ValueError, Exception) as e:
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
         raise HTTPException(status_code=400, detail=f"SBOM 解析失敗：{e}")
 
-    # save file + compute hash
-    filename = f"{release_id}_{file.filename}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
+    # save file + compute hash (strip path separators to prevent traversal)
+    safe_name = Path(file.filename or "sbom.json").name
+    filepath = UPLOAD_DIR / f"{release_id}_{safe_name}"
     with open(filepath, "wb") as f:
         f.write(content)
-    release.sbom_file_path = filepath
+    release.sbom_file_path = str(filepath)
     release.sbom_hash = hashlib.sha256(content).hexdigest()
     db.commit()
 
@@ -119,6 +139,7 @@ def upload_sbom(
                 cve_id=cve_id,
                 cvss_score=v["cvss_score"],
                 severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
                 status="open",
             ))
             vuln_count += 1
@@ -136,7 +157,7 @@ def upload_sbom(
 
 
 @router.post("/{release_id}/rescan")
-def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
+def rescan_vulnerabilities(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -172,6 +193,7 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 cve_id=cve_id,
                 cvss_score=v["cvss_score"],
                 severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
                 status="open",
             ))
             new_count += 1
@@ -225,7 +247,7 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/enrich-epss")
-def enrich_epss(release_id: str, db: Session = Depends(get_db)):
+def enrich_epss(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -240,7 +262,9 @@ def enrich_epss(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/enrich-nvd")
-def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    if release_id in _active_enrichments:
+        raise HTTPException(status_code=409, detail="此版本的 NVD 補充正在執行中，請稍後")
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -254,11 +278,15 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session =
 
     def _task():
         from app.core.database import SessionLocal
+        _active_enrichments.add(release_id)
         _db = SessionLocal()
         try:
             _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
             enrich_vulns_nvd(_vulns, _db)
+        except Exception as exc:
+            logger.error("NVD 補充失敗 release_id=%s: %s", release_id, exc)
         finally:
+            _active_enrichments.discard(release_id)
             _db.close()
 
     background_tasks.add_task(_task)
@@ -286,10 +314,12 @@ def get_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{release_id}", status_code=204)
-def delete_release(release_id: str, db: Session = Depends(get_db)):
+def delete_release(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法刪除")
     if release.sbom_file_path and os.path.exists(release.sbom_file_path):
         os.remove(release.sbom_file_path)
     db.delete(release)
@@ -318,7 +348,14 @@ def list_components(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/vulnerabilities")
-def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
+def list_vulnerabilities(
+    release_id: str,
+    skip: int = 0,
+    limit: int = 500,
+    db: Session = Depends(get_db),
+):
+    if limit > 1000:
+        limit = 1000
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -349,7 +386,7 @@ def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 "cvss_v4_vector": v.cvss_v4_vector,
             })
     result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
-    return result
+    return result[skip: skip + limit]
 
 
 @router.get("/{release_id}/vulnerabilities/export")
@@ -521,6 +558,71 @@ def download_iec62443_report(release_id: str, db: Session = Depends(get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{release_id}/compliance/iec62443-4-2")
+def download_iec62443_42_report(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    if not components_raw:
+        raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
+
+    components = [{"name": c.name, "version": c.version, "license": c.license,
+                   "vuln_count": len(c.vulnerabilities),
+                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+    vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
+              "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
+             for c in components_raw for v in c.vulnerabilities]
+
+    pdf_bytes = iec62443_42_report.generate(
+        org_name=org.name if org else "Unknown",
+        product_name=product.name if product else "Unknown",
+        version=release.version,
+        components=components,
+        vulns=vulns,
+    )
+    safe = (product.name if product else "report").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="IEC62443_4-2_{safe}_{release.version}.pdf"'})
+
+
+@router.get("/{release_id}/compliance/iec62443-3-3")
+def download_iec62443_33_report(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    if not components_raw:
+        raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
+
+    components = [{"name": c.name, "version": c.version, "license": c.license,
+                   "vuln_count": len(c.vulnerabilities),
+                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+    vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
+              "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
+             for c in components_raw for v in c.vulnerabilities]
+
+    org_id = product.organization_id if product else None
+    incidents_raw = db.query(CRAIncident).all() if org_id else []
+    cra_incidents = [{"status": i.status} for i in incidents_raw]
+
+    pdf_bytes = iec62443_33_report.generate(
+        org_name=org.name if org else "Unknown",
+        product_name=product.name if product else "Unknown",
+        version=release.version,
+        components=components,
+        vulns=vulns,
+        cra_incidents=cra_incidents,
+    )
+    safe = (product.name if product else "report").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="IEC62443_3-3_{safe}_{release.version}.pdf"'})
 
 
 @router.get("/{release_id}/evidence-package")
@@ -796,7 +898,7 @@ def verify_integrity(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/lock")
-def lock_release(release_id: str, db: Session = Depends(get_db)):
+def lock_release(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -808,7 +910,7 @@ def lock_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/unlock")
-def unlock_release(release_id: str, db: Session = Depends(get_db)):
+def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
