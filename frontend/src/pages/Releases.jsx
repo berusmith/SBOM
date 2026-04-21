@@ -10,6 +10,9 @@ export default function Releases() {
   const [showForm, setShowForm] = useState(false);
   const [version, setVersion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const [diffFrom, setDiffFrom] = useState("");
+  const [diffTo, setDiffTo] = useState("");
 
   const fetchData = () => {
     api.get(`/products/${productId}/releases`).then((res) => {
@@ -58,12 +61,22 @@ export default function Releases() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">版本列表</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
-        >
-          + 新增版本
-        </button>
+        <div className="flex gap-2">
+          {releases.length >= 2 && (
+            <button
+              onClick={() => setShowDiff(!showDiff)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm"
+            >
+              版本比對
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+          >
+            + 新增版本
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -83,6 +96,33 @@ export default function Releases() {
             取消
           </button>
         </form>
+      )}
+
+      {showDiff && (
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <p className="text-sm font-medium text-gray-700 mb-3">選擇要比對的兩個版本</p>
+          <div className="flex gap-3 items-center flex-wrap">
+            <select value={diffFrom} onChange={(e) => setDiffFrom(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
+              <option value="">— 舊版本 —</option>
+              {releases.map((r) => <option key={r.id} value={r.id}>{r.version}</option>)}
+            </select>
+            <span className="text-gray-400">→</span>
+            <select value={diffTo} onChange={(e) => setDiffTo(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
+              <option value="">— 新版本 —</option>
+              {releases.map((r) => <option key={r.id} value={r.id}>{r.version}</option>)}
+            </select>
+            <button
+              disabled={!diffFrom || !diffTo || diffFrom === diffTo}
+              onClick={() => navigate(`/releases/diff?product=${productId}&from=${diffFrom}&to=${diffTo}`)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-40"
+            >
+              開始比對
+            </button>
+            <button onClick={() => setShowDiff(false)} className="text-sm text-gray-400 hover:text-gray-600">取消</button>
+          </div>
+        </div>
       )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
