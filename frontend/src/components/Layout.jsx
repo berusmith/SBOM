@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
@@ -9,6 +10,14 @@ const navItems = [
 export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchQ, setSearchQ] = useState("");
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (!searchQ.trim()) return;
+    navigate(`/search?q=${encodeURIComponent(searchQ.trim())}`);
+    setSearchQ("");
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -35,9 +44,18 @@ export default function Layout({ children }) {
               </Link>
             ))}
           </div>
+          <form onSubmit={handleSearch} className="ml-auto flex items-center gap-1">
+            <input
+              value={searchQ}
+              onChange={(e) => setSearchQ(e.target.value)}
+              placeholder="搜尋元件..."
+              className="bg-gray-700 text-white text-sm rounded px-3 py-1 w-44 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+            <button type="submit" className="text-gray-400 hover:text-white px-1 text-sm">⌕</button>
+          </form>
           <button
             onClick={handleLogout}
-            className="ml-auto text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             登出
           </button>

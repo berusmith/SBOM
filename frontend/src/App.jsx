@@ -8,6 +8,7 @@ import Releases from "./pages/Releases";
 import ReleaseDetail from "./pages/ReleaseDetail";
 import CRAIncidents from "./pages/CRAIncidents";
 import CRAIncidentDetail from "./pages/CRAIncidentDetail";
+import Search from "./pages/Search";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -33,6 +34,7 @@ export default function App() {
                   <Route path="/releases/:releaseId" element={<ReleaseDetail />} />
                   <Route path="/cra" element={<CRAIncidents />} />
                   <Route path="/cra/:incidentId" element={<CRAIncidentDetail />} />
+                  <Route path="/search" element={<Search />} />
                 </Routes>
               </Layout>
             </RequireAuth>
