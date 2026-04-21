@@ -167,9 +167,16 @@ detected
 - `backend/sbom.db` and `backend/uploads/` are gitignored; `deploy/.env.server` has real credentials — gitignored
 - Schema changes: add `ALTER TABLE ADD COLUMN` to the migration block in `main.py`; SQLite does not support DROP/RENAME COLUMN natively
 
+### Production Server
+- **IP**: `161.33.130.101` — Oracle Linux 9.7, 1GB RAM, user `opc`
+- **SSH key**: `D:\projects\SBOM\ssh-key-2026-04-21.key` (gitignored, one level above `sbom-platform/`)
+- **Deploy**: `bash deploy/deploy.sh` from `sbom-platform/` — builds frontend locally, rsyncs to server, restarts service
+- **First deploy**: `bash deploy/first-deploy.sh` — also runs `setup.sh` on server (installs python3.11 + nginx via dnf)
+- Node.js is NOT installed on the server; frontend is always built locally then uploaded as `dist/`
+
 ## Documentation
 - `docs/api-reference.md` — Full API endpoint reference with request/response shapes
 - `docs/db-schema.md` — All 13 tables with field-level descriptions
 - `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
 - `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
-- `deploy/ORACLE_CLOUD_SETUP.md` — Production deployment (Oracle Cloud, nginx, systemd)
+- `deploy/ORACLE_CLOUD_SETUP.md` — Production server info, firewall setup, deploy steps, ops commands
