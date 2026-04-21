@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=opc
-Group=opc
+User=ubuntu
+Group=ubuntu
 WorkingDirectory=/var/www/sbom/backend
 EnvironmentFile=/var/www/sbom/.env
 Environment=STATIC_DIR=/var/www/sbom/frontend/dist
