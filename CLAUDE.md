@@ -27,16 +27,15 @@ npm run preview  # serve dist/ locally
 
 ## Testing
 
-No pytest suite. Use stdlib-only ad-hoc scripts (`urllib` + `json` — `requests` and `grep -P` are unavailable):
+No pytest suite. Use stdlib-only ad-hoc scripts (`urllib` + `json` — `requests` and `grep -P` are unavailable).
 
+**Full regression suite** (39 tests, run from `sbom-platform/`):
 ```bash
-# Health check
-python - <<'EOF'
-import urllib.request, json
-print(json.loads(urllib.request.urlopen("http://localhost:9100/health").read()))
-EOF
+python test_all.py
+```
 
-# Authenticated request pattern
+**Ad-hoc pattern:**
+```bash
 python - <<'EOF'
 import urllib.request, json
 # 1. Get token
@@ -95,7 +94,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 |------|-------|-----------|
 | `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` |
 | `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool |
-| `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string |
+| `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 
@@ -117,6 +116,8 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `alerts.py` | Webhook POST + SMTP email on new vulnerability events |
 
 **`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
+
+**Python 3.9 compatibility** — The server runs Python 3.9. Use `from __future__ import annotations` at the top of any file that uses `X | Y` union syntax or `list[X]` / `dict[K,V]` in type hints outside of string literals.
 
 ### Frontend (`frontend/src/`)
 
@@ -179,4 +180,5 @@ detected
 - `docs/db-schema.md` — All 13 tables with field-level descriptions
 - `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
 - `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
+- `docs/TISAX_MODULE_PLAN.md` — TISAX/VDA ISA 6.0 module design (data model, API, UI — not yet implemented)
 - `deploy/ORACLE_CLOUD_SETUP.md` — Production server info, firewall setup, deploy steps, ops commands
