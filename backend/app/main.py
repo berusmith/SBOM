@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings
+from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.core.database import Base, engine
 from app.core.deps import get_current_user
 
@@ -25,6 +26,8 @@ with engine.connect() as conn:
         ("cvss_v3_vector",  "TEXT"),
         ("cvss_v4_score",   "REAL"),
         ("cvss_v4_vector",  "TEXT"),
+        ("scanned_at",      "DATETIME"),
+        ("fixed_at",        "DATETIME"),
     ]:
         if col not in vuln_cols:
             conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))

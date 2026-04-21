@@ -184,6 +184,46 @@ export default function Dashboard() {
 
         </div>
       )}
+
+      {/* Patch tracking summary */}
+      {stats.patch_tracking && (
+        <div className="mt-4 bg-white rounded-lg shadow p-5">
+          <h2 className="font-semibold text-gray-700 mb-4">修補追蹤</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Patch rate gauge */}
+            <div className="flex flex-col items-center">
+              <div className="relative w-24 h-24 mb-2">
+                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                  <circle
+                    cx="18" cy="18" r="15.9" fill="none"
+                    stroke={stats.patch_tracking.patch_rate >= 80 ? "#22c55e" : stats.patch_tracking.patch_rate >= 40 ? "#f59e0b" : "#ef4444"}
+                    strokeWidth="3"
+                    strokeDasharray={`${stats.patch_tracking.patch_rate} ${100 - stats.patch_tracking.patch_rate}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-gray-800">{stats.patch_tracking.patch_rate}%</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">修補率</p>
+            </div>
+            {/* Fixed count */}
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-3xl font-bold text-green-600">{stats.patch_tracking.fixed}</span>
+              <p className="text-sm text-gray-500 mt-1">已修補漏洞</p>
+            </div>
+            {/* Avg days to fix */}
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-3xl font-bold text-blue-600">
+                {stats.patch_tracking.avg_days_to_fix != null ? stats.patch_tracking.avg_days_to_fix : "—"}
+              </span>
+              <p className="text-sm text-gray-500 mt-1">平均修補天數</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

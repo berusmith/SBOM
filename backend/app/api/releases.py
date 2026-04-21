@@ -736,6 +736,44 @@ def export_csaf(release_id: str, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/{release_id}/patch-stats")
+def get_patch_stats(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+    vulns = [v for c in components for v in c.vulnerabilities]
+
+    total = len(vulns)
+    fixed = sum(1 for v in vulns if v.status == "fixed")
+    open_count = sum(1 for v in vulns if v.status == "open")
+    in_triage = sum(1 for v in vulns if v.status == "in_triage")
+    affected = sum(1 for v in vulns if v.status == "affected")
+    not_affected = sum(1 for v in vulns if v.status == "not_affected")
+
+    patch_rate = round(fixed / total * 100, 1) if total else 0.0
+
+    # Average days to fix (for completed fixes)
+    days_list = []
+    for v in vulns:
+        if v.status == "fixed" and v.fixed_at and v.scanned_at:
+            delta = v.fixed_at - v.scanned_at
+            days_list.append(delta.total_seconds() / 86400)
+    avg_days_to_fix = round(sum(days_list) / len(days_list), 1) if days_list else None
+
+    return {
+        "total": total,
+        "fixed": fixed,
+        "open": open_count,
+        "in_triage": in_triage,
+        "affected": affected,
+        "not_affected": not_affected,
+        "patch_rate": patch_rate,
+        "avg_days_to_fix": avg_days_to_fix,
+    }
+
+
 SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 
 

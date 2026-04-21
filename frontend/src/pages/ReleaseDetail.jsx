@@ -70,6 +70,7 @@ export default function ReleaseDetail() {
   const [enrichingNvd, setEnrichingNvd] = useState(false);
   const [nvdMsg, setNvdMsg] = useState(null);
   const [expandedVuln, setExpandedVuln] = useState(null);
+  const [vulnHistory, setVulnHistory] = useState({});
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState("cvss_score");
@@ -540,7 +541,15 @@ export default function ReleaseDetail() {
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">
                       <button
-                        onClick={() => setExpandedVuln(expandedVuln === v.id ? null : v.id)}
+                        onClick={() => {
+                          const next = expandedVuln === v.id ? null : v.id;
+                          setExpandedVuln(next);
+                          if (next && !vulnHistory[next]) {
+                            api.get(`/vulnerabilities/${next}/history`).then((r) =>
+                              setVulnHistory((h) => ({ ...h, [next]: r.data }))
+                            ).catch(() => {});
+                          }
+                        }}
                         className="text-blue-700 hover:underline text-left"
                       >
                         {v.cve_id}
@@ -601,6 +610,28 @@ export default function ReleaseDetail() {
                               <a key={i} href={url} target="_blank" rel="noreferrer"
                                 className="text-blue-600 hover:underline truncate max-w-xs">{url}</a>
                             ))}
+                          </div>
+                        )}
+                        {/* VEX history timeline */}
+                        {vulnHistory[v.id] && vulnHistory[v.id].length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-600 mb-1">狀態變更紀錄</p>
+                            <ol className="space-y-1">
+                              {vulnHistory[v.id].map((h) => (
+                                <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
+                                  <span className="text-gray-300 mt-0.5">▸</span>
+                                  <span className="font-mono text-gray-400 shrink-0">
+                                    {h.changed_at ? new Date(h.changed_at).toLocaleString("zh-TW") : "—"}
+                                  </span>
+                                  <span>
+                                    <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
+                                    <span className="mx-1 text-gray-400">→</span>
+                                    <span className="font-medium text-gray-700">{STATUS_LABEL[h.to_status] ?? h.to_status}</span>
+                                    {h.note && <span className="ml-2 italic text-gray-400">{h.note}</span>}
+                                  </span>
+                                </li>
+                              ))}
+                            </ol>
                           </div>
                         )}
                       </td>
@@ -666,6 +697,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
   const [justification, setJustification] = useState(vuln.justification || "");
   const [response, setResponse] = useState(vuln.response || "");
   const [detail, setDetail] = useState(vuln.detail || "");
+  const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -676,6 +708,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
         justification: status === "not_affected" ? (justification || null) : null,
         response: status === "affected" ? (response || null) : null,
         detail: detail || null,
+        note: note || null,
       });
       onUpdate();
       onClose();
@@ -756,6 +789,20 @@ function VexModal({ vuln, onClose, onUpdate }) {
               rows={3}
               placeholder="補充說明此漏洞的評估結果或處置方式..."
               className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+            />
+          </div>
+
+          {/* Note — recorded in history */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              變更備註 <span className="text-gray-400 font-normal">(記入歷程，選填)</span>
+            </label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="例：已與開發確認此版本不影響"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
         </div>
