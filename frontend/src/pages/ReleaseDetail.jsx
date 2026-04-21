@@ -72,6 +72,7 @@ export default function ReleaseDetail() {
   const [sortField, setSortField] = useState("cvss_score");
   const [sortAsc, setSortAsc] = useState(false);
   const [filterEpss, setFilterEpss] = useState(false);
+  const [filterKev, setFilterKev] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
@@ -249,7 +250,8 @@ export default function ReleaseDetail() {
     .filter((v) =>
       (!filterSeverity || v.severity === filterSeverity) &&
       (!filterStatus || v.status === filterStatus) &&
-      (!filterEpss || (v.epss_score != null && v.epss_score >= 0.1))
+      (!filterEpss || (v.epss_score != null && v.epss_score >= 0.1)) &&
+      (!filterKev || v.is_kev)
     )
     .sort((a, b) => {
       let av, bv;
@@ -445,16 +447,16 @@ export default function ReleaseDetail() {
                   ))}
                 </select>
                 <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={filterEpss}
-                    onChange={(e) => setFilterEpss(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={filterEpss} onChange={(e) => setFilterEpss(e.target.checked)} />
                   僅顯示高 EPSS (&gt;10%)
                 </label>
-                {(filterSeverity || filterStatus || filterEpss) && (
+                <label className="flex items-center gap-1.5 text-sm text-red-600 cursor-pointer select-none font-medium">
+                  <input type="checkbox" checked={filterKev} onChange={(e) => setFilterKev(e.target.checked)} />
+                  僅顯示 CISA KEV
+                </label>
+                {(filterSeverity || filterStatus || filterEpss || filterKev) && (
                   <button
-                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); }}
+                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); }}
                     className="text-xs text-gray-400 hover:text-gray-600 underline"
                   >
                     清除篩選
@@ -509,7 +511,12 @@ export default function ReleaseDetail() {
                         }}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-blue-700">{v.cve_id}</td>
+                    <td className="px-4 py-2 font-mono text-xs text-blue-700">
+                      {v.cve_id}
+                      {v.is_kev && (
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide" style={{fontSize:"10px"}}>KEV</span>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-gray-700">{v.component_name} {v.component_version}</td>
                     <td className="px-4 py-2 text-gray-600">{v.cvss_score ?? "—"}</td>
                     <td className="px-4 py-2">

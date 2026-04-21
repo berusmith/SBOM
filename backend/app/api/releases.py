@@ -20,11 +20,22 @@ from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
 from app.services.epss import fetch_epss
+from app.services.kev import fetch_kev_cve_ids
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
+
+
+def _enrich_kev(vulns: list, db) -> None:
+    """Mark vulns that appear in the CISA KEV catalog."""
+    kev_ids = fetch_kev_cve_ids()
+    if not kev_ids:
+        return
+    for v in vulns:
+        v.is_kev = v.cve_id in kev_ids
+    db.commit()
 
 
 def _enrich_epss(vulns: list, db) -> None:
@@ -107,9 +118,10 @@ def upload_sbom(
             vuln_count += 1
     db.commit()
 
-    # Enrich newly added vulns with EPSS scores
+    # Enrich with EPSS and KEV
     all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
     _enrich_epss(all_vulns, db)
+    _enrich_kev(all_vulns, db)
 
     return {
         "components_found": len(parsed),
@@ -158,9 +170,10 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
 
     db.commit()
 
-    # Refresh EPSS scores for ALL vulns in this release (scores change daily)
+    # Refresh EPSS and KEV for ALL vulns (both change daily)
     all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
     _enrich_epss(all_vulns, db)
+    _enrich_kev(all_vulns, db)
 
     return {
         "components_scanned": len(comp_list),
@@ -177,8 +190,10 @@ def enrich_epss(release_id: str, db: Session = Depends(get_db)):
     if not vulns:
         raise HTTPException(status_code=400, detail="此版本尚無漏洞資料")
     _enrich_epss(vulns, db)
-    updated = sum(1 for v in vulns if v.epss_score is not None)
-    return {"total_vulnerabilities": len(vulns), "epss_updated": updated}
+    _enrich_kev(vulns, db)
+    epss_updated = sum(1 for v in vulns if v.epss_score is not None)
+    kev_count = sum(1 for v in vulns if v.is_kev)
+    return {"total_vulnerabilities": len(vulns), "epss_updated": epss_updated, "kev_count": kev_count}
 
 
 @router.delete("/{release_id}", status_code=204)
@@ -235,6 +250,7 @@ def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 "detail": v.detail,
                 "epss_score": v.epss_score,
                 "epss_percentile": v.epss_percentile,
+                "is_kev": bool(v.is_kev),
             })
     result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
     return result
@@ -253,7 +269,7 @@ def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
     writer = csv.writer(buf)
     writer.writerow([
         "CVE ID", "元件名稱", "元件版本",
-        "CVSS 分數", "嚴重度", "EPSS 分數", "EPSS 百分位",
+        "CVSS 分數", "嚴重度", "EPSS 分數", "EPSS 百分位", "CISA KEV",
         "VEX 狀態", "Justification", "Response", "說明",
     ])
     for c in components_raw:
@@ -266,6 +282,7 @@ def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
                 v.severity or "",
                 f"{v.epss_score:.4f}" if v.epss_score is not None else "",
                 f"{v.epss_percentile:.4f}" if v.epss_percentile is not None else "",
+                "是" if v.is_kev else "",
                 v.status,
                 v.justification or "",
                 v.response or "",
