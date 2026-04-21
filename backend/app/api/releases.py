@@ -7,7 +7,7 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
 from app.services.alerts import notify_new_vulns
+from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 
@@ -232,6 +233,37 @@ def enrich_epss(release_id: str, db: Session = Depends(get_db)):
     return {"total_vulnerabilities": len(vulns), "epss_updated": epss_updated, "kev_count": kev_count}
 
 
+@router.post("/{release_id}/enrich-nvd")
+def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+    if not vulns:
+        raise HTTPException(status_code=400, detail="此版本尚無漏洞資料")
+    unique_cves = len({v.cve_id for v in vulns if v.cve_id.startswith("CVE-")})
+    from app.core.config import settings as _cfg
+    delay = 0.7 if _cfg.NVD_API_KEY else 7.0
+    est_seconds = int(unique_cves * delay)
+
+    def _task():
+        from app.core.database import SessionLocal
+        _db = SessionLocal()
+        try:
+            _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+            enrich_vulns_nvd(_vulns, _db)
+        finally:
+            _db.close()
+
+    background_tasks.add_task(_task)
+    return {
+        "status": "started",
+        "unique_cves": unique_cves,
+        "estimated_seconds": est_seconds,
+        "message": f"NVD 資料補充已在背景執行，預計約 {est_seconds} 秒完成",
+    }
+
+
 @router.delete("/{release_id}", status_code=204)
 def delete_release(release_id: str, db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
@@ -287,6 +319,13 @@ def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 "epss_score": v.epss_score,
                 "epss_percentile": v.epss_percentile,
                 "is_kev": bool(v.is_kev),
+                "description": v.description,
+                "cwe": v.cwe,
+                "nvd_refs": json.loads(v.nvd_refs) if v.nvd_refs else [],
+                "cvss_v3_score": v.cvss_v3_score,
+                "cvss_v3_vector": v.cvss_v3_vector,
+                "cvss_v4_score": v.cvss_v4_score,
+                "cvss_v4_vector": v.cvss_v4_vector,
             })
     result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
     return result
@@ -305,8 +344,8 @@ def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
     writer = csv.writer(buf)
     writer.writerow([
         "CVE ID", "元件名稱", "元件版本",
-        "CVSS 分數", "嚴重度", "EPSS 分數", "EPSS 百分位", "CISA KEV",
-        "VEX 狀態", "Justification", "Response", "說明",
+        "CVSS v3", "CVSS v4", "嚴重度", "EPSS 分數", "EPSS 百分位", "CISA KEV",
+        "CWE", "VEX 狀態", "Justification", "Response", "說明", "描述",
     ])
     for c in components_raw:
         for v in sorted(c.vulnerabilities, key=lambda x: x.epss_score or x.cvss_score or 0, reverse=True):
@@ -314,15 +353,18 @@ def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
                 v.cve_id,
                 c.name,
                 c.version or "",
-                v.cvss_score if v.cvss_score is not None else "",
+                v.cvss_v3_score if v.cvss_v3_score is not None else (v.cvss_score if v.cvss_score is not None else ""),
+                v.cvss_v4_score if v.cvss_v4_score is not None else "",
                 v.severity or "",
                 f"{v.epss_score:.4f}" if v.epss_score is not None else "",
                 f"{v.epss_percentile:.4f}" if v.epss_percentile is not None else "",
                 "是" if v.is_kev else "",
+                v.cwe or "",
                 v.status,
                 v.justification or "",
                 v.response or "",
                 v.detail or "",
+                (v.description or "")[:300],
             ])
 
     product_name = (product.name if product else "report").replace(" ", "_")

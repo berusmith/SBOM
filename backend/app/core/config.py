@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     SMTP_FROM: str = ""
     SMTP_TLS: bool = True
 
+    # NVD API (optional — without key: 5 req/30s; with key: 50 req/30s)
+    NVD_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
 

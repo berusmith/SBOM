@@ -18,6 +18,13 @@ with engine.connect() as conn:
         ("epss_score",      "REAL"),
         ("epss_percentile", "REAL"),
         ("is_kev",          "INTEGER DEFAULT 0"),
+        ("description",     "TEXT"),
+        ("cwe",             "TEXT"),
+        ("nvd_refs",        "TEXT"),
+        ("cvss_v3_score",   "REAL"),
+        ("cvss_v3_vector",  "TEXT"),
+        ("cvss_v4_score",   "REAL"),
+        ("cvss_v4_vector",  "TEXT"),
     ]:
         if col not in vuln_cols:
             conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))

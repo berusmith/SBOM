@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 
@@ -67,6 +67,9 @@ export default function ReleaseDetail() {
   const [rescanResult, setRescanResult] = useState(null);
   const [enriching, setEnriching] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
+  const [enrichingNvd, setEnrichingNvd] = useState(false);
+  const [nvdMsg, setNvdMsg] = useState(null);
+  const [expandedVuln, setExpandedVuln] = useState(null);
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState("cvss_score");
@@ -194,6 +197,19 @@ export default function ReleaseDetail() {
     }
   };
 
+  const handleEnrichNvd = async () => {
+    setEnrichingNvd(true);
+    setNvdMsg(null);
+    try {
+      const res = await api.post(`/releases/${releaseId}/enrich-nvd`);
+      setNvdMsg(res.data.message);
+    } catch (err) {
+      setNvdMsg("NVD 補充失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setEnrichingNvd(false);
+    }
+  };
+
   const handleEnrichEpss = async () => {
     setEnriching(true);
     try {
@@ -287,6 +303,9 @@ export default function ReleaseDetail() {
               : `失敗：${uploadResult.msg}`}
           </span>
         )}
+        {nvdMsg && (
+          <span className="text-sm text-blue-600">{nvdMsg}</span>
+        )}
         {rescanResult && (
           <span className={`text-sm ${rescanResult.ok ? "text-green-600" : "text-red-500"}`}>
             {rescanResult.ok
@@ -302,6 +321,13 @@ export default function ReleaseDetail() {
               className={`px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
             >
               {rescanning ? "掃描中..." : "重新掃描 CVE"}
+            </button>
+            <button
+              onClick={handleEnrichNvd}
+              disabled={enrichingNvd}
+              className={`px-4 py-2 rounded text-sm text-white ${enrichingNvd ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
+            >
+              {enrichingNvd ? "啟動中..." : "更新 NVD"}
             </button>
             <button
               onClick={handleEnrichEpss}
@@ -498,7 +524,8 @@ export default function ReleaseDetail() {
               </thead>
               <tbody>
                 {displayedVulns.map((v) => (
-                  <tr key={v.id} className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""}`}>
+                  <React.Fragment key={v.id}>
+                  <tr className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""}`}>
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
@@ -511,8 +538,13 @@ export default function ReleaseDetail() {
                         }}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs text-blue-700">
-                      {v.cve_id}
+                    <td className="px-4 py-2 font-mono text-xs">
+                      <button
+                        onClick={() => setExpandedVuln(expandedVuln === v.id ? null : v.id)}
+                        className="text-blue-700 hover:underline text-left"
+                      >
+                        {v.cve_id}
+                      </button>
                       {v.is_kev && (
                         <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide" style={{fontSize:"10px"}}>KEV</span>
                       )}
@@ -552,6 +584,29 @@ export default function ReleaseDetail() {
                       <VexEditButton vuln={v} onUpdate={fetchVulns} />
                     </td>
                   </tr>
+                  {expandedVuln === v.id && (
+                    <tr key={`${v.id}-detail`} className="bg-gray-50 border-t">
+                      <td colSpan={9} className="px-6 py-3 text-sm text-gray-700 space-y-2">
+                        {v.description && <p className="leading-relaxed">{v.description}</p>}
+                        {!v.description && <p className="text-gray-400 italic">NVD 描述尚未補充，請點「更新 NVD」</p>}
+                        <div className="flex gap-6 flex-wrap text-xs text-gray-500">
+                          {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
+                          {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
+                          {v.cvss_v4_score != null && <span><span className="font-medium text-gray-700">CVSS v4：</span>{v.cvss_v4_score}</span>}
+                        </div>
+                        {v.nvd_refs && v.nvd_refs.length > 0 && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="font-medium text-gray-700">參考連結：</span>
+                            {v.nvd_refs.map((url, i) => (
+                              <a key={i} href={url} target="_blank" rel="noreferrer"
+                                className="text-blue-600 hover:underline truncate max-w-xs">{url}</a>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
