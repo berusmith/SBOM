@@ -183,5 +183,4 @@ detected
 - `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
 - `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
 - `docs/TISAX_MODULE_PLAN.md` — Planned TISAX module: VDA ISA 6.0 self-assessment (63 controls), maturity scoring 0–5, AL2/AL3 gap analysis
-- `docs/TISAX_MODULE_PLAN.md` — TISAX/VDA ISA 6.0 module design (data model, API, UI — not yet implemented)
 - `deploy/ORACLE_CLOUD_SETUP.md` — Production server info, firewall setup, deploy steps, ops commands
