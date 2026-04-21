@@ -63,6 +63,8 @@ def upload_sbom(
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳 SBOM")
 
     content = file.file.read()
 
@@ -72,12 +74,13 @@ def upload_sbom(
     except (ValueError, Exception) as e:
         raise HTTPException(status_code=400, detail=f"SBOM 解析失敗：{e}")
 
-    # save file
+    # save file + compute hash
     filename = f"{release_id}_{file.filename}"
     filepath = os.path.join(UPLOAD_DIR, filename)
     with open(filepath, "wb") as f:
         f.write(content)
     release.sbom_file_path = filepath
+    release.sbom_hash = hashlib.sha256(content).hexdigest()
     db.commit()
 
     # delete existing components for this release (re-upload scenario)
@@ -137,6 +140,8 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法重新掃描")
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -262,6 +267,21 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session =
         "unique_cves": unique_cves,
         "estimated_seconds": est_seconds,
         "message": f"NVD 資料補充已在背景執行，預計約 {est_seconds} 秒完成",
+    }
+
+
+@router.get("/{release_id}")
+def get_release(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    return {
+        "id": release.id,
+        "version": release.version,
+        "locked": release.locked or False,
+        "has_sbom": bool(release.sbom_file_path),
+        "sbom_hash": release.sbom_hash,
+        "created_at": release.created_at.isoformat() if release.created_at else None,
     }
 
 
@@ -753,6 +773,48 @@ def export_csaf(release_id: str, db: Session = Depends(get_db)):
         content=csaf_doc,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/{release_id}/integrity")
+def verify_integrity(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        return {"status": "no_file", "message": "尚未上傳 SBOM 檔案"}
+    if not release.sbom_hash:
+        return {"status": "no_hash", "message": "此版本無完整性記錄（上傳時未計算 hash）"}
+    with open(release.sbom_file_path, "rb") as f:
+        current_hash = hashlib.sha256(f.read()).hexdigest()
+    ok = current_hash == release.sbom_hash
+    return {
+        "status": "ok" if ok else "tampered",
+        "stored_hash": release.sbom_hash,
+        "current_hash": current_hash,
+        "message": "檔案完整，未被竄改" if ok else "⚠ 警告：SBOM 檔案與上傳時的 hash 不符，可能已被竄改",
+    }
+
+
+@router.post("/{release_id}/lock")
+def lock_release(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定")
+    release.locked = True
+    db.commit()
+    return {"locked": True}
+
+
+@router.post("/{release_id}/unlock")
+def unlock_release(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    release.locked = False
+    db.commit()
+    return {"locked": False}
 
 
 @router.get("/{release_id}/patch-stats")

@@ -81,6 +81,9 @@ export default function ReleaseDetail() {
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
   const [violations, setViolations] = useState(null);
+  const [locked, setLocked] = useState(false);
+  const [integrity, setIntegrity] = useState(null);
+  const [checkingIntegrity, setCheckingIntegrity] = useState(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
@@ -91,12 +94,35 @@ export default function ReleaseDetail() {
   const fetchViolations = () => {
     api.get(`/policies/releases/${releaseId}/violations`).then((r) => setViolations(r.data)).catch(() => {});
   };
+  const fetchRelease = () => {
+    api.get(`/releases/${releaseId}`).then((r) => setLocked(r.data.locked ?? false)).catch(() => {});
+  };
 
   useEffect(() => {
     fetchComponents();
     fetchVulns();
     fetchViolations();
+    fetchRelease();
   }, [releaseId]);
+
+  const handleLockToggle = async () => {
+    const action = locked ? "unlock" : "lock";
+    if (!locked && !window.confirm("鎖定後將無法上傳 SBOM、重新掃描或修改 VEX 狀態，確定鎖定？")) return;
+    try {
+      await api.post(`/releases/${releaseId}/${action}`);
+      setLocked(!locked);
+    } catch (e) { alert(e.response?.data?.detail || "操作失敗"); }
+  };
+
+  const handleCheckIntegrity = async () => {
+    setCheckingIntegrity(true);
+    setIntegrity(null);
+    try {
+      const r = await api.get(`/releases/${releaseId}/integrity`);
+      setIntegrity(r.data);
+    } catch { setIntegrity({ status: "error", message: "驗證失敗" }); }
+    finally { setCheckingIntegrity(false); }
+  };
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -392,9 +418,45 @@ export default function ReleaseDetail() {
             >
               {downloading ? "產生中..." : "下載 PDF 報告"}
             </button>
+            {/* Integrity check */}
+            <button
+              onClick={handleCheckIntegrity}
+              disabled={checkingIntegrity}
+              className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+            >
+              {checkingIntegrity ? "驗證中..." : "完整性驗證"}
+            </button>
+            {/* Lock / Unlock */}
+            <button
+              onClick={handleLockToggle}
+              className={`px-4 py-2 rounded text-sm text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
+            >
+              {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
+            </button>
           </div>
         )}
       </div>
+
+      {/* Integrity result */}
+      {integrity && (
+        <div className={`mb-3 px-4 py-3 rounded text-sm flex items-center gap-2 ${
+          integrity.status === "ok" ? "bg-green-50 text-green-700" :
+          integrity.status === "tampered" ? "bg-red-50 text-red-700" : "bg-yellow-50 text-yellow-700"
+        }`}>
+          <span>{integrity.status === "ok" ? "✓" : integrity.status === "tampered" ? "⚠" : "ℹ"}</span>
+          <span>{integrity.message}</span>
+          {integrity.stored_hash && (
+            <span className="ml-2 font-mono text-xs opacity-60">SHA-256: {integrity.stored_hash.slice(0, 16)}…</span>
+          )}
+        </div>
+      )}
+
+      {/* Lock banner */}
+      {locked && (
+        <div className="mb-3 px-4 py-2 rounded bg-gray-100 border border-gray-300 text-sm text-gray-700 flex items-center gap-2">
+          🔒 <span>此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。</span>
+        </div>
+      )}
 
       {/* Severity summary */}
       {vulns.length > 0 && (

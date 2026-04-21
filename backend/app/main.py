@@ -35,6 +35,16 @@ with engine.connect() as conn:
             conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))
     conn.commit()
 
+    # releases table migrations
+    rel_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(releases)"))}
+    for col, typedef in [
+        ("sbom_hash", "TEXT"),
+        ("locked",    "INTEGER DEFAULT 0"),
+    ]:
+        if col not in rel_cols:
+            conn.execute(text(f"ALTER TABLE releases ADD COLUMN {col} {typedef}"))
+    conn.commit()
+
 app = FastAPI(title="SBOM Management Platform", version="0.1.0")
 
 app.add_middleware(

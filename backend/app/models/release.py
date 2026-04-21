@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -16,6 +16,8 @@ class Release(Base):
     sbom_file_path = Column(String, nullable=True)
     dtrack_project_uuid = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    sbom_hash = Column(String, nullable=True)    # SHA-256 of uploaded SBOM file
+    locked = Column(Boolean, nullable=False, default=False)
 
     product = relationship("Product", back_populates="releases")
     components = relationship("Component", back_populates="release", cascade="all, delete-orphan")

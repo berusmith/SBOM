@@ -6,8 +6,18 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.component import Component
+from app.models.release import Release
 from app.models.vex_history import VexHistory
 from app.models.vulnerability import Vulnerability
+
+
+def _check_not_locked(vuln: Vulnerability, db: Session):
+    comp = db.query(Component).filter(Component.id == vuln.component_id).first()
+    if comp:
+        rel = db.query(Release).filter(Release.id == comp.release_id).first()
+        if rel and rel.locked:
+            raise HTTPException(status_code=409, detail="版本已鎖定，無法修改 VEX 狀態")
 
 router = APIRouter(prefix="/api/vulnerabilities", tags=["vulnerabilities"])
 
@@ -87,6 +97,10 @@ def batch_update_vex(payload: BatchVexUpdate, db: Session = Depends(get_db)):
         vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
         if not vuln:
             continue
+        try:
+            _check_not_locked(vuln, db)
+        except HTTPException:
+            continue  # skip locked releases silently in batch
         _apply_vex(vuln, payload.status, payload.justification, payload.response, payload.detail, payload.note, db)
         updated += 1
 
@@ -106,6 +120,7 @@ def update_vex(vuln_id: str, payload: VexUpdate, db: Session = Depends(get_db)):
     vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
+    _check_not_locked(vuln, db)
 
     _apply_vex(vuln, payload.status, payload.justification, payload.response, payload.detail, payload.note, db)
     db.commit()
