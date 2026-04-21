@@ -3,7 +3,7 @@
 # 執行方式（在 sbom-platform/ 目錄下）: bash deploy/deploy.sh
 set -e
 
-KEY="../../ssh-key-2026-04-21.key"
+KEY="../ssh-key-2026-04-21.key"
 SERVER="ubuntu@161.33.130.101"
 REMOTE="/var/www/sbom"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no"
