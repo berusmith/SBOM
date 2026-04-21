@@ -1,0 +1,37 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "version": 1,
+  "components": [
+    {
+      "name": "log4j-core",
+      "version": "2.14.1",
+      "purl": "pkg:maven/org.apache.logging.log4j/log4j-core@2.14.1",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }]
+    },
+    {
+      "name": "openssl",
+      "version": "1.1.1k",
+      "purl": "pkg:generic/openssl@1.1.1k",
+      "licenses": [{ "license": { "id": "OpenSSL" } }]
+    },
+    {
+      "name": "lodash",
+      "version": "4.17.15",
+      "purl": "pkg:npm/lodash@4.17.15",
+      "licenses": [{ "license": { "id": "MIT" } }]
+    },
+    {
+      "name": "flask",
+      "version": "0.12.2",
+      "purl": "pkg:pypi/flask@0.12.2",
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }]
+    },
+    {
+      "name": "libexpat",
+      "version": "2.4.1",
+      "purl": "pkg:generic/libexpat@2.4.1",
+      "licenses": [{ "license": { "id": "MIT" } }]
+    }
+  ]
+}

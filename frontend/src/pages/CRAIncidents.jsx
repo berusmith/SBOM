@@ -1,0 +1,218 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/client";
+
+const STATUS_COLOR = {
+  detected:        "bg-gray-100 text-gray-600",
+  pending_triage:  "bg-yellow-100 text-yellow-700",
+  clock_running:   "bg-red-100 text-red-700",
+  t24_submitted:   "bg-orange-100 text-orange-700",
+  investigating:   "bg-orange-100 text-orange-700",
+  t72_submitted:   "bg-blue-100 text-blue-700",
+  remediating:     "bg-purple-100 text-purple-700",
+  final_submitted: "bg-teal-100 text-teal-700",
+  closed:          "bg-green-100 text-green-700",
+};
+
+function Countdown({ seconds, label }) {
+  if (seconds === null || seconds === undefined) return null;
+  if (seconds === 0) return <span className="text-xs text-red-600 font-bold">⚠ {label} 已逾時</span>;
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const urgent = seconds < 6 * 3600;
+  return (
+    <span className={`text-xs font-mono ${urgent ? "text-red-600 font-bold" : "text-gray-500"}`}>
+      {label} 剩 {h}h {m}m
+    </span>
+  );
+}
+
+export default function CRAIncidents() {
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+
+  const fetchIncidents = () => {
+    api.get("/cra/incidents")
+      .then((r) => setIncidents(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  const handleDelete = async (e, inc) => {
+    e.stopPropagation();
+    if (!window.confirm(`確定要刪除事件「${inc.title}」？此操作無法還原。`)) return;
+    try {
+      await api.delete(`/cra/incidents/${inc.id}`);
+      fetchIncidents();
+    } catch (err) {
+      alert("刪除失敗：" + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  useEffect(() => { fetchIncidents(); }, []);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">CRA 事件管理</h1>
+        <button
+          onClick={() => setShowForm(true)}
+          className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+        >
+          + 新增事件
+        </button>
+      </div>
+
+      {showForm && (
+        <CreateForm
+          onClose={() => setShowForm(false)}
+          onCreated={() => { setShowForm(false); fetchIncidents(); }}
+        />
+      )}
+
+      {loading ? (
+        <div className="text-gray-400 text-center mt-8">載入中...</div>
+      ) : incidents.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-10 text-center text-gray-400">
+          <p className="text-lg mb-1">尚無 CRA 事件</p>
+          <p className="text-sm">偵測到主動被利用漏洞時，在此建立事件並追蹤 24/72/14 通報時限。</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500 text-left">
+              <tr>
+                <th className="px-4 py-3">事件標題</th>
+                <th className="px-4 py-3">觸發 CVE</th>
+                <th className="px-4 py-3">狀態</th>
+                <th className="px-4 py-3">時限</th>
+                <th className="px-4 py-3">建立時間</th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {incidents.map((inc) => (
+                <tr
+                  key={inc.id}
+                  className="border-t hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/cra/${inc.id}`)}
+                >
+                  <td className="px-4 py-3 font-medium text-gray-800">{inc.title}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-blue-700">
+                    {inc.trigger_cve_ids || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[inc.status] || "bg-gray-100 text-gray-600"}`}>
+                      {inc.status_label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 space-y-0.5">
+                    {inc.status === "clock_running" && (
+                      <Countdown seconds={inc.t24_remaining_seconds} label="T+24h" />
+                    )}
+                    {["t24_submitted", "investigating"].includes(inc.status) && (
+                      <Countdown seconds={inc.t72_remaining_seconds} label="T+72h" />
+                    )}
+                    {["t72_submitted", "remediating"].includes(inc.status) && (
+                      <Countdown seconds={inc.t14d_remaining_seconds} label="T+14d" />
+                    )}
+                    {!["clock_running","t24_submitted","investigating","t72_submitted","remediating"].includes(inc.status) && (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 text-xs">
+                    {inc.created_at ? new Date(inc.created_at).toLocaleString("zh-TW") : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={(e) => handleDelete(e, inc)}
+                      className="text-red-500 hover:underline text-xs"
+                    >
+                      刪除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CreateForm({ onClose, onCreated }) {
+  const [title, setTitle] = useState("");
+  const [cveIds, setCveIds] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/cra/incidents", {
+        title: title.trim(),
+        trigger_cve_ids: cveIds.trim() || null,
+        description: description.trim() || null,
+        trigger_source: "manual",
+      });
+      onCreated();
+    } catch (err) {
+      alert("建立失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-semibold text-gray-800 mb-4">新增 CRA 事件</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">事件標題 <span className="text-red-500">*</span></label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="例：Log4Shell 影響評估"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-400 font-normal">(逗號分隔)</span></label>
+            <input
+              value={cveIds}
+              onChange={(e) => setCveIds(e.target.value)}
+              placeholder="CVE-2021-44228,CVE-2021-45046"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-400 font-normal">(選填)</span></label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
+            <button
+              type="submit"
+              disabled={saving || !title.trim()}
+              className={`px-4 py-2 text-sm text-white rounded ${saving || !title.trim() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
+            >
+              {saving ? "建立中..." : "建立"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

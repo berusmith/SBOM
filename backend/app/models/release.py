@@ -1,0 +1,23 @@
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, ForeignKey, String
+from sqlalchemy.orm import relationship
+
+from app.core.database import Base
+
+
+class Release(Base):
+    __tablename__ = "releases"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    product_id = Column(String, ForeignKey("products.id"), nullable=False, index=True)
+    version = Column(String, nullable=False)
+    sbom_file_path = Column(String, nullable=True)
+    dtrack_project_uuid = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    product = relationship("Product", back_populates="releases")
+    components = relationship("Component", back_populates="release", cascade="all, delete-orphan")
+    compliance_maps = relationship("ComplianceMap", back_populates="release", cascade="all, delete-orphan")
+    vex_statements = relationship("VexStatement", back_populates="release", cascade="all, delete-orphan")

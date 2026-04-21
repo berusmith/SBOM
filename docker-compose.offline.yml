@@ -1,0 +1,23 @@
+version: "3.9"
+
+# Air-gapped / Offline deployment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.offline.yml up
+
+services:
+  vuln-mirror:
+    image: ghcr.io/jeremylong/open-vulnerability-data-mirror:latest
+    volumes:
+      - vuln_mirror_data:/data
+    ports:
+      - "8888:8888"
+    restart: unless-stopped
+
+  dependencytrack-apiserver:
+    environment:
+      # Override NVD mirror to point at local vuln-mirror service
+      ALPINE_NVD_FEEDS_URL: http://vuln-mirror:8888/nvd
+    depends_on:
+      - vuln-mirror
+
+volumes:
+  vuln_mirror_data:

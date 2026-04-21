@@ -1,0 +1,641 @@
+import { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import api from "../api/client";
+
+const SEVERITY_COLOR = {
+  critical: "bg-red-100 text-red-700",
+  high:     "bg-orange-100 text-orange-700",
+  medium:   "bg-yellow-100 text-yellow-700",
+  low:      "bg-blue-100 text-blue-700",
+  info:     "bg-gray-100 text-gray-500",
+};
+
+const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
+
+const STATUS_LABEL = {
+  open: "Open",
+  in_triage: "In Triage",
+  not_affected: "Not Affected",
+  affected: "Affected",
+  fixed: "Fixed",
+};
+
+const STATUS_COLOR = {
+  open:         "bg-red-100 text-red-700",
+  in_triage:    "bg-yellow-100 text-yellow-700",
+  not_affected: "bg-green-100 text-green-700",
+  affected:     "bg-orange-100 text-orange-700",
+  fixed:        "bg-blue-100 text-blue-700",
+};
+
+const JUSTIFICATION_OPTIONS = [
+  { value: "code_not_present",               label: "程式碼不存在 (code_not_present)" },
+  { value: "code_not_reachable",             label: "程式碼不可達 (code_not_reachable)" },
+  { value: "requires_configuration",         label: "需特殊設定才觸發 (requires_configuration)" },
+  { value: "requires_dependency",            label: "需特殊相依才觸發 (requires_dependency)" },
+  { value: "requires_environment",           label: "需特殊環境才觸發 (requires_environment)" },
+  { value: "protected_by_compiler",          label: "編譯器保護 (protected_by_compiler)" },
+  { value: "protected_at_runtime",           label: "執行期保護 (protected_at_runtime)" },
+  { value: "protected_at_perimeter",         label: "邊界防護 (protected_at_perimeter)" },
+  { value: "protected_by_mitigating_control", label: "緩解控制保護 (protected_by_mitigating_control)" },
+];
+
+const RESPONSE_OPTIONS = [
+  { value: "can_not_fix",          label: "無法修復 (can_not_fix)" },
+  { value: "will_not_fix",         label: "不予修復 (will_not_fix)" },
+  { value: "update",               label: "升級版本 (update)" },
+  { value: "rollback",             label: "回滾版本 (rollback)" },
+  { value: "workaround_available", label: "有暫時解法 (workaround_available)" },
+];
+
+export default function ReleaseDetail() {
+  const { releaseId } = useParams();
+  const navigate = useNavigate();
+  const fileRef = useRef();
+
+  const [tab, setTab] = useState("components");
+  const [components, setComponents] = useState([]);
+  const [vulns, setVulns] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadingCsaf, setDownloadingCsaf] = useState(false);
+  const [downloadingEvidence, setDownloadingEvidence] = useState(false);
+  const [downloadingIec, setDownloadingIec] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanResult, setRescanResult] = useState(null);
+  const [filterSeverity, setFilterSeverity] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [sortField, setSortField] = useState("cvss_score");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [selected, setSelected] = useState(new Set());
+  const [batchStatus, setBatchStatus] = useState("in_triage");
+  const [batching, setBatching] = useState(false);
+
+  const fetchComponents = () => {
+    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
+  };
+  const fetchVulns = () => {
+    api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchComponents();
+    fetchVulns();
+  }, [releaseId]);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadResult(null);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await api.post(`/releases/${releaseId}/sbom`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setUploadResult({ ok: true, ...res.data });
+      fetchComponents();
+      fetchVulns();
+    } catch (err) {
+      setUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
+    } finally {
+      setUploading(false);
+      fileRef.current.value = "";
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    setDownloading(true);
+    try {
+      const resp = await api.get(`/releases/${releaseId}/report`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `SBOM_Report_${releaseId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadIec = async () => {
+    setDownloadingIec(true);
+    try {
+      const resp = await api.get(`/releases/${releaseId}/compliance/iec62443`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `IEC62443_${releaseId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDownloadingIec(false);
+    }
+  };
+
+  const handleDownloadEvidence = async () => {
+    setDownloadingEvidence(true);
+    try {
+      const resp = await api.get(`/releases/${releaseId}/evidence-package`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `evidence_${releaseId}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDownloadingEvidence(false);
+    }
+  };
+
+  const handleRescan = async () => {
+    setRescanning(true);
+    setRescanResult(null);
+    try {
+      const res = await api.post(`/releases/${releaseId}/rescan`);
+      setRescanResult({ ok: true, ...res.data });
+      fetchVulns();
+      fetchComponents();
+    } catch (err) {
+      setRescanResult({ ok: false, msg: err.response?.data?.detail || err.message });
+    } finally {
+      setRescanning(false);
+    }
+  };
+
+  const handleBatchVex = async () => {
+    if (selected.size === 0) return;
+    setBatching(true);
+    try {
+      await api.patch("/vulnerabilities/batch", {
+        vuln_ids: [...selected],
+        status: batchStatus,
+      });
+      setSelected(new Set());
+      fetchVulns();
+    } catch (err) {
+      alert("批次更新失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setBatching(false);
+    }
+  };
+
+  const handleDownloadCsaf = async () => {
+    setDownloadingCsaf(true);
+    try {
+      const resp = await api.get(`/releases/${releaseId}/csaf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `VEX_${releaseId}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDownloadingCsaf(false);
+    }
+  };
+
+  const severityCounts = vulns.reduce((acc, v) => {
+    acc[v.severity] = (acc[v.severity] || 0) + 1;
+    return acc;
+  }, {});
+
+  const SEVERITY_ORDER = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+  const displayedVulns = [...vulns]
+    .filter((v) => (!filterSeverity || v.severity === filterSeverity) && (!filterStatus || v.status === filterStatus))
+    .sort((a, b) => {
+      let av, bv;
+      if (sortField === "cvss_score") { av = a.cvss_score ?? -1; bv = b.cvss_score ?? -1; }
+      else if (sortField === "severity") { av = SEVERITY_ORDER[a.severity] ?? -1; bv = SEVERITY_ORDER[b.severity] ?? -1; }
+      else { av = a.cve_id; bv = b.cve_id; }
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+  return (
+    <div>
+      <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm mb-4 block">
+        ← 返回
+      </button>
+
+      {/* Upload + Download area */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4 flex-wrap">
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-1">上傳 SBOM 檔案</p>
+          <p className="text-xs text-gray-400">支援 CycloneDX JSON、SPDX JSON</p>
+        </div>
+        <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+          {uploading ? "上傳中..." : "選擇檔案"}
+          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+        {uploadResult && (
+          <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
+            {uploadResult.ok
+              ? `完成：${uploadResult.components_found} 個元件，${uploadResult.vulnerabilities_found} 個漏洞`
+              : `失敗：${uploadResult.msg}`}
+          </span>
+        )}
+        {rescanResult && (
+          <span className={`text-sm ${rescanResult.ok ? "text-green-600" : "text-red-500"}`}>
+            {rescanResult.ok
+              ? `重新掃描完成：新增 ${rescanResult.new_vulnerabilities_found} 個漏洞（掃描 ${rescanResult.components_scanned} 個元件）`
+              : `掃描失敗：${rescanResult.msg}`}
+          </span>
+        )}
+        {components.length > 0 && (
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={handleRescan}
+              disabled={rescanning}
+              className={`px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
+            >
+              {rescanning ? "掃描中..." : "重新掃描 CVE"}
+            </button>
+            <button
+              onClick={handleDownloadIec}
+              disabled={downloadingIec}
+              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
+            >
+              {downloadingIec ? "產生中..." : "IEC 62443 報告"}
+            </button>
+            <button
+              onClick={handleDownloadEvidence}
+              disabled={downloadingEvidence}
+              className={`px-4 py-2 rounded text-sm text-white ${downloadingEvidence ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            >
+              {downloadingEvidence ? "打包中..." : "下載證據包 ZIP"}
+            </button>
+            <button
+              onClick={handleDownloadCsaf}
+              disabled={downloadingCsaf}
+              className={`px-4 py-2 rounded text-sm text-white ${downloadingCsaf ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
+            >
+              {downloadingCsaf ? "產生中..." : "匯出 CSAF VEX"}
+            </button>
+            <button
+              onClick={handleDownloadReport}
+              disabled={downloading}
+              className={`px-4 py-2 rounded text-sm text-white ${downloading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+            >
+              {downloading ? "產生中..." : "下載 PDF 報告"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Severity summary */}
+      {vulns.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          {["critical","high","medium","low","info"].map((s) =>
+            severityCounts[s] ? (
+              <span key={s} className={`px-3 py-1 rounded-full text-xs font-medium ${SEVERITY_COLOR[s]}`}>
+                {s} {severityCounts[s]}
+              </span>
+            ) : null
+          )}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-3">
+        {["components", "vulnerabilities"].map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+              tab === t ? "bg-blue-600 text-white" : "bg-white text-gray-600 hover:bg-gray-100"
+            }`}
+          >
+            {t === "components" ? `元件 (${components.length})` : `漏洞 (${vulns.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Components table */}
+      {tab === "components" && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {components.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">尚未上傳 SBOM 檔案</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-left">
+                <tr>
+                  <th className="px-4 py-3">元件名稱</th>
+                  <th className="px-4 py-3">版本</th>
+                  <th className="px-4 py-3">授權</th>
+                  <th className="px-4 py-3">漏洞數</th>
+                  <th className="px-4 py-3">最高風險</th>
+                </tr>
+              </thead>
+              <tbody>
+                {components.map((c) => (
+                  <tr key={c.id} className="border-t hover:bg-gray-50">
+                    <td className="px-4 py-2 font-medium text-gray-800 max-w-xs truncate">{c.name}</td>
+                    <td className="px-4 py-2 text-gray-500">{c.version || "—"}</td>
+                    <td className="px-4 py-2 text-gray-500 text-xs">{c.license || "—"}</td>
+                    <td className="px-4 py-2">{c.vuln_count || "—"}</td>
+                    <td className="px-4 py-2">
+                      {c.highest_severity ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[c.highest_severity]}`}>
+                          {c.highest_severity}
+                        </span>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Vulnerabilities table */}
+      {tab === "vulnerabilities" && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {vulns.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              {components.length === 0 ? "尚未上傳 SBOM 檔案" : "未發現漏洞"}
+            </div>
+          ) : (
+            <>
+              {/* Filter bar */}
+              <div className="flex gap-3 items-center px-4 py-3 border-b bg-gray-50 flex-wrap">
+                <select
+                  value={filterSeverity}
+                  onChange={(e) => setFilterSeverity(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                >
+                  <option value="">全部嚴重度</option>
+                  {["critical","high","medium","low","info"].map((s) => (
+                    <option key={s} value={s}>{s}{severityCounts[s] ? ` (${severityCounts[s]})` : ""}</option>
+                  ))}
+                </select>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                >
+                  <option value="">全部狀態</option>
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                  ))}
+                </select>
+                {(filterSeverity || filterStatus) && (
+                  <button
+                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 underline"
+                  >
+                    清除篩選
+                  </button>
+                )}
+                <span className="ml-auto text-xs text-gray-400">
+                  顯示 {displayedVulns.length} / {vulns.length} 筆
+                </span>
+              </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-500 text-left">
+                <tr>
+                  <th className="px-3 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={displayedVulns.length > 0 && displayedVulns.every((v) => selected.has(v.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelected(new Set(displayedVulns.map((v) => v.id)));
+                        else setSelected(new Set());
+                      }}
+                    />
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("cve_id"); setSortAsc(sortField === "cve_id" ? !sortAsc : true); }}>
+                    CVE ID {sortField === "cve_id" ? (sortAsc ? "↑" : "↓") : ""}
+                  </th>
+                  <th className="px-4 py-3">元件</th>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
+                    CVSS {sortField === "cvss_score" ? (sortAsc ? "↑" : "↓") : ""}
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
+                    嚴重度 {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
+                  </th>
+                  <th className="px-4 py-3">VEX 狀態</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {displayedVulns.map((v) => (
+                  <tr key={v.id} className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""}`}>
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(v.id)}
+                        onChange={(e) => {
+                          const next = new Set(selected);
+                          if (e.target.checked) next.add(v.id);
+                          else next.delete(v.id);
+                          setSelected(next);
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-2 font-mono text-xs text-blue-700">{v.cve_id}</td>
+                    <td className="px-4 py-2 text-gray-700">{v.component_name} {v.component_version}</td>
+                    <td className="px-4 py-2 text-gray-600">{v.cvss_score ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {v.severity && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity]}`}>
+                          {v.severity}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[v.status] || "bg-gray-100 text-gray-600"}`}>
+                        {STATUS_LABEL[v.status] || v.status}
+                      </span>
+                      {v.justification && (
+                        <div className="text-xs text-gray-400 mt-0.5">{v.justification}</div>
+                      )}
+                      {v.detail && (
+                        <div className="text-xs text-gray-400 mt-0.5 italic truncate max-w-xs">{v.detail}</div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <VexEditButton vuln={v} onUpdate={fetchVulns} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </>
+          )}
+        </div>
+      )}
+      {/* Floating batch action bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-5 py-3 flex items-center gap-4 z-40">
+          <span className="text-sm font-medium">已選 {selected.size} 筆</span>
+          <select
+            value={batchStatus}
+            onChange={(e) => setBatchStatus(e.target.value)}
+            className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white focus:outline-none"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleBatchVex}
+            disabled={batching}
+            className={`px-4 py-1.5 rounded text-sm font-medium ${batching ? "bg-gray-500" : "bg-blue-500 hover:bg-blue-400"}`}
+          >
+            {batching ? "更新中..." : "套用"}
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-gray-400 hover:text-white text-sm"
+          >
+            取消
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VexEditButton({ vuln, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="px-2 py-1 text-xs rounded border border-gray-300 text-gray-600 hover:bg-gray-50"
+      >
+        編輯
+      </button>
+      {open && <VexModal vuln={vuln} onClose={() => setOpen(false)} onUpdate={onUpdate} />}
+    </>
+  );
+}
+
+function VexModal({ vuln, onClose, onUpdate }) {
+  const [status, setStatus] = useState(vuln.status);
+  const [justification, setJustification] = useState(vuln.justification || "");
+  const [response, setResponse] = useState(vuln.response || "");
+  const [detail, setDetail] = useState(vuln.detail || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/vulnerabilities/${vuln.id}/status`, {
+        status,
+        justification: status === "not_affected" ? (justification || null) : null,
+        response: status === "affected" ? (response || null) : null,
+        detail: detail || null,
+      });
+      onUpdate();
+      onClose();
+    } catch {
+      alert("更新失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-semibold text-gray-800 mb-1">VEX 狀態更新</h3>
+        <p className="text-xs text-gray-400 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+
+        <div className="space-y-4">
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Justification — only for not_affected */}
+          {status === "not_affected" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Justification <span className="text-gray-400 font-normal">(不受影響的原因)</span>
+              </label>
+              <select
+                value={justification}
+                onChange={(e) => setJustification(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              >
+                <option value="">— 選擇原因 —</option>
+                {JUSTIFICATION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Response — only for affected */}
+          {status === "affected" && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Response <span className="text-gray-400 font-normal">(處置方式)</span>
+              </label>
+              <select
+                value={response}
+                onChange={(e) => setResponse(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              >
+                <option value="">— 選擇處置 —</option>
+                {RESPONSE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Detail — always optional */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              說明 <span className="text-gray-400 font-normal">(自由文字，選填)</span>
+            </label>
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              rows={3}
+              placeholder="補充說明此漏洞的評估結果或處置方式..."
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+          >
+            {saving ? "儲存中..." : "儲存"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
