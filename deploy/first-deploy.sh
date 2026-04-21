@@ -4,7 +4,7 @@
 set -e
 
 KEY="../ssh-key-2026-04-21.key"
-SERVER="ubuntu@161.33.130.101"
+SERVER="opc@161.33.130.101"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no"
 
 chmod 600 "$KEY" 2>/dev/null || true
@@ -29,7 +29,7 @@ echo ""
 echo "=== 請在伺服器上填寫 .env ==="
 echo "  執行: $SSH $SERVER"
 echo "  然後: cp /tmp/.env.production /var/www/sbom/.env && nano /var/www/sbom/.env"
-echo "  修改 SECRET_KEY（隨機字串）和 ADMIN_PASSWORD 後儲存"
+echo "  修改 SECRET_KEY 和 ADMIN_PASSWORD 後儲存"
 echo ""
 read -p "填寫完 .env 後按 Enter 繼續進行首次程式碼部署..."
 

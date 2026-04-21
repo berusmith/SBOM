@@ -4,11 +4,10 @@
 set -e
 
 KEY="../ssh-key-2026-04-21.key"
-SERVER="ubuntu@161.33.130.101"
+SERVER="opc@161.33.130.101"
 REMOTE="/var/www/sbom"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no"
 
-# Windows git bash: 確保 key 權限
 chmod 600 "$KEY" 2>/dev/null || true
 
 echo "=== [1/4] Build 前端（本機執行，不佔伺服器記憶體）==="
