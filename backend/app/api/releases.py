@@ -1,3 +1,4 @@
+import csv
 import hashlib
 import io
 import json
@@ -237,6 +238,47 @@ def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
             })
     result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
     return result
+
+
+@router.get("/{release_id}/vulnerabilities/export")
+def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "CVE ID", "元件名稱", "元件版本",
+        "CVSS 分數", "嚴重度", "EPSS 分數", "EPSS 百分位",
+        "VEX 狀態", "Justification", "Response", "說明",
+    ])
+    for c in components_raw:
+        for v in sorted(c.vulnerabilities, key=lambda x: x.epss_score or x.cvss_score or 0, reverse=True):
+            writer.writerow([
+                v.cve_id,
+                c.name,
+                c.version or "",
+                v.cvss_score if v.cvss_score is not None else "",
+                v.severity or "",
+                f"{v.epss_score:.4f}" if v.epss_score is not None else "",
+                f"{v.epss_percentile:.4f}" if v.epss_percentile is not None else "",
+                v.status,
+                v.justification or "",
+                v.response or "",
+                v.detail or "",
+            ])
+
+    product_name = (product.name if product else "report").replace(" ", "_")
+    filename = f"vulns_{product_name}_{release.version}.csv"
+    return Response(
+        content=buf.getvalue().encode("utf-8-sig"),  # utf-8-sig for Excel compatibility
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/{release_id}/compliance")

@@ -66,6 +66,7 @@ export default function ReleaseDetail() {
   const [rescanning, setRescanning] = useState(false);
   const [rescanResult, setRescanResult] = useState(null);
   const [enriching, setEnriching] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState("cvss_score");
@@ -172,6 +173,23 @@ export default function ReleaseDetail() {
       setRescanResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
       setRescanning(false);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setExportingCsv(true);
+    try {
+      const resp = await api.get(`/releases/${releaseId}/vulnerabilities/export`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vulns_${releaseId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("匯出失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setExportingCsv(false);
     }
   };
 
@@ -289,6 +307,13 @@ export default function ReleaseDetail() {
               className={`px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
             >
               {enriching ? "更新中..." : "更新 EPSS"}
+            </button>
+            <button
+              onClick={handleExportCsv}
+              disabled={exportingCsv}
+              className={`px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
+            >
+              {exportingCsv ? "匯出中..." : "匯出 CSV"}
             </button>
             <button
               onClick={handleDownloadIec}
