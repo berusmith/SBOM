@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
+from app.models import brand_config as _brand_config_model  # noqa: F401
 from app.core.database import Base, engine
 from app.core.deps import get_current_user
 

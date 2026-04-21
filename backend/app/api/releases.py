@@ -18,6 +18,7 @@ from app.models.product import Product
 from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
+from app.models.brand_config import BrandConfig
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
 from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
@@ -420,12 +421,22 @@ def download_report(release_id: str, db: Session = Depends(get_db)):
             })
     all_vulns.sort(key=lambda x: x["cvss_score"] or 0, reverse=True)
 
+    brand_cfg = db.query(BrandConfig).filter(BrandConfig.id == "default").first()
+    brand = {
+        "company_name":  brand_cfg.company_name if brand_cfg else "",
+        "tagline":       brand_cfg.tagline if brand_cfg else "",
+        "primary_color": brand_cfg.primary_color if brand_cfg else "#1e3a8a",
+        "report_footer": brand_cfg.report_footer if brand_cfg else "",
+        "logo_path":     brand_cfg.logo_path if brand_cfg else None,
+    } if brand_cfg else {}
+
     pdf_bytes = pdf_report.generate(
         org_name=org.name if org else "Unknown",
         product_name=product.name if product else "Unknown",
         version=release.version,
         components=components,
         vulns=all_vulns,
+        brand=brand,
     )
 
     filename = f"SBOM_Report_{(product.name if product else 'report').replace(' ', '_')}_{release.version}.pdf"
@@ -590,9 +601,17 @@ def download_evidence_package(release_id: str, db: Session = Depends(get_db)):
                       "component_version": v["component"].split("@")[1] if "@" in v["component"] else "",
                       "cvss_score": v["cvss_score"], "severity": v["severity"], "status": v["vex_status"]}
                      for v in all_vulns]
+    brand_cfg2 = db.query(BrandConfig).filter(BrandConfig.id == "default").first()
+    brand2 = {
+        "company_name":  brand_cfg2.company_name if brand_cfg2 else "",
+        "tagline":       brand_cfg2.tagline if brand_cfg2 else "",
+        "primary_color": brand_cfg2.primary_color if brand_cfg2 else "#1e3a8a",
+        "report_footer": brand_cfg2.report_footer if brand_cfg2 else "",
+        "logo_path":     brand_cfg2.logo_path if brand_cfg2 else None,
+    } if brand_cfg2 else {}
     pdf_bytes = pdf_report.generate(
         org_name=org_name, product_name=product_name, version=release.version,
-        components=components_for_pdf, vulns=vulns_for_pdf,
+        components=components_for_pdf, vulns=vulns_for_pdf, brand=brand2,
     )
 
     # ── 4. Original SBOM file ────────────────────────────────────────────────
