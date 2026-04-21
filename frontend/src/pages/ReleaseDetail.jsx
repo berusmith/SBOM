@@ -333,106 +333,98 @@ export default function ReleaseDetail() {
         )}
       </div>
 
-      {/* Upload + Download area */}
-      <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4 flex-wrap">
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-1">上傳 SBOM 檔案</p>
-          <p className="text-xs text-gray-400">支援 CycloneDX JSON、SPDX JSON</p>
+      {/* Upload + Action area */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4 space-y-3">
+        {/* Row 1: upload + status messages */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div>
+            <p className="text-sm font-medium text-gray-700">上傳 SBOM 檔案</p>
+            <p className="text-xs text-gray-400">支援 CycloneDX JSON、SPDX JSON</p>
+          </div>
+          <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+            {uploading ? "上傳中..." : "選擇檔案"}
+            <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
+          </label>
+          {uploadResult && (
+            <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
+              {uploadResult.ok
+                ? `完成：${uploadResult.components_found} 個元件，${uploadResult.vulnerabilities_found} 個漏洞`
+                : `失敗：${uploadResult.msg}`}
+            </span>
+          )}
+          {nvdMsg && <span className="text-sm text-blue-600">{nvdMsg}</span>}
+          {rescanResult && (
+            <span className={`text-sm ${rescanResult.ok ? "text-green-600" : "text-red-500"}`}>
+              {rescanResult.ok
+                ? `重新掃描完成：新增 ${rescanResult.new_vulnerabilities_found} 個漏洞`
+                : `掃描失敗：${rescanResult.msg}`}
+            </span>
+          )}
         </div>
-        <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
-          {uploading ? "上傳中..." : "選擇檔案"}
-          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
-        </label>
-        {uploadResult && (
-          <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
-            {uploadResult.ok
-              ? `完成：${uploadResult.components_found} 個元件，${uploadResult.vulnerabilities_found} 個漏洞`
-              : `失敗：${uploadResult.msg}`}
-          </span>
-        )}
-        {nvdMsg && (
-          <span className="text-sm text-blue-600">{nvdMsg}</span>
-        )}
-        {rescanResult && (
-          <span className={`text-sm ${rescanResult.ok ? "text-green-600" : "text-red-500"}`}>
-            {rescanResult.ok
-              ? `重新掃描完成：新增 ${rescanResult.new_vulnerabilities_found} 個漏洞（掃描 ${rescanResult.components_scanned} 個元件）`
-              : `掃描失敗：${rescanResult.msg}`}
-          </span>
-        )}
+
+        {/* Row 2: grouped action buttons */}
         {components.length > 0 && (
-          <div className="ml-auto flex gap-2">
-            <button
-              onClick={handleRescan}
-              disabled={rescanning}
-              className={`px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
-            >
-              {rescanning ? "掃描中..." : "重新掃描 CVE"}
-            </button>
-            <button
-              onClick={handleEnrichNvd}
-              disabled={enrichingNvd}
-              className={`px-4 py-2 rounded text-sm text-white ${enrichingNvd ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
-            >
-              {enrichingNvd ? "啟動中..." : "更新 NVD"}
-            </button>
-            <button
-              onClick={handleEnrichEpss}
-              disabled={enriching}
-              className={`px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
-            >
-              {enriching ? "更新中..." : "更新 EPSS"}
-            </button>
-            <button
-              onClick={handleExportCsv}
-              disabled={exportingCsv}
-              className={`px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
-            >
-              {exportingCsv ? "匯出中..." : "匯出 CSV"}
-            </button>
-            <button
-              onClick={handleDownloadIec}
-              disabled={downloadingIec}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
-            >
-              {downloadingIec ? "產生中..." : "IEC 62443 報告"}
-            </button>
-            <button
-              onClick={handleDownloadEvidence}
-              disabled={downloadingEvidence}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingEvidence ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
-            >
-              {downloadingEvidence ? "打包中..." : "下載證據包 ZIP"}
-            </button>
-            <button
-              onClick={handleDownloadCsaf}
-              disabled={downloadingCsaf}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingCsaf ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
-            >
-              {downloadingCsaf ? "產生中..." : "匯出 CSAF VEX"}
-            </button>
-            <button
-              onClick={handleDownloadReport}
-              disabled={downloading}
-              className={`px-4 py-2 rounded text-sm text-white ${downloading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
-            >
-              {downloading ? "產生中..." : "下載 PDF 報告"}
-            </button>
-            {/* Integrity check */}
-            <button
-              onClick={handleCheckIntegrity}
-              disabled={checkingIntegrity}
-              className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-            >
-              {checkingIntegrity ? "驗證中..." : "完整性驗證"}
-            </button>
-            {/* Lock / Unlock */}
-            <button
-              onClick={handleLockToggle}
-              className={`px-4 py-2 rounded text-sm text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
-            >
-              {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
-            </button>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 pt-2 border-t">
+
+            {/* 掃描 group */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium mr-1">掃描</span>
+              <button onClick={handleRescan} disabled={rescanning}
+                className={`px-3 py-1.5 rounded text-xs text-white ${rescanning ? "bg-gray-300" : "bg-orange-500 hover:bg-orange-600"}`}>
+                {rescanning ? "掃描中..." : "重新掃描 CVE"}
+              </button>
+              <button onClick={handleEnrichNvd} disabled={enrichingNvd}
+                className={`px-3 py-1.5 rounded text-xs text-white ${enrichingNvd ? "bg-gray-300" : "bg-cyan-600 hover:bg-cyan-700"}`}>
+                {enrichingNvd ? "更新中..." : "更新 NVD"}
+              </button>
+              <button onClick={handleEnrichEpss} disabled={enriching}
+                className={`px-3 py-1.5 rounded text-xs text-white ${enriching ? "bg-gray-300" : "bg-violet-600 hover:bg-violet-700"}`}>
+                {enriching ? "更新中..." : "更新 EPSS"}
+              </button>
+            </div>
+
+            <div className="border-l border-gray-200" />
+
+            {/* 匯出 group */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium mr-1">匯出</span>
+              <button onClick={handleExportCsv} disabled={exportingCsv}
+                className={`px-3 py-1.5 rounded text-xs text-white ${exportingCsv ? "bg-gray-300" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                {exportingCsv ? "匯出中..." : "CSV"}
+              </button>
+              <button onClick={handleDownloadCsaf} disabled={downloadingCsaf}
+                className={`px-3 py-1.5 rounded text-xs text-white ${downloadingCsaf ? "bg-gray-300" : "bg-purple-600 hover:bg-purple-700"}`}>
+                {downloadingCsaf ? "產生中..." : "CSAF VEX"}
+              </button>
+              <button onClick={handleDownloadReport} disabled={downloading}
+                className={`px-3 py-1.5 rounded text-xs text-white ${downloading ? "bg-gray-300" : "bg-green-600 hover:bg-green-700"}`}>
+                {downloading ? "產生中..." : "PDF 報告"}
+              </button>
+              <button onClick={handleDownloadIec} disabled={downloadingIec}
+                className={`px-3 py-1.5 rounded text-xs text-white ${downloadingIec ? "bg-gray-300" : "bg-teal-600 hover:bg-teal-700"}`}>
+                {downloadingIec ? "產生中..." : "IEC 62443"}
+              </button>
+              <button onClick={handleDownloadEvidence} disabled={downloadingEvidence}
+                className={`px-3 py-1.5 rounded text-xs text-white ${downloadingEvidence ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"}`}>
+                {downloadingEvidence ? "打包中..." : "證據包 ZIP"}
+              </button>
+            </div>
+
+            <div className="border-l border-gray-200" />
+
+            {/* 管理 group */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-400 font-medium mr-1">管理</span>
+              <button onClick={handleCheckIntegrity} disabled={checkingIntegrity}
+                className="px-3 py-1.5 rounded text-xs border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40">
+                {checkingIntegrity ? "驗證中..." : "完整性驗證"}
+              </button>
+              <button onClick={handleLockToggle}
+                className={`px-3 py-1.5 rounded text-xs text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}>
+                {locked ? "🔓 解鎖" : "🔒 鎖定"}
+              </button>
+            </div>
+
           </div>
         )}
       </div>

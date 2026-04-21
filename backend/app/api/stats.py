@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -64,6 +64,54 @@ def get_stats(db: Session = Depends(get_db)):
             "active": active_incidents,
         },
     }
+
+
+@router.get("/top-vulns")
+def get_top_vulns(db: Session = Depends(get_db)):
+    """Return top 10 unresolved critical/high vulnerabilities across all releases."""
+    from app.models.product import Product as ProductModel
+    from app.models.organization import Organization as OrgModel
+
+    rows = (
+        db.query(Vulnerability, Component, Release, ProductModel, OrgModel)
+        .join(Component, Vulnerability.component_id == Component.id)
+        .join(Release, Component.release_id == Release.id)
+        .join(ProductModel, Release.product_id == ProductModel.id)
+        .join(OrgModel, ProductModel.organization_id == OrgModel.id)
+        .filter(
+            Vulnerability.severity.in_(["critical", "high"]),
+            Vulnerability.status.notin_(["fixed", "not_affected"]),
+        )
+        .order_by(
+            case(
+                (Vulnerability.severity == "critical", 0),
+                (Vulnerability.severity == "high", 1),
+                else_=2,
+            ),
+            Vulnerability.cvss_score.desc().nulls_last(),
+        )
+        .limit(10)
+        .all()
+    )
+
+    result = []
+    for vuln, comp, release, product, org in rows:
+        result.append({
+            "vuln_id": vuln.id,
+            "cve_id": vuln.cve_id,
+            "severity": vuln.severity,
+            "cvss_score": vuln.cvss_score,
+            "epss_score": vuln.epss_score,
+            "is_kev": vuln.is_kev,
+            "status": vuln.status,
+            "component_name": comp.name,
+            "component_version": comp.version,
+            "release_id": release.id,
+            "release_version": release.version,
+            "product_name": product.name,
+            "org_name": org.name,
+        })
+    return result
 
 
 @router.get("/risk-overview")

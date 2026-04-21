@@ -8,6 +8,7 @@ const navItems = [
   { path: "/policies",      label: "Policy" },
   { path: "/cra",           label: "🚨 CRA 事件" },
   { path: "/settings",      label: "通知設定" },
+  { path: "/help",          label: "說明" },
 ];
 
 export default function Layout({ children }) {

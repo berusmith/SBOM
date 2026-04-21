@@ -2,6 +2,75 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 
+const SEV_COLOR = {
+  critical: "bg-red-100 text-red-700 border-red-200",
+  high:     "bg-orange-100 text-orange-700 border-orange-200",
+};
+
+function TopVulns() {
+  const [items, setItems] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    api.get("/stats/top-vulns").then((r) => setItems(r.data)).catch(() => setItems([]));
+  }, []);
+
+  if (items === null) return null;
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-4 bg-white rounded-lg shadow p-5">
+      <h2 className="font-semibold text-gray-700 mb-3">
+        需處理的高風險漏洞
+        <span className="ml-2 text-xs font-normal text-gray-400">Critical / High 未修補，前 10 筆</span>
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-gray-400 border-b">
+              <th className="pb-2 pr-4">CVE</th>
+              <th className="pb-2 pr-4">嚴重度</th>
+              <th className="pb-2 pr-4">CVSS</th>
+              <th className="pb-2 pr-4">元件</th>
+              <th className="pb-2 pr-4">產品 / 版本</th>
+              <th className="pb-2 pr-4">客戶</th>
+              <th className="pb-2">狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((v) => (
+              <tr
+                key={v.vuln_id}
+                className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                onClick={() => navigate(`/releases/${v.release_id}`)}
+              >
+                <td className="py-2 pr-4 font-mono text-xs text-blue-700">
+                  {v.cve_id}
+                  {v.is_kev && (
+                    <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold" style={{fontSize:"9px"}}>KEV</span>
+                  )}
+                </td>
+                <td className="py-2 pr-4">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium border ${SEV_COLOR[v.severity] || "bg-gray-100 text-gray-500"}`}>
+                    {v.severity}
+                  </span>
+                </td>
+                <td className="py-2 pr-4 text-gray-600">{v.cvss_score ?? "—"}</td>
+                <td className="py-2 pr-4 text-gray-700">{v.component_name} <span className="text-gray-400">{v.component_version}</span></td>
+                <td className="py-2 pr-4 text-gray-700">{v.product_name} <span className="text-gray-400 text-xs">{v.release_version}</span></td>
+                <td className="py-2 pr-4 text-gray-500">{v.org_name}</td>
+                <td className="py-2">
+                  <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600">{v.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 const CRA_DEADLINE = new Date("2026-09-11T00:00:00Z");
 
 function CRACountdown() {
@@ -184,6 +253,8 @@ export default function Dashboard() {
 
         </div>
       )}
+
+      <TopVulns />
 
       {/* Patch tracking summary */}
       {stats.patch_tracking && (
