@@ -2,9 +2,10 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.models import brand_config as _brand_config_model  # noqa: F401
+from app.models import policy_rule as _policy_rule_model  # noqa: F401
 from app.core.database import Base, engine
 from app.core.deps import get_current_user
 
@@ -55,6 +56,7 @@ app.include_router(stats.router, dependencies=_auth)
 app.include_router(cra.router, dependencies=_auth)
 app.include_router(search.router, dependencies=_auth)
 app.include_router(settings.router, dependencies=_auth)
+app.include_router(policies.router, dependencies=_auth)
 
 
 @app.get("/health")

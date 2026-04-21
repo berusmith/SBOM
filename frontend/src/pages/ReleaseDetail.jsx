@@ -80,6 +80,7 @@ export default function ReleaseDetail() {
   const [selected, setSelected] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
+  const [violations, setViolations] = useState(null);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
@@ -87,10 +88,14 @@ export default function ReleaseDetail() {
   const fetchVulns = () => {
     api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => {});
   };
+  const fetchViolations = () => {
+    api.get(`/policies/releases/${releaseId}/violations`).then((r) => setViolations(r.data)).catch(() => {});
+  };
 
   useEffect(() => {
     fetchComponents();
     fetchVulns();
+    fetchViolations();
   }, [releaseId]);
 
   const handleUpload = async (e) => {
@@ -283,9 +288,24 @@ export default function ReleaseDetail() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm mb-4 block">
-        ← 返回
-      </button>
+      <div className="flex items-center gap-3 mb-4">
+        <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm">
+          ← 返回
+        </button>
+        {violations && violations.total > 0 && (
+          <span
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${
+              violations.violations.some((v) => v.action === "block")
+                ? "bg-red-600 text-white"
+                : "bg-orange-100 text-orange-700"
+            }`}
+            title="點擊查看 Policy 違規詳情"
+            onClick={() => navigate("/policies")}
+          >
+            ⚠ {violations.total} 項 Policy 違規
+          </span>
+        )}
+      </div>
 
       {/* Upload + Download area */}
       <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4 flex-wrap">
