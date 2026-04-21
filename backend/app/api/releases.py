@@ -19,6 +19,7 @@ from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
+from app.services.alerts import notify_new_vulns
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 
@@ -174,6 +175,41 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
     all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
     _enrich_epss(all_vulns, db)
     _enrich_kev(all_vulns, db)
+
+    # Send alerts for new vulns
+    if new_count > 0:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+        # Collect new vuln details for alert
+        new_vuln_details = []
+        for purl, vulns in vuln_results.items():
+            comp = purl_to_comp.get(purl)
+            if not comp:
+                continue
+            existing_cves = {v.cve_id for v in comp.vulnerabilities} - {v["cve_id"] for v in vulns}
+            # re-derive which ones were actually new
+        # Simpler: query newly added vulns (status=open added in this session is tricky, use all_vulns filtered)
+        new_vuln_details = []
+        for purl, scan_vulns in vuln_results.items():
+            comp = purl_to_comp.get(purl)
+            if not comp:
+                continue
+            for v in comp.vulnerabilities:
+                if v.status == "open" and any(sv["cve_id"] == v.cve_id for sv in scan_vulns):
+                    new_vuln_details.append({
+                        "cve_id": v.cve_id,
+                        "severity": v.severity,
+                        "cvss_score": v.cvss_score,
+                        "epss_score": v.epss_score,
+                        "is_kev": bool(v.is_kev),
+                        "component": f"{comp.name}@{comp.version or ''}",
+                    })
+        notify_new_vulns(db, {
+            "org": org.name if org else "",
+            "product": product.name if product else "",
+            "version": release.version,
+            "release_id": release_id,
+        }, new_vuln_details[:new_count])
 
     return {
         "components_scanned": len(comp_list),

@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings
 from app.core.database import Base, engine
 from app.core.deps import get_current_user
 
@@ -43,6 +43,7 @@ app.include_router(vulnerabilities.router, dependencies=_auth)
 app.include_router(stats.router, dependencies=_auth)
 app.include_router(cra.router, dependencies=_auth)
 app.include_router(search.router, dependencies=_auth)
+app.include_router(settings.router, dependencies=_auth)
 
 
 @app.get("/health")

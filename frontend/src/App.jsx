@@ -10,6 +10,7 @@ import CRAIncidents from "./pages/CRAIncidents";
 import CRAIncidentDetail from "./pages/CRAIncidentDetail";
 import Search from "./pages/Search";
 import ReleaseDiff from "./pages/ReleaseDiff";
+import Settings from "./pages/Settings";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -37,6 +38,7 @@ export default function App() {
                   <Route path="/cra/:incidentId" element={<CRAIncidentDetail />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/releases/diff" element={<ReleaseDiff />} />
+                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </Layout>
             </RequireAuth>
