@@ -2,172 +2,174 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Starting the Platform
+## Commands
 
-Backend (port 9100):
+**Backend**
 ```bash
-# Windows
-D:\projects\SBOM\sbom-platform\start_backend.bat
-
-# Or manually
-cd D:\projects\SBOM\sbom-platform\backend
-python -m uvicorn app.main:app --port 9100 --reload
+cd backend
+python -m uvicorn app.main:app --port 9100 --reload   # dev
+python -m uvicorn app.main:app --port 9100            # prod-like
 ```
 
-Frontend (port 3000):
+**Frontend**
 ```bash
-# Windows
-D:\projects\SBOM\sbom-platform\start_frontend.bat
-
-# Or manually
-cd D:\projects\SBOM\sbom-platform\frontend
-npm run dev
+cd frontend
+npm run dev      # dev server (port 3000)
+npm run build    # production build → dist/
+npm run preview  # serve dist/ locally
 ```
 
-Interactive API docs: `http://localhost:9100/docs`
+**Windows shortcuts** (from `sbom-platform/`):
+- `start_backend.bat` — kills any existing port 9100 process, then starts backend
+- `start_frontend.bat` — starts frontend dev server
+
+**Interactive API docs:** `http://localhost:9100/docs`
 
 ## Testing
 
-No pytest test suite exists. Tests are run as ad-hoc Python scripts using `urllib` + `json` (not `requests`, not `grep -P` — both are unavailable in this environment). When writing tests, use only stdlib.
+No pytest suite. Use stdlib-only ad-hoc scripts (`urllib` + `json` — `requests` and `grep -P` are unavailable):
 
 ```bash
+# Health check
 python - <<'EOF'
 import urllib.request, json
-req = urllib.request.urlopen("http://localhost:9100/health")
-print(json.loads(req.read()))
+print(json.loads(urllib.request.urlopen("http://localhost:9100/health").read()))
+EOF
+
+# Authenticated request pattern
+python - <<'EOF'
+import urllib.request, json
+# 1. Get token
+req = urllib.request.Request("http://localhost:9100/api/auth/login",
+    data=json.dumps({"username":"admin","password":"sbom@2024"}).encode(),
+    headers={"Content-Type":"application/json"}, method="POST")
+token = json.loads(urllib.request.urlopen(req).read())["access_token"]
+# 2. Use token
+req2 = urllib.request.Request("http://localhost:9100/api/organizations",
+    headers={"Authorization": f"Bearer {token}"})
+print(json.loads(urllib.request.urlopen(req2).read()))
 EOF
 ```
 
 ## Architecture
 
-### Data Model (cascade delete chain)
+### Data Model
 ```
 Organization → Product → Release → Component → Vulnerability → VexHistory
-                               └── VexStatement (release-level VEX for CSAF export)
+                               └── VexStatement  (release-level, for CSAF export)
                                └── ComplianceMap
 
-CRAIncident   (org-level, independent)
-User          (global)
-PolicyRule    (global)
-BrandConfig   (global singleton)
-AlertConfig   (global singleton)
+CRAIncident   (org-level, no FK to products — incidents span product lines)
+User / PolicyRule / BrandConfig / AlertConfig  (global, not org-scoped)
 ```
-All relationships use `cascade="all, delete-orphan"`. UUID primary keys throughout.
+All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throughout.
 
 ### Backend (`backend/app/`)
 
 **`main.py`**
-- FastAPI app entry point
-- CORS restricted to `ALLOWED_ORIGIN` env var (default `localhost:3000`)
-- Inline SQLite migration block at startup — add new `ALTER TABLE ADD COLUMN` here, not via Alembic
-- Seeds admin user from `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars on first run
-- Serves React SPA from `STATIC_DIR` env var when set (production mode)
+- Inline SQLite migration block runs at every startup — add `ALTER TABLE ADD COLUMN` here for new columns, not Alembic
+- Seeds admin user from env vars if `users` table is empty
+- `STATIC_DIR` env var: when set, mounts React `dist/` at `/` for production single-binary mode
 
-**`api/`** — One router per resource, all require JWT except `/api/auth/login`
+**`api/`** — One router per resource, all require JWT Bearer except `/api/auth/login`
 
 | Router | Prefix | Key endpoints |
 |--------|--------|---------------|
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
-| `organizations.py` | `/api/organizations` | CRUD + GET `/{id}/products` |
-| `products.py` | `/api/products` | CRUD + GET `/{id}/releases`, `/vuln-trend`, `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom`, `/rescan`, `/enrich-epss`, `/enrich-nvd`, GET `/vulnerabilities`, `/report`, `/compliance/iec62443`, `/compliance/iec62443-4-2`, `/compliance/iec62443-3-3`, `/evidence-package`, `/csaf`, `/integrity`, POST `/lock`, `/unlock` |
+| `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
+| `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend`, `/diff` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, GET `/{id}/history` |
-| `cra.py` | `/api/cra` | CRUD incidents + POST `/start-clock`, `/advance`, `/close-not-affected` |
-| `stats.py` | `/api/stats` | GET `/` (dashboard totals), `/risk-overview`, `/top-threats` |
+| `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
+| `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` |
 | `search.py` | `/api/search` | GET `/components?q=` |
-| `settings.py` | `/api/settings` | GET/POST `/brand`, POST `/brand/logo`, GET/POST `/alerts` |
-| `policies.py` | `/api/policies` | CRUD policy rules |
-| `users.py` | `/api/users` | CRUD users (admin only) |
+| `settings.py` | `/api/settings` | GET/POST `/brand` `/alerts`, POST `/brand/logo` |
+| `policies.py` | `/api/policies` | CRUD |
+| `users.py` | `/api/users` | CRUD (admin only) |
 
-Chinese error messages for all user-facing 409/400 errors.
+User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
-**`models/`** — SQLAlchemy ORM models
+**`models/`** — SQLAlchemy ORM
 
-| Model | Table | Notes |
-|-------|-------|-------|
-| `organization.py` | `organizations` | `license_status`: active/trial/expired |
-| `product.py` | `products` | FK → organizations |
-| `release.py` | `releases` | `sbom_hash` (SHA-256), `locked` bool |
-| `component.py` | `components` | `purl` used for CVE scanning |
-| `vulnerability.py` | `vulnerabilities` | VEX fields + EPSS + KEV + NVD enrichment + patch tracking |
-| `vex.py` | `vex_statements` | Release-level VEX for CSAF 2.0 export |
-| `vex_history.py` | `vex_history` | Append-only VEX audit log |
-| `cra_incident.py` | `cra_incidents` | State machine + SLA timestamps + append-only audit_log |
-| `user.py` | `users` | bcrypt hashed password, role: admin/analyst |
-| `policy_rule.py` | `policy_rules` | Custom compliance alert rules |
-| `brand_config.py` | `brand_config` | Singleton: logo, company_name, primary_color, footer_text |
-| `alert_config.py` | `alert_config` | Singleton: webhook_url, email_to, notify flags |
-| `compliance.py` | `compliance_maps` | Release ↔ compliance requirement mapping |
+| File | Table | Key notes |
+|------|-------|-----------|
+| `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` |
+| `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool |
+| `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string |
+| `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
+| `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 
-**`schemas/`** — Pydantic schemas for Organization, Product, Release. Other routers use inline `BaseModel`.
+**`schemas/`** — Pydantic v2 schemas exist only for Organization, Product, Release. All other routers define inline `BaseModel` classes.
 
 **`services/`**
 
-| Service | Description |
-|---------|-------------|
-| `sbom_parser.py` | Parses CycloneDX JSON and SPDX JSON → `[{name, version, purl, license}]` |
-| `vuln_scanner.py` | OSV.dev `/v1/query` per component PURL, deduplicates by `(component_id, cve_id)` |
-| `epss.py` | FIRST.org EPSS API — batch fetch exploitation probability scores |
-| `kev.py` | CISA KEV catalogue — marks vulnerabilities with `is_kev=True` |
-| `nvd.py` | NVD API 2.0 — enriches CVEs with description, CWE, CVSS v3/v4, refs |
-| `alerts.py` | Sends Webhook POST and/or SMTP email on new vulnerability events |
-| `pdf_report.py` | fpdf2 PDF generation. Uses Helvetica (Latin-1 only); use `_s()` to strip non-Latin-1 chars |
-| `iec62443_report.py` | IEC 62443-4-1: 11 SDL requirements (SM-9, DM-1~5, SUM-1~5) assessed against DB data |
-| `iec62443_42_report.py` | IEC 62443-4-2: Component-level CR-1~4 requirements |
-| `iec62443_33_report.py` | IEC 62443-3-3: System-level FR-1~7 requirements |
+| File | Description |
+|------|-------------|
+| `sbom_parser.py` | CycloneDX + SPDX JSON → `[{name, version, purl, license}]` |
+| `vuln_scanner.py` | OSV.dev `/v1/query` per PURL; deduplicates on `(component_id, cve_id)` |
+| `epss.py` | FIRST.org EPSS batch API |
+| `kev.py` | CISA KEV catalogue → sets `is_kev=True` |
+| `nvd.py` | NVD API 2.0 → description, CWE, CVSS v3/v4, refs. Rate-limited: 5 req/30s without key, 50/30s with `NVD_API_KEY` |
+| `pdf_report.py` | fpdf2. **Helvetica only (Latin-1)** — always pass text through `_s()` helper to strip non-Latin-1 chars |
+| `iec62443_report.py` | 4-1 SDL: SM-9, DM-1~5, SUM-1~5 |
+| `iec62443_42_report.py` | 4-2 component: CR-1~4 |
+| `iec62443_33_report.py` | 3-3 system: FR-1~7 |
+| `alerts.py` | Webhook POST + SMTP email on new vulnerability events |
+
+**`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
 
 ### Frontend (`frontend/src/`)
 
-**`api/client.js`** — Axios instance with `baseURL: /api`; Vite proxies `/api` → `http://localhost:9100`
+**`api/client.js`** — Axios instance; `baseURL: /api`; JWT token injected from `localStorage.getItem("token")`. Vite proxies `/api` → `http://localhost:9100`.
 
-**`App.jsx`** — All routes:
+**`App.jsx`** — All routes. Auth guard (`RequireAuth`) redirects to `/login` if no token.
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/` | `Dashboard` | Stats, CRA countdown, severity charts |
-| `/organizations` | `Organizations` | Customer org management |
-| `/organizations/:orgId/products` | `Products` | Product list for an org |
-| `/products/:productId/releases` | `Releases` | Release list with vuln trend chart |
-| `/releases/:releaseId` | `ReleaseDetail` | SBOM upload, scan, VEX, reports |
-| `/releases/diff` | `ReleaseDiff` | Two-version vulnerability diff |
-| `/cra` | `CRAIncidents` | CRA Article 14 incident list |
-| `/cra/:incidentId` | `CRAIncidentDetail` | Incident detail + SLA clock |
-| `/risk-overview` | `RiskOverview` | Cross-org risk ranking |
-| `/policies` | `Policies` | Custom policy rule management |
-| `/settings` | `Settings` | Brand config + notification config |
+| Route | Page | Notes |
+|-------|------|-------|
+| `/` | `Dashboard` | CRA countdown, severity charts, patch stats |
+| `/organizations` | `Organizations` | Entry point for org → product → release drill-down |
+| `/organizations/:orgId/products` | `Products` | |
+| `/products/:productId/releases` | `Releases` | |
+| `/releases/:releaseId` | `ReleaseDetail` | Most complex page: SBOM upload, scan, VEX, all report downloads |
+| `/releases/diff` | `ReleaseDiff` | Query params `?v1=&v2=` |
+| `/cra` / `/cra/:id` | `CRAIncidents` / `CRAIncidentDetail` | |
+| `/risk-overview` | `RiskOverview` | Cross-org Critical/High ranking |
+| `/policies` | `Policies` | |
+| `/settings` | `Settings` | Brand + notifications |
 | `/search` | `Search` | Global component search |
-| `/help` | `Help` | In-app help center (24 articles, full-text search) |
+| `/help` | `Help` | 24-article in-app help center with full-text search |
 
-**`components/Layout.jsx`** — Nav sidebar + top search bar. Active state: `location.pathname.startsWith(item.path)`.
+State is local React hooks only — no Redux/Zustand.
 
 ### CRA Incident State Machine
 ```
-detected → pending_triage → clock_running → t24_submitted → investigating
-                         ↘                → t72_submitted → remediating → final_submitted → closed
-                           close-not-affected → closed
+detected
+  └→ pending_triage
+        ├→ closed            (close-not-affected: confirmed not in scope)
+        └→ clock_running     (start-clock: sets awareness_timestamp = T+0)
+              └→ t24_submitted   (Early Warning filed, T+24h)
+                    └→ investigating
+                          └→ t72_submitted   (Notification filed, T+72h)
+                                └→ remediating
+                                      └→ final_submitted   (Final Report, T+14d after patch)
+                                            └→ closed
 ```
-Clock (T+24h/72h/14d deadlines) starts only at `clock_running` via explicit `start-clock` call, preserving the legal awareness timestamp.
 
-### VEX Fields (on `vulnerabilities` table)
+### VEX Fields
 - `status`: `open` / `in_triage` / `not_affected` / `affected` / `fixed`
-- `justification`: only valid when `status = not_affected` (cleared otherwise). Values: `code_not_present`, `code_not_reachable`, `requires_configuration`, `requires_dependency`, `requires_environment`, `protected_by_compiler`, `protected_at_runtime`, `protected_at_perimeter`, `protected_by_mitigating_control`
-- `response`: only valid when `status = affected` (cleared otherwise). Values: `can_not_fix`, `will_not_fix`, `update`, `rollback`, `workaround_available`
-- `detail`: free-text, always valid
-
-### Schema Migrations
-New columns go in the `main.py` migration block (inline `ALTER TABLE ADD COLUMN IF NOT EXISTS`). No Alembic. Existing migration block covers: `vulnerabilities` (VEX fields, EPSS, KEV, NVD, patch tracking) and `releases` (`sbom_hash`, `locked`).
+- `justification` (only with `not_affected`): `code_not_present` `code_not_reachable` `requires_configuration` `requires_dependency` `requires_environment` `protected_by_compiler` `protected_at_runtime` `protected_at_perimeter` `protected_by_mitigating_control`
+- `response` (only with `affected`): `can_not_fix` `will_not_fix` `update` `rollback` `workaround_available`
+- Setting `status` to anything other than the valid parent clears `justification`/`response` automatically
 
 ### Key Constraints
 - **Port 9100 only** — 8080/8005/8009/8443 conflict with Tomcat on this machine
-- SQLite at `backend/sbom.db`; uploads at `backend/uploads/` — neither tracked by git
 - No Docker in dev environment
-- Platform language: Traditional Chinese (zh-TW)
-- EU CRA Article 14 enforcement deadline: **2026-09-11**
-- `deploy/.env.server` contains real credentials — gitignored, never commit
+- `backend/sbom.db` and `backend/uploads/` are gitignored; `deploy/.env.server` has real credentials — gitignored
+- Schema changes: add `ALTER TABLE ADD COLUMN` to the migration block in `main.py`; SQLite does not support DROP/RENAME COLUMN natively
 
 ## Documentation
-- `docs/api-reference.md` — Full API endpoint reference
-- `docs/db-schema.md` — All 13 tables with field descriptions
-- `docs/user-manual.md` — Consultant SOP (8-step workflow + scenarios)
-- `docs/phase2-spec.md` — Phase 2 feature specs (CSAF import, VEX chain, firmware scan)
-- `deploy/ORACLE_CLOUD_SETUP.md` — Production deployment guide
+- `docs/api-reference.md` — Full API endpoint reference with request/response shapes
+- `docs/db-schema.md` — All 13 tables with field-level descriptions
+- `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
+- `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
+- `deploy/ORACLE_CLOUD_SETUP.md` — Production deployment (Oracle Cloud, nginx, systemd)
