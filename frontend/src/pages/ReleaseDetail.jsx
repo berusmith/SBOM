@@ -65,10 +65,12 @@ export default function ReleaseDetail() {
   const [loading, setLoading] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanResult, setRescanResult] = useState(null);
+  const [enriching, setEnriching] = useState(false);
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [sortField, setSortField] = useState("cvss_score");
   const [sortAsc, setSortAsc] = useState(false);
+  const [filterEpss, setFilterEpss] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
@@ -173,6 +175,18 @@ export default function ReleaseDetail() {
     }
   };
 
+  const handleEnrichEpss = async () => {
+    setEnriching(true);
+    try {
+      await api.post(`/releases/${releaseId}/enrich-epss`);
+      fetchVulns();
+    } catch (err) {
+      alert("EPSS 更新失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setEnriching(false);
+    }
+  };
+
   const handleBatchVex = async () => {
     if (selected.size === 0) return;
     setBatching(true);
@@ -214,11 +228,16 @@ export default function ReleaseDetail() {
 
   const SEVERITY_ORDER = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
   const displayedVulns = [...vulns]
-    .filter((v) => (!filterSeverity || v.severity === filterSeverity) && (!filterStatus || v.status === filterStatus))
+    .filter((v) =>
+      (!filterSeverity || v.severity === filterSeverity) &&
+      (!filterStatus || v.status === filterStatus) &&
+      (!filterEpss || (v.epss_score != null && v.epss_score >= 0.1))
+    )
     .sort((a, b) => {
       let av, bv;
       if (sortField === "cvss_score") { av = a.cvss_score ?? -1; bv = b.cvss_score ?? -1; }
       else if (sortField === "severity") { av = SEVERITY_ORDER[a.severity] ?? -1; bv = SEVERITY_ORDER[b.severity] ?? -1; }
+      else if (sortField === "epss_score") { av = a.epss_score ?? -1; bv = b.epss_score ?? -1; }
       else { av = a.cve_id; bv = b.cve_id; }
       if (av < bv) return sortAsc ? -1 : 1;
       if (av > bv) return sortAsc ? 1 : -1;
@@ -263,6 +282,13 @@ export default function ReleaseDetail() {
               className={`px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
             >
               {rescanning ? "掃描中..." : "重新掃描 CVE"}
+            </button>
+            <button
+              onClick={handleEnrichEpss}
+              disabled={enriching}
+              className={`px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
+            >
+              {enriching ? "更新中..." : "更新 EPSS"}
             </button>
             <button
               onClick={handleDownloadIec}
@@ -393,9 +419,17 @@ export default function ReleaseDetail() {
                     <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                   ))}
                 </select>
-                {(filterSeverity || filterStatus) && (
+                <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={filterEpss}
+                    onChange={(e) => setFilterEpss(e.target.checked)}
+                  />
+                  僅顯示高 EPSS (&gt;10%)
+                </label>
+                {(filterSeverity || filterStatus || filterEpss) && (
                   <button
-                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); }}
+                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); }}
                     className="text-xs text-gray-400 hover:text-gray-600 underline"
                   >
                     清除篩選
@@ -428,6 +462,9 @@ export default function ReleaseDetail() {
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
                     嚴重度 {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
+                    EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
+                  </th>
                   <th className="px-4 py-3">VEX 狀態</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -456,6 +493,17 @@ export default function ReleaseDetail() {
                           {v.severity}
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-2 text-xs">
+                      {v.epss_score != null ? (
+                        <span className={`px-2 py-0.5 rounded font-medium ${
+                          v.epss_score >= 0.5 ? "bg-red-100 text-red-700" :
+                          v.epss_score >= 0.1 ? "bg-orange-100 text-orange-700" :
+                          "bg-gray-100 text-gray-500"
+                        }`}>
+                          {(v.epss_score * 100).toFixed(1)}%
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[v.status] || "bg-gray-100 text-gray-600"}`}>

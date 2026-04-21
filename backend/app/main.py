@@ -12,9 +12,11 @@ Base.metadata.create_all(bind=engine)
 with engine.connect() as conn:
     vuln_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(vulnerabilities)"))}
     for col, typedef in [
-        ("justification", "TEXT"),
-        ("response",      "TEXT"),
-        ("detail",        "TEXT"),
+        ("justification",   "TEXT"),
+        ("response",        "TEXT"),
+        ("detail",          "TEXT"),
+        ("epss_score",      "REAL"),
+        ("epss_percentile", "REAL"),
     ]:
         if col not in vuln_cols:
             conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))

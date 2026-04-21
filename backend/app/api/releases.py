@@ -18,11 +18,25 @@ from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
+from app.services.epss import fetch_epss
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
+
+
+def _enrich_epss(vulns: list, db) -> None:
+    """Fetch EPSS scores and update vuln records in-place."""
+    cve_ids = list({v.cve_id for v in vulns if v.cve_id})
+    if not cve_ids:
+        return
+    scores = fetch_epss(cve_ids)
+    for v in vulns:
+        if v.cve_id in scores:
+            v.epss_score = scores[v.cve_id]["epss"]
+            v.epss_percentile = scores[v.cve_id]["percentile"]
+    db.commit()
 
 
 @router.post("/{release_id}/sbom")
@@ -92,6 +106,10 @@ def upload_sbom(
             vuln_count += 1
     db.commit()
 
+    # Enrich newly added vulns with EPSS scores
+    all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+    _enrich_epss(all_vulns, db)
+
     return {
         "components_found": len(parsed),
         "vulnerabilities_found": vuln_count,
@@ -138,10 +156,28 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
             new_count += 1
 
     db.commit()
+
+    # Refresh EPSS scores for ALL vulns in this release (scores change daily)
+    all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+    _enrich_epss(all_vulns, db)
+
     return {
         "components_scanned": len(comp_list),
         "new_vulnerabilities_found": new_count,
     }
+
+
+@router.post("/{release_id}/enrich-epss")
+def enrich_epss(release_id: str, db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+    if not vulns:
+        raise HTTPException(status_code=400, detail="此版本尚無漏洞資料")
+    _enrich_epss(vulns, db)
+    updated = sum(1 for v in vulns if v.epss_score is not None)
+    return {"total_vulnerabilities": len(vulns), "epss_updated": updated}
 
 
 @router.delete("/{release_id}", status_code=204)
@@ -196,8 +232,10 @@ def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 "justification": v.justification,
                 "response": v.response,
                 "detail": v.detail,
+                "epss_score": v.epss_score,
+                "epss_percentile": v.epss_percentile,
             })
-    result.sort(key=lambda x: x["cvss_score"] or 0, reverse=True)
+    result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
     return result
 
 
