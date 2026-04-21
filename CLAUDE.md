@@ -96,6 +96,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool |
 | `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
+| `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 
 **`schemas/`** — Pydantic v2 schemas exist only for Organization, Product, Release. All other routers define inline `BaseModel` classes.
@@ -167,6 +168,7 @@ detected
 - No Docker in dev environment
 - `backend/sbom.db` and `backend/uploads/` are gitignored; `deploy/.env.server` has real credentials — gitignored
 - Schema changes: add `ALTER TABLE ADD COLUMN` to the migration block in `main.py`; SQLite does not support DROP/RENAME COLUMN natively
+- SQLite runs in **WAL mode** (`PRAGMA journal_mode=WAL` in `core/database.py`) — `sbom.db-shm` and `sbom.db-wal` are normal side-files, gitignored
 
 ### Production Server
 - **IP**: `161.33.130.101` — Oracle Linux 9.7, 1GB RAM, user `opc`
