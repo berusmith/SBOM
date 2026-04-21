@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -63,3 +64,88 @@ def get_stats(db: Session = Depends(get_db)):
             "active": active_incidents,
         },
     }
+
+
+@router.get("/risk-overview")
+def get_risk_overview(db: Session = Depends(get_db)):
+    orgs = db.query(Organization).all()
+    result = []
+
+    for org in orgs:
+        products = db.query(Product).filter(Product.organization_id == org.id).all()
+        product_ids = [p.id for p in products]
+        if not product_ids:
+            result.append({
+                "org_id": org.id,
+                "org_name": org.name,
+                "products": 0,
+                "releases": 0,
+                "total_vulns": 0,
+                "critical": 0,
+                "high": 0,
+                "unpatched_critical": 0,
+                "unpatched_high": 0,
+                "patch_rate": 0.0,
+                "active_incidents": 0,
+                "risk_score": 0,
+            })
+            continue
+
+        release_rows = db.query(Release).filter(Release.product_id.in_(product_ids)).all()
+        release_ids = [r.id for r in release_rows]
+
+        if not release_ids:
+            result.append({
+                "org_id": org.id,
+                "org_name": org.name,
+                "products": len(products),
+                "releases": 0,
+                "total_vulns": 0,
+                "critical": 0,
+                "high": 0,
+                "unpatched_critical": 0,
+                "unpatched_high": 0,
+                "patch_rate": 0.0,
+                "active_incidents": 0,
+                "risk_score": 0,
+            })
+            continue
+
+        component_ids_q = db.query(Component.id).filter(Component.release_id.in_(release_ids)).subquery()
+        vulns = db.query(
+            Vulnerability.severity, Vulnerability.status
+        ).filter(Vulnerability.component_id.in_(component_ids_q)).all()
+
+        total = len(vulns)
+        critical = sum(1 for v in vulns if v.severity == "critical")
+        high = sum(1 for v in vulns if v.severity == "high")
+        fixed = sum(1 for v in vulns if v.status == "fixed")
+        unpatched_critical = sum(1 for v in vulns if v.severity == "critical" and v.status not in ("fixed", "not_affected"))
+        unpatched_high = sum(1 for v in vulns if v.severity == "high" and v.status not in ("fixed", "not_affected"))
+        patch_rate = round(fixed / total * 100, 1) if total else 0.0
+
+        active_incidents = db.query(CRAIncident).filter(
+            CRAIncident.organization_id == org.id,
+            CRAIncident.status != "closed"
+        ).count()
+
+        # Risk score: weighted sum (higher = worse)
+        risk_score = unpatched_critical * 10 + unpatched_high * 3 + active_incidents * 5
+
+        result.append({
+            "org_id": org.id,
+            "org_name": org.name,
+            "products": len(products),
+            "releases": len(release_rows),
+            "total_vulns": total,
+            "critical": critical,
+            "high": high,
+            "unpatched_critical": unpatched_critical,
+            "unpatched_high": unpatched_high,
+            "patch_rate": patch_rate,
+            "active_incidents": active_incidents,
+            "risk_score": risk_score,
+        })
+
+    result.sort(key=lambda x: x["risk_score"], reverse=True)
+    return result

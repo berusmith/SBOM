@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 const navItems = [
   { path: "/",              label: "儀表板" },
   { path: "/organizations", label: "客戶管理" },
+  { path: "/risk-overview", label: "風險總覽" },
   { path: "/cra",           label: "🚨 CRA 事件" },
   { path: "/settings",      label: "通知設定" },
 ];
