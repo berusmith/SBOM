@@ -22,15 +22,16 @@ function TopVulns() {
         <span className="ml-2 text-xs font-normal text-gray-400">Critical / High 未修補，前 10 筆</span>
       </h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <p className="sm:hidden text-xs text-gray-400 pb-1">← 左右滑動查看全部</p>
+        <table className="w-full text-sm min-w-[560px]">
           <thead>
             <tr className="text-left text-xs text-gray-400 border-b">
               <th className="pb-2 pr-4">CVE</th>
               <th className="pb-2 pr-4">嚴重度</th>
-              <th className="pb-2 pr-4">CVSS</th>
+              <th className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
               <th className="pb-2 pr-4">元件</th>
-              <th className="pb-2 pr-4">產品 / 版本</th>
-              <th className="pb-2 pr-4">客戶</th>
+              <th className="pb-2 pr-4 hidden sm:table-cell">產品 / 版本</th>
+              <th className="pb-2 pr-4 hidden lg:table-cell">客戶</th>
               <th className="pb-2">狀態</th>
             </tr>
           </thead>
@@ -41,22 +42,22 @@ function TopVulns() {
                 className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
                 onClick={() => navigate(`/releases/${v.release_id}`)}
               >
-                <td className="py-2 pr-4 font-mono text-xs text-blue-700">
+                <td className="py-3 pr-4 font-mono text-xs text-blue-700">
                   {v.cve_id}
                   {v.is_kev && (
                     <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold" style={{fontSize:"9px"}}>KEV</span>
                   )}
                 </td>
-                <td className="py-2 pr-4">
+                <td className="py-3 pr-4">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity] || DEFAULT_BADGE}`}>
                     {v.severity}
                   </span>
                 </td>
-                <td className="py-2 pr-4 text-gray-600">{v.cvss_score ?? "—"}</td>
-                <td className="py-2 pr-4 text-gray-700">{v.component_name} <span className="text-gray-400">{v.component_version}</span></td>
-                <td className="py-2 pr-4 text-gray-700">{v.product_name} <span className="text-gray-400 text-xs">{v.release_version}</span></td>
-                <td className="py-2 pr-4 text-gray-500">{v.org_name}</td>
-                <td className="py-2">
+                <td className="py-3 pr-4 text-gray-600 hidden md:table-cell">{v.cvss_score ?? "—"}</td>
+                <td className="py-3 pr-4 text-gray-700">{v.component_name} <span className="text-gray-400">{v.component_version}</span></td>
+                <td className="py-3 pr-4 text-gray-700 hidden sm:table-cell">{v.product_name} <span className="text-gray-400 text-xs">{v.release_version}</span></td>
+                <td className="py-3 pr-4 text-gray-500 hidden lg:table-cell">{v.org_name}</td>
+                <td className="py-3">
                   <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600">{v.status}</span>
                 </td>
               </tr>
@@ -399,17 +400,17 @@ export default function Dashboard() {
                     const sevColor = { critical: "text-red-600 bg-red-50", high: "text-orange-600 bg-orange-50", medium: "text-yellow-600 bg-yellow-50", low: "text-blue-600 bg-blue-50" }[v.severity] || "text-gray-500 bg-gray-50";
                     return (
                       <tr key={v.cve_id} className="hover:bg-gray-50">
-                        <td className="py-2 pr-4 font-mono text-xs text-gray-700">{v.cve_id}</td>
-                        <td className="py-2 pr-4">
+                        <td className="py-3 pr-4 font-mono text-xs text-gray-700">{v.cve_id}</td>
+                        <td className="py-3 pr-4">
                           <span className={`font-semibold ${parseFloat(v.epss_score) >= 0.5 ? "text-red-600" : "text-orange-500"}`}>
                             {(v.epss_score * 100).toFixed(1)}%
                           </span>
                         </td>
-                        <td className="py-2 pr-4">
+                        <td className="py-3 pr-4">
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${sevColor}`}>{v.severity}</span>
                         </td>
-                        <td className="py-2 pr-4 text-gray-600 max-w-[160px] truncate">{v.component}</td>
-                        <td className="py-2">
+                        <td className="py-3 pr-4 text-gray-600 max-w-[160px] truncate">{v.component}</td>
+                        <td className="py-3">
                           {v.is_kev && <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">KEV</span>}
                         </td>
                       </tr>
@@ -446,7 +447,7 @@ export default function Dashboard() {
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => navigate(`/search?q=${encodeURIComponent(c.name)}`)}
                   >
-                    <td className="py-2.5 pr-4">
+                    <td className="py-3 pr-4">
                       <span className="font-medium text-gray-800">{c.name}</span>
                       {c.version && <span className="ml-1.5 text-xs text-gray-400">{c.version}</span>}
                     </td>

@@ -693,11 +693,11 @@ export default function ReleaseDetail() {
               <tbody>
                 {components.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
-                    <td className="px-4 py-2 text-gray-500">{c.version || "—"}</td>
-                    <td className="px-4 py-2 text-gray-500 text-xs">{c.license || "—"}</td>
-                    <td className="px-4 py-2">{c.vuln_count || "—"}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
+                    <td className="px-4 py-3 text-gray-500">{c.version || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{c.license || "—"}</td>
+                    <td className="px-4 py-3">{c.vuln_count || "—"}</td>
+                    <td className="px-4 py-3">
                       {c.highest_severity ? (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[c.highest_severity]}`}>
                           {c.highest_severity}
@@ -770,7 +770,8 @@ export default function ReleaseDetail() {
                   顯示 {displayedVulns.length} / {vulns.length} 筆
                 </span>
               </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto relative">
+              <p className="sm:hidden text-xs text-gray-400 px-3 pb-1">← 左右滑動查看全部</p>
             <table className="w-full text-sm min-w-[700px]">
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
@@ -806,7 +807,7 @@ export default function ReleaseDetail() {
                 {displayedVulns.map((v) => (
                   <React.Fragment key={v.id}>
                   <tr className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""} ${v.suppressed ? "opacity-50" : ""}`}>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-3">
                       <input
                         type="checkbox"
                         checked={selected.has(v.id)}
@@ -818,7 +819,7 @@ export default function ReleaseDetail() {
                         }}
                       />
                     </td>
-                    <td className="px-4 py-2 font-mono text-xs">
+                    <td className="px-4 py-3 font-mono text-xs">
                       <button
                         onClick={() => {
                           const next = expandedVuln === v.id ? null : v.id;
@@ -837,8 +838,8 @@ export default function ReleaseDetail() {
                         <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide" style={{fontSize:"10px"}}>KEV</span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-gray-700">{v.component_name} {v.component_version}</td>
-                    <td className="px-4 py-2 text-xs hidden md:table-cell">
+                    <td className="px-4 py-3 text-gray-700">{v.component_name} {v.component_version}</td>
+                    <td className="px-4 py-3 text-xs hidden md:table-cell">
                       {v.cvss_v4_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v4_score}</span>
@@ -853,14 +854,14 @@ export default function ReleaseDetail() {
                         <span className="text-gray-600">{v.cvss_score ?? "—"}</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
                       {v.severity && (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity]}`}>
                           {v.severity}
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-xs hidden sm:table-cell">
+                    <td className="px-4 py-3 text-xs hidden sm:table-cell">
                       {v.epss_score != null ? (
                         <span className={`px-2 py-0.5 rounded font-medium ${
                           v.epss_score >= 0.5 ? "bg-red-100 text-red-700" :
@@ -871,7 +872,7 @@ export default function ReleaseDetail() {
                         </span>
                       ) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-2 hidden lg:table-cell">
+                    <td className="px-4 py-3 hidden lg:table-cell">
                       {v.sla_status === "overdue" ? (
                         <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
                           逾 {Math.abs(v.sla_days)} 天
@@ -886,7 +887,7 @@ export default function ReleaseDetail() {
                         <span className="text-gray-200">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${VEX_STATUS_COLOR[v.status] || DEFAULT_BADGE}`}>
                         {STATUS_LABEL[v.status] || v.status}
                       </span>
@@ -897,7 +898,7 @@ export default function ReleaseDetail() {
                         <div className="text-xs text-gray-400 mt-0.5 italic truncate max-w-xs">{v.detail}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex gap-1">
                         {!v.suppressed && <VexEditButton vuln={v} onUpdate={fetchVulns} />}
                         <SuppressButton vuln={v} onUpdate={fetchVulns} />
