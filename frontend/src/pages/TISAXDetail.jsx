@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { TISAX_COMPLIANCE_STATUS, DEFAULT_BADGE } from "../constants/colors";
 
-const STATUS_CONFIG = {
-  compliant:  { label: "達標",  cls: "bg-green-100 text-green-700" },
-  near:       { label: "接近",  cls: "bg-yellow-100 text-yellow-700" },
-  gap:        { label: "缺口",  cls: "bg-red-100 text-red-700" },
-  unassessed: { label: "未評",  cls: "bg-gray-100 text-gray-500" },
-};
+const STATUS_CONFIG = TISAX_COMPLIANCE_STATUS;
 
 const MATURITY_LABELS = {
   0: "0 — 未執行",

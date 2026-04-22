@@ -1,18 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
-
-const STATUS_COLOR = {
-  detected:        "bg-gray-100 text-gray-600",
-  pending_triage:  "bg-yellow-100 text-yellow-700",
-  clock_running:   "bg-red-100 text-red-700",
-  t24_submitted:   "bg-orange-100 text-orange-700",
-  investigating:   "bg-orange-100 text-orange-700",
-  t72_submitted:   "bg-blue-100 text-blue-700",
-  remediating:     "bg-purple-100 text-purple-700",
-  final_submitted: "bg-teal-100 text-teal-700",
-  closed:          "bg-green-100 text-green-700",
-};
+import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -106,7 +95,7 @@ export default function CRAIncidents() {
                     {inc.trigger_cve_ids || "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[inc.status] || "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${CRA_STATUS_COLOR[inc.status] || DEFAULT_BADGE}`}>
                       {inc.status_label}
                     </span>
                   </td>

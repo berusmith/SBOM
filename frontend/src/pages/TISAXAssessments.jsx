@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護" };
-const LEVEL_COLORS  = { AL1: "bg-gray-100 text-gray-600", AL2: "bg-blue-100 text-blue-700", AL3: "bg-purple-100 text-purple-700" };
 
 function MaturityBar({ value, max = 5 }) {
   const pct = (value / max) * 100;
@@ -138,7 +138,7 @@ export default function TISAXAssessments() {
                       {MODULE_LABELS[a.module] || a.module}
                     </span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[a.assessment_level]}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${TISAX_LEVEL_COLOR[a.assessment_level] || DEFAULT_BADGE}`}>
                         {a.assessment_level}
                       </span>
                       <span className="text-xs text-gray-400">{total} 項控制項</span>

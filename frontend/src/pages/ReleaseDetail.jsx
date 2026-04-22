@@ -1,14 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
-
-const SEVERITY_COLOR = {
-  critical: "bg-red-100 text-red-700",
-  high:     "bg-orange-100 text-orange-700",
-  medium:   "bg-yellow-100 text-yellow-700",
-  low:      "bg-blue-100 text-blue-700",
-  info:     "bg-gray-100 text-gray-500",
-};
+import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
@@ -20,13 +13,6 @@ const STATUS_LABEL = {
   fixed: "Fixed",
 };
 
-const STATUS_COLOR = {
-  open:         "bg-red-100 text-red-700",
-  in_triage:    "bg-yellow-100 text-yellow-700",
-  not_affected: "bg-green-100 text-green-700",
-  affected:     "bg-orange-100 text-orange-700",
-  fixed:        "bg-blue-100 text-blue-700",
-};
 
 const JUSTIFICATION_OPTIONS = [
   { value: "code_not_present",               label: "程式碼不存在 (code_not_present)" },
@@ -885,7 +871,7 @@ export default function ReleaseDetail() {
                       )}
                     </td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[v.status] || "bg-gray-100 text-gray-600"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${VEX_STATUS_COLOR[v.status] || DEFAULT_BADGE}`}>
                         {STATUS_LABEL[v.status] || v.status}
                       </span>
                       {v.justification && (

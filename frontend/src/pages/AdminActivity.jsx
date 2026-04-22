@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
+import { AUDIT_EVENT_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 const EVENT_LABELS = {
   login_ok:        "登入成功",
@@ -21,25 +22,6 @@ const EVENT_LABELS = {
   cra_closed:      "CRA 事件關閉",
 };
 
-const EVENT_COLORS = {
-  login_ok:        "bg-green-100 text-green-700",
-  login_fail:      "bg-red-100 text-red-700",
-  sbom_upload:     "bg-blue-100 text-blue-700",
-  vuln_scan:       "bg-purple-100 text-purple-700",
-  report_download: "bg-yellow-100 text-yellow-700",
-  user_created:    "bg-teal-100 text-teal-700",
-  user_updated:    "bg-gray-100 text-gray-700",
-  user_deleted:    "bg-red-100 text-red-700",
-  vex_update:      "bg-indigo-100 text-indigo-700",
-  lock:            "bg-gray-200 text-gray-700",
-  unlock:          "bg-gray-100 text-gray-500",
-  policy_created:  "bg-orange-100 text-orange-700",
-  policy_updated:  "bg-orange-100 text-orange-600",
-  policy_deleted:  "bg-red-100 text-red-600",
-  cra_created:     "bg-pink-100 text-pink-700",
-  cra_advanced:    "bg-pink-100 text-pink-600",
-  cra_closed:      "bg-green-100 text-green-600",
-};
 
 function fmtDate(iso) {
   if (!iso) return "-";
@@ -231,7 +213,7 @@ export default function AdminActivity() {
                   <td className="px-4 py-2 text-gray-700 font-medium">{e.username}</td>
                   <td className="px-4 py-2 text-gray-500 hidden sm:table-cell">{e.org_name || "—"}</td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${EVENT_COLORS[e.event_type] || "bg-gray-100 text-gray-600"}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${AUDIT_EVENT_COLOR[e.event_type] || DEFAULT_BADGE}`}>
                       {EVENT_LABELS[e.event_type] || e.event_type}
                     </span>
                   </td>

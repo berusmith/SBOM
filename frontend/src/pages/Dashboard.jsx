@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
-
-const SEV_COLOR = {
-  critical: "bg-red-100 text-red-700 border-red-200",
-  high:     "bg-orange-100 text-orange-700 border-orange-200",
-};
+import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 function TopVulns() {
   const [items, setItems] = useState(null);
@@ -51,7 +47,7 @@ function TopVulns() {
                   )}
                 </td>
                 <td className="py-2 pr-4">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium border ${SEV_COLOR[v.severity] || "bg-gray-100 text-gray-500"}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity] || DEFAULT_BADGE}`}>
                     {v.severity}
                   </span>
                 </td>

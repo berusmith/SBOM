@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import api from "../api/client";
-
-const SEVERITY_COLOR = {
-  critical: "bg-red-100 text-red-700",
-  high:     "bg-orange-100 text-orange-700",
-  medium:   "bg-yellow-100 text-yellow-700",
-  low:      "bg-blue-100 text-blue-700",
-  info:     "bg-gray-100 text-gray-500",
-};
+import { SEVERITY_COLOR } from "../constants/colors";
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();

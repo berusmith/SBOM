@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
+import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 
 const SEVERITY_OPTIONS = [
   { value: "any",      label: "任何嚴重度" },
@@ -9,13 +10,6 @@ const SEVERITY_OPTIONS = [
   { value: "low",      label: "Low" },
 ];
 
-const SEV_COLOR = {
-  critical: "text-red-600 bg-red-50",
-  high:     "text-orange-600 bg-orange-50",
-  medium:   "text-yellow-700 bg-yellow-50",
-  low:      "text-blue-600 bg-blue-50",
-  any:      "text-gray-600 bg-gray-100",
-};
 
 const DEFAULT_FORM = {
   name: "", description: "", severity: "any", require_kev: false,
@@ -204,7 +198,7 @@ export default function Policies() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-800">{rule.name}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEV_COLOR[rule.severity]}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLOR[rule.severity] || DEFAULT_BADGE}`}>
                       {SEVERITY_OPTIONS.find((o) => o.value === rule.severity)?.label}
                     </span>
                     {rule.require_kev && (
