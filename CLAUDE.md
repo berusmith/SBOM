@@ -60,6 +60,7 @@ Organization → Product → Release → Component → Vulnerability → VexHist
 
 CRAIncident   (org-level, no FK to products — incidents span product lines)
 User / PolicyRule / BrandConfig / AlertConfig  (global, not org-scoped)
+AuditEvent    (global, append-only)
 ```
 All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throughout.
 
@@ -76,15 +77,16 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 |--------|--------|---------------|
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
 | `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
-| `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend`, `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` |
-| `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, GET `/{id}/history` |
+| `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` |
+| `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
-| `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` |
+| `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` |
 | `search.py` | `/api/search` | GET `/components?q=` |
 | `settings.py` | `/api/settings` | GET/POST `/brand` `/alerts`, POST `/brand/logo` |
 | `policies.py` | `/api/policies` | CRUD |
 | `users.py` | `/api/users` | CRUD (admin only) |
+| `admin.py` | `/api/admin` | GET `/activity?date_from=&date_to=` |
 
 User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
@@ -92,11 +94,11 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 | File | Table | Key notes |
 |------|-------|-----------|
-| `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` |
+| `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` + `suppressed`/`suppressed_until`/`suppressed_reason` |
 | `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool |
 | `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
-| `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password |
+| `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password; `organization_id` nullable FK for org-scoped viewers |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 
 **`schemas/`** — Pydantic v2 schemas exist only for Organization, Product, Release. All other routers define inline `BaseModel` classes.
@@ -105,7 +107,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 | File | Description |
 |------|-------------|
-| `sbom_parser.py` | CycloneDX + SPDX JSON → `[{name, version, purl, license}]` |
+| `sbom_parser.py` | CycloneDX + SPDX JSON → `[{name, version, purl, license}]`; also extracts `dependencies[]` / `relationships[]` for dependency graph |
 | `vuln_scanner.py` | OSV.dev `/v1/query` per PURL; deduplicates on `(component_id, cve_id)` |
 | `epss.py` | FIRST.org EPSS batch API |
 | `kev.py` | CISA KEV catalogue → sets `is_kev=True` |
@@ -120,6 +122,12 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 **Python 3.9 compatibility** — The server runs Python 3.9. Use `from __future__ import annotations` at the top of any file that uses `X | Y` union syntax or `list[X]` / `dict[K,V]` in type hints outside of string literals.
 
+### Key helpers in `releases.py`
+
+- `_SLA_DAYS` — dict mapping severity → SLA days (`critical: 7, high: 30, medium: 90, low: 180`)
+- `_sla_info(vuln)` — returns `{sla_days, sla_status}` (`overdue` / `warning` / `ok` / `na`); calls `_is_suppressed()` first and returns `na` for suppressed vulns
+- `_is_suppressed(vuln)` — checks `vuln.suppressed` and `vuln.suppressed_until` against current UTC time; no cron needed, evaluated on every request
+
 ### Frontend (`frontend/src/`)
 
 **`api/client.js`** — Axios instance; `baseURL: /api`; JWT token injected from `localStorage.getItem("token")`. Vite proxies `/api` → `http://localhost:9100`.
@@ -128,11 +136,11 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 | Route | Page | Notes |
 |-------|------|-------|
-| `/` | `Dashboard` | CRA countdown, severity charts, patch stats |
+| `/` | `Dashboard` | CRA countdown, severity charts, SLA-overdue card, top-risky-components table, patch stats |
 | `/organizations` | `Organizations` | Entry point for org → product → release drill-down |
-| `/organizations/:orgId/products` | `Products` | |
+| `/organizations/:orgId/products` | `Products` | Trend chart with Medium line + hover tooltip |
 | `/products/:productId/releases` | `Releases` | |
-| `/releases/:releaseId` | `ReleaseDetail` | Most complex page: SBOM upload, scan, VEX, all report downloads |
+| `/releases/:releaseId` | `ReleaseDetail` | Most complex page — see below |
 | `/releases/diff` | `ReleaseDiff` | Query params `?v1=&v2=` |
 | `/cra` / `/cra/:id` | `CRAIncidents` / `CRAIncidentDetail` | |
 | `/risk-overview` | `RiskOverview` | Cross-org Critical/High ranking |
@@ -140,8 +148,18 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `/settings` | `Settings` | Brand + notifications |
 | `/search` | `Search` | Global component search |
 | `/help` | `Help` | 24-article in-app help center with full-text search |
+| `/admin/activity` | `AdminActivity` | Audit log with date-range filter + CSV export |
 
 State is local React hooks only — no Redux/Zustand.
+
+**`ReleaseDetail.jsx` structure** (most complex page):
+- Three tabs: 元件 / 漏洞 / 依賴關係圖
+- Policy Gate card (green/red border, 5 checks) rendered above SBOM quality card
+- Vuln table: SLA column (hidden lg), suppress button per row alongside VEX edit button
+- `severityCounts` and Policy Gate exclude suppressed vulns (`v.suppressed`)
+- `displayedVulns` filter: `showSuppressed` toggle switches between suppressed and active vulns
+- Upload result shows diff vs previous release version
+- Inline components: `DependencyGraph` (SVG, BFS layout), `VexEditButton` + `VexModal`, `SuppressButton` + `SuppressModal`
 
 ### CRA Incident State Machine
 ```
@@ -163,12 +181,16 @@ detected
 - `response` (only with `affected`): `can_not_fix` `will_not_fix` `update` `rollback` `workaround_available`
 - Setting `status` to anything other than the valid parent clears `justification`/`response` automatically
 
+### Suppression (Risk Acceptance)
+Separate from VEX status. `suppressed=true` removes a vuln from SLA tracking, severity counts, and Policy Gate checks. `suppressed_until` is an optional UTC expiry — `_is_suppressed()` evaluates it on every request with no background job needed.
+
 ### Key Constraints
 - **Port 9100 only** — 8080/8005/8009/8443 conflict with Tomcat on this machine
 - No Docker in dev environment
 - `backend/sbom.db` and `backend/uploads/` are gitignored; `deploy/.env.server` has real credentials — gitignored
 - Schema changes: add `ALTER TABLE ADD COLUMN` to the migration block in `main.py`; SQLite does not support DROP/RENAME COLUMN natively
 - SQLite runs in **WAL mode** (`PRAGMA journal_mode=WAL` in `core/database.py`) — `sbom.db-shm` and `sbom.db-wal` are normal side-files, gitignored
+- No new npm packages — all charts/graphs use pure SVG rendered in React
 
 ### Production Server
 - **IP**: `161.33.130.101` — Oracle Linux 9.7, 1GB RAM, user `opc`
@@ -179,7 +201,7 @@ detected
 
 ## Documentation
 - `docs/api-reference.md` — Full API endpoint reference with request/response shapes
-- `docs/db-schema.md` — All 13 tables with field-level descriptions
+- `docs/db-schema.md` — All tables with field-level descriptions
 - `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
 - `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
 - `docs/TISAX_MODULE_PLAN.md` — Planned TISAX module: VDA ISA 6.0 self-assessment (63 controls), maturity scoring 0–5, AL2/AL3 gap analysis
