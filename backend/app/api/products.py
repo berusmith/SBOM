@@ -13,10 +13,12 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 
 @router.post("/{product_id}/releases", response_model=ReleaseResponse)
-def create_release(product_id: str, payload: ReleaseCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def create_release(product_id: str, payload: ReleaseCreate, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權在此產品建立版本")
     release = Release(product_id=product_id, version=payload.version)
     db.add(release)
     db.commit()
@@ -25,10 +27,12 @@ def create_release(product_id: str, payload: ReleaseCreate, _admin: dict = Depen
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_product(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權刪除此產品")
     db.delete(product)
     db.commit()
 

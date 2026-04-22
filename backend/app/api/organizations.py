@@ -68,7 +68,9 @@ def list_organizations(org_scope: str | None = Depends(get_org_scope), db: Sessi
 
 
 @router.post("/{org_id}/products", response_model=ProductResponse)
-def create_product(org_id: str, payload: ProductCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def create_product(org_id: str, payload: ProductCreate, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    if org_scope and org_scope != org_id:
+        raise HTTPException(status_code=403, detail="無權在此組織建立產品")
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
