@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const SEVERITY_OPTIONS = [
   { value: "any",      label: "任何嚴重度" },
@@ -34,6 +35,9 @@ export default function Policies() {
   const [editLicenseRule, setEditLicenseRule] = useState(null);
   const [licenseForm, setLicenseForm] = useState({ license_id: "", label: "", action: "warn", enabled: true });
   const [savingLicense, setSavingLicense] = useState(false);
+  const [confirmDeleteRule, setConfirmDeleteRule] = useState(null);
+  const [confirmDeleteLicense, setConfirmDeleteLicense] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const flash = (type, text) => { setMsg({ type, text }); setTimeout(() => setMsg(null), 4000); };
 
@@ -91,13 +95,15 @@ export default function Policies() {
     } catch { flash("err", "更新失敗"); }
   };
 
-  const handleDelete = async (rule) => {
-    if (!window.confirm(`確定要刪除「${rule.name}」？`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/policies/${rule.id}`);
+      await api.delete(`/policies/${confirmDeleteRule.id}`);
       flash("ok", "規則已刪除");
+      setConfirmDeleteRule(null);
       fetchAll();
     } catch { flash("err", "刪除失敗"); }
+    finally { setDeleting(false); }
   };
 
   const violationCount = (ruleId) =>
@@ -137,10 +143,11 @@ export default function Policies() {
     try { await api.patch(`/licenses/rules/${r.id}`, { enabled: !r.enabled }); fetchAll(); }
     catch { flash("err", "更新失敗"); }
   };
-  const handleDeleteLicense = async (r) => {
-    if (!window.confirm(`確定刪除「${r.label || r.license_id}」？`)) return;
-    try { await api.delete(`/licenses/rules/${r.id}`); flash("ok", "規則已刪除"); fetchAll(); }
+  const handleDeleteLicense = async () => {
+    setDeleting(true);
+    try { await api.delete(`/licenses/rules/${confirmDeleteLicense.id}`); flash("ok", "規則已刪除"); setConfirmDeleteLicense(null); fetchAll(); }
     catch { flash("err", "刪除失敗"); }
+    finally { setDeleting(false); }
   };
 
   return (
@@ -231,7 +238,7 @@ export default function Policies() {
                 {/* Actions */}
                 <div className="shrink-0 flex gap-2">
                   <button onClick={() => openEdit(rule)} className="text-xs text-blue-600 hover:underline">編輯</button>
-                  <button onClick={() => handleDelete(rule)} className="text-xs text-red-500 hover:underline">刪除</button>
+                  <button onClick={() => setConfirmDeleteRule(rule)} className="text-xs text-red-500 hover:underline">刪除</button>
                 </div>
               </div>
             );
@@ -295,7 +302,7 @@ export default function Policies() {
                   </div>
                   <div className="shrink-0 flex gap-2">
                     <button onClick={() => openEditLicense(rule)} className="text-xs text-blue-600 hover:underline">編輯</button>
-                    <button onClick={() => handleDeleteLicense(rule)} className="text-xs text-red-500 hover:underline">刪除</button>
+                    <button onClick={() => setConfirmDeleteLicense(rule)} className="text-xs text-red-500 hover:underline">刪除</button>
                   </div>
                 </div>
               );
@@ -460,6 +467,28 @@ export default function Policies() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteRule}
+        title="確認刪除規則"
+        message={`確定要刪除「${confirmDeleteRule?.name}」？`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDeleteRule(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmDeleteLicense}
+        title="確認刪除許可證規則"
+        message={`確定刪除「${confirmDeleteLicense?.label || confirmDeleteLicense?.license_id}」？`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDeleteLicense}
+        onCancel={() => setConfirmDeleteLicense(null)}
+      />
     </div>
   );
 }

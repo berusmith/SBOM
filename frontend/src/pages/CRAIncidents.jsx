@@ -4,6 +4,7 @@ import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonTable } from "../components/Skeleton";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -24,6 +25,8 @@ export default function CRAIncidents() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   const fetchIncidents = () => {
@@ -33,14 +36,16 @@ export default function CRAIncidents() {
       .finally(() => setLoading(false));
   };
 
-  const handleDelete = async (e, inc) => {
-    e.stopPropagation();
-    if (!window.confirm(`確定要刪除事件「${inc.title}」？此操作無法還原。`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/cra/incidents/${inc.id}`);
+      await api.delete(`/cra/incidents/${confirmDelete.id}`);
+      setConfirmDelete(null);
       fetchIncidents();
     } catch (err) {
       toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -121,7 +126,7 @@ export default function CRAIncidents() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={(e) => handleDelete(e, inc)}
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelete(inc); }}
                       className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       刪除
@@ -207,6 +212,17 @@ function CreateForm({ onClose, onCreated }) {
           </div>
         </form>
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除事件"
+        message={`確定要刪除事件「${confirmDelete?.title}」？此操作無法還原。`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

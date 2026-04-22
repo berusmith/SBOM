@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護" };
 
@@ -27,6 +28,8 @@ export default function TISAXAssessments() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ organization_id: "", module: "infosec", assessment_level: "AL2" });
   const [loading, setLoading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const isAdmin = localStorage.getItem("role") === "admin";
   const orgId   = localStorage.getItem("org_id");
 
@@ -55,13 +58,16 @@ export default function TISAXAssessments() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("確定要刪除此評估？所有自評資料將一併刪除。")) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/tisax/assessments/${id}`);
+      await api.delete(`/tisax/assessments/${confirmDelete.id}`);
+      setConfirmDelete(null);
       fetchAll();
     } catch (err) {
       toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -149,7 +155,7 @@ export default function TISAXAssessments() {
                   <div className="flex gap-2">
                     <button onClick={() => navigate(`/tisax/${a.id}`)}
                       className="text-blue-600 hover:underline text-xs">開始自評</button>
-                    <button onClick={() => handleDelete(a.id)}
+                    <button onClick={() => setConfirmDelete(a)}
                       className="text-red-400 hover:underline text-xs">刪除</button>
                   </div>
                 </div>
@@ -178,6 +184,17 @@ export default function TISAXAssessments() {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除評估"
+        message="確定要刪除此評估？所有自評資料將一併刪除。"
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

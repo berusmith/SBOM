@@ -4,6 +4,7 @@ import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonDetail } from "../components/Skeleton";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const STATES = [
   "detected", "pending_triage", "clock_running", "t24_submitted",
@@ -94,6 +95,8 @@ export default function CRAIncidentDetail() {
   const navigate = useNavigate();
   const [inc, setInc] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const fetch = () => {
     api.get(`/cra/incidents/${incidentId}`)
@@ -230,15 +233,15 @@ function ActionPanel({ inc, onUpdate }) {
   };
 
   const handleCloseNotAffected = async () => {
-    if (!window.confirm("確認此事件不受影響並關閉？")) return;
-    setSaving(true);
+    setClosing(true);
     try {
       await api.post(`/cra/incidents/${inc.id}/close-not-affected`, { note: note || null });
+      setConfirmClose(false);
       onUpdate();
     } catch (err) {
       toast.error("操作失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setSaving(false);
+      setClosing(false);
     }
   };
 
@@ -313,9 +316,9 @@ function ActionPanel({ inc, onUpdate }) {
                 🕐 確認受影響，啟動時鐘
               </button>
               <button
-                onClick={handleCloseNotAffected}
-                disabled={saving}
-                className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+                onClick={() => setConfirmClose(true)}
+                disabled={closing}
+                className={`px-4 py-2 text-sm text-white rounded ${closing ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
               >
                 ✓ 不受影響，關閉
               </button>
@@ -341,6 +344,17 @@ function ActionPanel({ inc, onUpdate }) {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmClose}
+        title="確認關閉事件"
+        message="確認此事件不受影響並關閉？"
+        confirmText="關閉"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleCloseNotAffected}
+        onCancel={() => setConfirmClose(false)}
+      />
     </div>
   );
 }

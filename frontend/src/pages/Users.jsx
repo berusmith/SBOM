@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,8 @@ export default function Users() {
   const [editForm, setEditForm] = useState({ password: "", role: "viewer", is_active: true, organization_id: "" });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const flash = (type, text) => { setMsg({ type, text }); setTimeout(() => setMsg(null), 4000); };
 
@@ -50,14 +53,17 @@ export default function Users() {
     }
   };
 
-  const handleDelete = async (u) => {
-    if (!window.confirm(`確定刪除帳號「${u.username}」？`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/users/${u.id}`);
-      flash("success", `帳號 ${u.username} 已刪除`);
+      await api.delete(`/users/${confirmDelete.id}`);
+      flash("success", `帳號 ${confirmDelete.username} 已刪除`);
+      setConfirmDelete(null);
       fetchAll();
     } catch (err) {
       flash("error", err.response?.data?.detail || "刪除失敗");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -202,7 +208,7 @@ export default function Users() {
                     <td className="px-4 py-3 text-right flex justify-end gap-2">
                       <button onClick={() => openEdit(u)}
                         className="text-yellow-600 px-2 py-1 rounded hover:bg-gray-100 text-xs">編輯</button>
-                      <button onClick={() => handleDelete(u)}
+                      <button onClick={() => setConfirmDelete(u)}
                         className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs">刪除</button>
                     </td>
                   </tr>
@@ -212,6 +218,17 @@ export default function Users() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除帳號"
+        message={`確定刪除帳號「${confirmDelete?.username}」？`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

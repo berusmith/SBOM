@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 export default function Releases() {
   const toast = useToast();
@@ -18,6 +19,8 @@ export default function Releases() {
   const [diffFrom, setDiffFrom] = useState("");
   const [diffTo, setDiffTo] = useState("");
   const [trendData, setTrendData] = useState([]);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = () => {
     api.get(`/products/${productId}/releases`).then((res) => {
@@ -45,13 +48,16 @@ export default function Releases() {
     }
   };
 
-  const handleDelete = async (r) => {
-    if (!window.confirm(`確定要刪除版本「${r.version}」？此操作將同時刪除 SBOM 檔案及所有漏洞資料，無法還原。`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/releases/${r.id}`);
+      await api.delete(`/releases/${confirmDelete.id}`);
+      setConfirmDelete(null);
       fetchData();
     } catch (err) {
       toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -200,7 +206,7 @@ export default function Releases() {
                       詳細
                     </button>
                     <button
-                      onClick={() => handleDelete(r)}
+                      onClick={() => setConfirmDelete(r)}
                       className="text-red-500 hover:underline text-xs"
                     >
                       刪除
@@ -213,6 +219,17 @@ export default function Releases() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除版本"
+        message={`確定要刪除版本「${confirmDelete?.version}」？\n此操作將同時刪除 SBOM 檔案及所有漏洞資料，無法還原。`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

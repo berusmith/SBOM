@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../api/client";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 export default function Settings() {
   // Current user role
@@ -423,6 +424,8 @@ function UserManagement({ flash }) {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ username: "", password: "", role: "viewer" });
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = () => api.get("/users").then((r) => setUsers(r.data)).catch(() => {});
   useEffect(() => { fetchUsers(); }, []);
@@ -454,14 +457,17 @@ function UserManagement({ flash }) {
     }
   };
 
-  const handleDelete = async (u) => {
-    if (!window.confirm(`確定要刪除使用者「${u.username}」？`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/users/${u.id}`);
+      await api.delete(`/users/${confirmDelete.id}`);
       flash("ok", "使用者已刪除");
+      setConfirmDelete(null);
       fetchUsers();
     } catch (err) {
       flash("err", err.response?.data?.detail || "刪除失敗");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -550,7 +556,7 @@ function UserManagement({ flash }) {
                 {u.role === "admin" ? "Admin" : "Viewer"}
               </button>
               <button
-                onClick={() => handleDelete(u)}
+                onClick={() => setConfirmDelete(u)}
                 className="text-xs text-red-500 hover:underline"
               >
                 刪除
@@ -561,6 +567,17 @@ function UserManagement({ flash }) {
         {users.length === 0 && (
           <p className="text-sm text-gray-400 text-center py-3">尚無使用者</p>
         )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除使用者"
+        message={`確定要刪除使用者「${confirmDelete?.username}」？`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
       </div>
     </div>
   );

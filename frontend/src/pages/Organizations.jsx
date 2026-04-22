@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 export default function Organizations() {
   const toast = useToast();
@@ -14,6 +15,8 @@ export default function Organizations() {
   const [loading, setLoading] = useState(false);
   const [editOrg, setEditOrg] = useState(null);
   const [editName, setEditName] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
 
@@ -56,13 +59,16 @@ export default function Organizations() {
     }
   };
 
-  const handleDelete = async (org) => {
-    if (!window.confirm(`確定要刪除「${org.name}」？此操作將同時刪除所有產品、版本及漏洞資料，無法還原。`)) return;
+  const handleDelete = async () => {
+    setDeleting(true);
     try {
-      await api.delete(`/organizations/${org.id}`);
+      await api.delete(`/organizations/${confirmDelete.id}`);
+      setConfirmDelete(null);
       fetchOrgs();
     } catch (err) {
       toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -208,7 +214,7 @@ export default function Organizations() {
                           編輯
                         </button>
                         <button
-                          onClick={() => handleDelete(org)}
+                          onClick={() => setConfirmDelete(org)}
                           className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                         >
                           刪除
@@ -223,6 +229,17 @@ export default function Organizations() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除客戶"
+        message={`確定要刪除「${confirmDelete?.name}」？\n此操作將同時刪除所有產品、版本及漏洞資料，無法還原。`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

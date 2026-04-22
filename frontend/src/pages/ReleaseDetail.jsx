@@ -4,6 +4,7 @@ import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonInline } from "../components/Skeleton";
+import { ConfirmModal } from "../components/ConfirmModal";
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
@@ -88,6 +89,8 @@ export default function ReleaseDetail() {
   const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
   const exportMenuRef = useRef();
   const advancedMenuRef = useRef();
+  const [confirmLock, setConfirmLock] = useState(false);
+  const [toggling, setToggling] = useState(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
@@ -123,12 +126,14 @@ export default function ReleaseDetail() {
   }, [releaseId]);
 
   const handleLockToggle = async () => {
+    setToggling(true);
     const action = locked ? "unlock" : "lock";
-    if (!locked && !window.confirm("鎖定後將無法上傳 SBOM、重新掃描或修改 VEX 狀態，確定鎖定？")) return;
     try {
       await api.post(`/releases/${releaseId}/${action}`);
       setLocked(!locked);
+      setConfirmLock(false);
     } catch (e) { toast.error(e.response?.data?.detail || "操作失敗"); }
+    finally { setToggling(false); }
   };
 
   const handleCheckIntegrity = async () => {
@@ -452,7 +457,7 @@ export default function ReleaseDetail() {
               {downloading ? "產生中..." : "下載 PDF 報告"}
             </button>
             <button
-              onClick={handleLockToggle}
+              onClick={() => locked ? handleLockToggle() : setConfirmLock(true)}
               className={`px-4 py-2 rounded text-sm text-white font-medium ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
             >
               {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
@@ -1019,6 +1024,17 @@ export default function ReleaseDetail() {
           </button>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmLock}
+        title="確認鎖定版本"
+        message="鎖定後將無法上傳 SBOM、重新掃描或修改 VEX 狀態，確定鎖定？"
+        confirmText="鎖定"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleLockToggle}
+        onCancel={() => setConfirmLock(false)}
+      />
     </div>
   );
 }
