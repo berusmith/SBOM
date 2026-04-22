@@ -1,17 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { PasswordInput } from "../components/PasswordInput";
+import { validate, validators } from "../utils/validate";
 
 export default function Login() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Client-side validation
+    const validationErrors = validate(
+      { username: validators.required, password: validators.required },
+      { username, password }
+    );
+    if (Object.values(validationErrors).some(e => e)) {
+      setErrors(validationErrors);
+      return;
+    }
+
     setError("");
+    setErrors({});
     setLoading(true);
     try {
       const res = await api.post("/auth/login", { username, password });
@@ -43,20 +58,26 @@ export default function Login() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (errors.username) setErrors(prev => ({...prev, username: null}));
+              }}
               autoFocus
-              required
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
+                errors.username ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-400"
+              }`}
             />
+            {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) setErrors(prev => ({...prev, password: null}));
+              }}
+              error={errors.password}
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}

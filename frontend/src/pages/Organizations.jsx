@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { PasswordInput } from "../components/PasswordInput";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
+import { validate, validators } from "../utils/validate";
 
 export default function Organizations() {
   const toast = useToast();
@@ -14,6 +16,7 @@ export default function Organizations() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [created, setCreated] = useState(null);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [editOrg, setEditOrg] = useState(null);
   const [editName, setEditName] = useState("");
@@ -30,7 +33,23 @@ export default function Organizations() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+
+    // Validate required name, and optional username/password if provided
+    const rules = { name: validators.required };
+    if (username.trim()) {
+      rules.username = validators.username;
+    }
+    if (password) {
+      rules.password = validators.password;
+    }
+
+    const validationErrors = validate(rules, { name, username, password });
+    if (Object.values(validationErrors).some(e => e)) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     try {
       const res = await api.post("/organizations", {
@@ -106,29 +125,48 @@ export default function Organizations() {
       {showForm && (
         <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 space-y-3">
           <div className="font-medium text-sm text-gray-700">新增客戶</div>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="客戶名稱（公司名）*"
-            required
-            className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <div>
+            <input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors(prev => ({...prev, name: null}));
+              }}
+              placeholder="客戶名稱（公司名）*"
+              className={`border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 ${
+                errors.name ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-400"
+              }`}
+            />
+            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          </div>
           <div className="border-t pt-3">
             <div className="text-xs text-gray-500 mb-2">登入帳號（選填，留空則不建立）</div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="帳號（至少 3 字元）"
-                className="border rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="初始密碼（至少 6 字元）"
-                className="border rounded px-3 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
+              <div className="flex-1">
+                <input
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (errors.username) setErrors(prev => ({...prev, username: null}));
+                  }}
+                  placeholder="帳號（至少 3 字元）"
+                  className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                    errors.username ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-400"
+                  }`}
+                />
+                {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
+              </div>
+              <div className="flex-1">
+                <PasswordInput
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (errors.password) setErrors(prev => ({...prev, password: null}));
+                  }}
+                  placeholder="初始密碼（至少 6 字元）"
+                  error={errors.password}
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-2 justify-end">

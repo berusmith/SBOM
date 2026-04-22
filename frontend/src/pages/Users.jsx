@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
+import { PasswordInput } from "../components/PasswordInput";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
+import { validate, validators } from "../utils/validate";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -10,6 +12,8 @@ export default function Users() {
   const [editUser, setEditUser] = useState(null);
   const [form, setForm] = useState({ username: "", password: "", role: "viewer", organization_id: "" });
   const [editForm, setEditForm] = useState({ password: "", role: "viewer", is_active: true, organization_id: "" });
+  const [errors, setErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -28,6 +32,18 @@ export default function Users() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // Validate username and password
+    const validationErrors = validate(
+      { username: validators.username, password: validators.password, organization_id: form.role === "viewer" ? validators.required : () => null },
+      { username: form.username, password: form.password, organization_id: form.organization_id }
+    );
+    if (Object.values(validationErrors).some(e => e)) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     try {
       await api.post("/users", form);
@@ -42,6 +58,20 @@ export default function Users() {
 
   const handleEdit = async (e) => {
     e.preventDefault();
+
+    // Validate password if provided
+    if (editForm.password) {
+      const validationErrors = validate(
+        { password: validators.password },
+        { password: editForm.password }
+      );
+      if (Object.values(validationErrors).some(e => e)) {
+        setEditErrors(validationErrors);
+        return;
+      }
+    }
+
+    setEditErrors({});
     try {
       const payload = { role: editForm.role, is_active: editForm.is_active, organization_id: editForm.organization_id || null };
       if (editForm.password) payload.password = editForm.password;
@@ -95,13 +125,30 @@ export default function Users() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1">帳號名稱</label>
-              <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} required
-                className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <div>
+                <input
+                  value={form.username}
+                  onChange={e => {
+                    setForm({ ...form, username: e.target.value });
+                    if (errors.username) setErrors(prev => ({...prev, username: null}));
+                  }}
+                  className={`border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 ${
+                    errors.username ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-400"
+                  }`}
+                />
+                {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
+              </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">初始密碼（至少 10 字元含英數）</label>
-              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required
-                className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <label className="text-xs text-gray-500 block mb-1">初始密碼</label>
+              <PasswordInput
+                value={form.password}
+                onChange={e => {
+                  setForm({ ...form, password: e.target.value });
+                  if (errors.password) setErrors(prev => ({...prev, password: null}));
+                }}
+                error={errors.password}
+              />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">角色</label>
@@ -138,9 +185,15 @@ export default function Users() {
           <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 space-y-3">
             <h2 className="text-lg font-semibold">編輯帳號：{editUser.username}</h2>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">新密碼（留空則不修改）</label>
-              <input type="password" value={editForm.password} onChange={e => setEditForm({ ...editForm, password: e.target.value })}
-                className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <label className="text-xs text-gray-500 block mb-1">新密碼（留空則不修改，至少 6 字元）</label>
+              <PasswordInput
+                value={editForm.password}
+                onChange={e => {
+                  setEditForm({ ...editForm, password: e.target.value });
+                  if (editErrors.password) setEditErrors(prev => ({...prev, password: null}));
+                }}
+                error={editErrors.password}
+              />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">角色</label>
