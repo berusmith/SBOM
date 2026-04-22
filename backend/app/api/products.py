@@ -85,15 +85,17 @@ def vuln_trend(product_id: str, org_scope: str | None = Depends(get_org_scope), 
     )
     result = []
     for r in releases:
-        vulns = [v for c in r.components for v in c.vulnerabilities]
+        all_vulns = [v for c in r.components for v in c.vulnerabilities]
+        unresolved = [v for v in all_vulns if v.status not in ("fixed", "not_affected")]
         counts = {s: 0 for s in ("critical", "high", "medium", "low", "info")}
-        for v in vulns:
+        for v in unresolved:
             sev = v.severity or "info"
             counts[sev] = counts.get(sev, 0) + 1
         result.append({
             "release_id": r.id,
             "version": r.version,
-            "total": len(vulns),
+            "total": len(unresolved),
+            "total_all": len(all_vulns),
             **counts,
         })
     return result
