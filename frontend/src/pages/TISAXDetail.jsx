@@ -171,6 +171,7 @@ export default function TISAXDetail() {
   const [tab, setTab]         = useState("controls"); // controls | gap
   const [filterStatus, setFilterStatus] = useState("");
   const [exporting, setExporting]       = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const fetchData = () => {
     api.get(`/tisax/assessments/${assessmentId}`).then(r => setData(r.data));
@@ -193,6 +194,17 @@ export default function TISAXDetail() {
       a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.csv`; a.click();
       URL.revokeObjectURL(url);
     } catch { alert("匯出失敗"); } finally { setExporting(false); }
+  };
+
+  const handleExportPdf = async () => {
+    setExportingPdf(true);
+    try {
+      const resp = await api.get(`/tisax/assessments/${assessmentId}/export-pdf`, { responseType: "blob" });
+      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert("PDF 匯出失敗"); } finally { setExportingPdf(false); }
   };
 
   if (!data) return <div className="text-gray-400 p-6">載入中...</div>;
@@ -286,10 +298,16 @@ export default function TISAXDetail() {
             <option value="compliant">達標</option>
           </select>
         )}
-        <button onClick={handleExportCsv} disabled={exporting}
-          className="ml-auto px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50">
-          {exporting ? "匯出中..." : "匯出 CSV"}
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button onClick={handleExportPdf} disabled={exportingPdf}
+            className="px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
+            {exportingPdf ? "產生中..." : "匯出 PDF"}
+          </button>
+          <button onClick={handleExportCsv} disabled={exporting}
+            className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50">
+            {exporting ? "匯出中..." : "匯出 CSV"}
+          </button>
+        </div>
       </div>
 
       {/* Controls tab */}

@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.services import tisax_pdf
 from app.core.deps import get_org_scope
 from app.models.organization import Organization
 from app.models.tisax import TISAXAssessment, TISAXControl
@@ -290,4 +291,53 @@ def export_csv(
         content=buf.getvalue().encode("utf-8-sig"),
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="tisax_{assessment_id[:8]}.csv"'},
+    )
+
+
+@router.get("/assessments/{assessment_id}/export-pdf")
+def export_pdf(
+    assessment_id: str,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    a = db.query(TISAXAssessment).filter(TISAXAssessment.id == assessment_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="評估不存在")
+    _assert_org_access(a, org_scope)
+
+    from app.models.organization import Organization
+    org = db.query(Organization).filter(Organization.id == a.organization_id).first()
+    org_name = org.name if org else "Unknown"
+
+    summary = _assessment_summary(a)
+    chapters = []
+    chapter_map: dict[str, list] = {}
+    for c in sorted(a.controls, key=lambda x: x.control_number):
+        chapter_map.setdefault(c.chapter, []).append(_control_out(c))
+    summary["chapters"] = chapters
+    for ch, ctrls in chapter_map.items():
+        chapters.append({"chapter": ch, "controls": ctrls})
+
+    al_threshold = {"AL1": 0.8, "AL2": 0.9, "AL3": 0.95}.get(a.assessment_level, 0.9)
+    total = len(a.controls)
+    compliant = sum(1 for c in a.controls if c.status == "compliant")
+    readiness = round(compliant / total, 4) if total else 0.0
+    gaps = [_control_out(c) for c in a.controls if c.status == "gap"]
+    near = [_control_out(c) for c in a.controls if c.status == "near"]
+    gaps.sort(key=lambda x: x["target_maturity"] - x["current_maturity"], reverse=True)
+    gap_report = {
+        "assessment_level": a.assessment_level,
+        "al_threshold":     al_threshold,
+        "readiness":        readiness,
+        "go_nogo":          "GO" if readiness >= al_threshold else "NO-GO",
+        "gaps":             gaps,
+        "near":             near,
+    }
+
+    pdf_bytes = tisax_pdf.generate(org_name, summary, chapters, gap_report)
+    filename = f"tisax_{org_name.replace(' ','_')}_{assessment_id[:8]}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
