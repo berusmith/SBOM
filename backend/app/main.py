@@ -42,8 +42,11 @@ with engine.connect() as conn:
             ("cvss_v3_vector",  "TEXT"),
             ("cvss_v4_score",   "REAL"),
             ("cvss_v4_vector",  "TEXT"),
-            ("scanned_at",      "DATETIME"),
-            ("fixed_at",        "DATETIME"),
+            ("scanned_at",        "DATETIME"),
+            ("fixed_at",          "DATETIME"),
+            ("suppressed",        "INTEGER DEFAULT 0"),
+            ("suppressed_until",  "DATETIME"),
+            ("suppressed_reason", "TEXT"),
         ]:
             if col not in vuln_cols:
                 conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))

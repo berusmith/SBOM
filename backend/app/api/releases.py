@@ -49,8 +49,19 @@ router = APIRouter(prefix="/api/releases", tags=["releases"])
 _SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
 
 
+def _is_suppressed(vuln) -> bool:
+    if not vuln.suppressed:
+        return False
+    if vuln.suppressed_until is None:
+        return True
+    ts = vuln.suppressed_until
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) < ts
+
+
 def _sla_info(vuln) -> dict:
-    if vuln.status in ("fixed", "not_affected") or vuln.severity not in _SLA_DAYS or not vuln.scanned_at:
+    if _is_suppressed(vuln) or vuln.status in ("fixed", "not_affected") or vuln.severity not in _SLA_DAYS or not vuln.scanned_at:
         return {"sla_days": None, "sla_status": "n/a"}
     scanned = vuln.scanned_at
     if scanned.tzinfo is None:
@@ -472,6 +483,9 @@ def list_vulnerabilities(
             "cvss_v4_score": v.cvss_v4_score,
             "cvss_v4_vector": v.cvss_v4_vector,
             **_sla_info(v),
+            "suppressed":        _is_suppressed(v),
+            "suppressed_until":  v.suppressed_until.isoformat() if v.suppressed_until else None,
+            "suppressed_reason": v.suppressed_reason,
         }
         for v, comp_name, comp_version in rows
     ]
@@ -1271,8 +1285,8 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
                    "passed": has_sbom,
                    "detail": "已上傳 SBOM 並計算 hash" if has_sbom else "尚未上傳 SBOM"})
 
-    # 2. No Critical open/affected vulns
-    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected")]
+    # 2. No Critical open/affected vulns (excluding suppressed)
+    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected") and not _is_suppressed(v)]
     no_critical = len(critical_open) == 0
     checks.append({"id": "no_critical", "label": "無未處理 Critical 漏洞",
                    "passed": no_critical,
@@ -1307,8 +1321,8 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
     checks.append({"id": "sbom_quality", "label": "SBOM 品質 ≥ B 級",
                    "passed": good_quality, "detail": grade_str})
 
-    # 5. All vulns have been triaged (no open/in_triage)
-    untriaged = [v for v in vulns if v.status in ("open", "in_triage")]
+    # 5. All vulns have been triaged (no open/in_triage, suppressed ones are exempt)
+    untriaged = [v for v in vulns if v.status in ("open", "in_triage") and not _is_suppressed(v)]
     all_triaged = len(untriaged) == 0
     checks.append({"id": "all_triaged", "label": "所有漏洞已完成分類",
                    "passed": all_triaged,

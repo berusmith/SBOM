@@ -137,6 +137,35 @@ def update_vex(vuln_id: str, payload: VexUpdate, _admin: dict = Depends(require_
     }
 
 
+class SuppressUpdate(BaseModel):
+    suppressed: bool
+    suppressed_until: Optional[str] = None   # ISO date "YYYY-MM-DD"
+    suppressed_reason: Optional[str] = None
+
+
+@router.patch("/{vuln_id}/suppress")
+def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    _check_not_locked(vuln, db)
+    vuln.suppressed = payload.suppressed
+    if payload.suppressed:
+        if payload.suppressed_until:
+            try:
+                vuln.suppressed_until = datetime.fromisoformat(payload.suppressed_until).replace(tzinfo=timezone.utc)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="suppressed_until 格式錯誤，請用 YYYY-MM-DD")
+        else:
+            vuln.suppressed_until = None
+        vuln.suppressed_reason = payload.suppressed_reason or None
+    else:
+        vuln.suppressed_until = None
+        vuln.suppressed_reason = None
+    db.commit()
+    return {"id": vuln_id, "suppressed": vuln.suppressed, "suppressed_until": vuln.suppressed_until.isoformat() if vuln.suppressed_until else None}
+
+
 @router.get("/{vuln_id}/history")
 def get_vuln_history(vuln_id: str, db: Session = Depends(get_db)):
     vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()

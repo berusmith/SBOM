@@ -81,6 +81,7 @@ export default function ReleaseDetail() {
   const [sortAsc, setSortAsc] = useState(false);
   const [filterEpss, setFilterEpss] = useState(false);
   const [filterKev, setFilterKev] = useState(false);
+  const [showSuppressed, setShowSuppressed] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
@@ -312,14 +313,16 @@ export default function ReleaseDetail() {
     }
   };
 
-  const severityCounts = vulns.reduce((acc, v) => {
+  const severityCounts = vulns.filter(v => !v.suppressed).reduce((acc, v) => {
     acc[v.severity] = (acc[v.severity] || 0) + 1;
     return acc;
   }, {});
+  const suppressedCount = vulns.filter(v => v.suppressed).length;
 
   const SEVERITY_ORDER = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
   const displayedVulns = [...vulns]
     .filter((v) =>
+      (showSuppressed ? v.suppressed : !v.suppressed) &&
       (!filterSeverity || v.severity === filterSeverity) &&
       (!filterStatus || v.status === filterStatus) &&
       (!filterEpss || (v.epss_score != null && v.epss_score >= 0.1)) &&
@@ -747,6 +750,12 @@ export default function ReleaseDetail() {
                   <input type="checkbox" checked={filterKev} onChange={(e) => setFilterKev(e.target.checked)} />
                   僅顯示 CISA KEV
                 </label>
+                {suppressedCount > 0 && (
+                  <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
+                    <input type="checkbox" checked={showSuppressed} onChange={(e) => setShowSuppressed(e.target.checked)} />
+                    顯示已抑制 ({suppressedCount})
+                  </label>
+                )}
                 {(filterSeverity || filterStatus || filterEpss || filterKev) && (
                   <button
                     onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); }}
@@ -794,7 +803,7 @@ export default function ReleaseDetail() {
               <tbody>
                 {displayedVulns.map((v) => (
                   <React.Fragment key={v.id}>
-                  <tr className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""}`}>
+                  <tr className={`border-t hover:bg-gray-50 ${selected.has(v.id) ? "bg-blue-50" : ""} ${v.suppressed ? "opacity-50" : ""}`}>
                     <td className="px-3 py-2">
                       <input
                         type="checkbox"
@@ -886,8 +895,11 @@ export default function ReleaseDetail() {
                         <div className="text-xs text-gray-400 mt-0.5 italic truncate max-w-xs">{v.detail}</div>
                       )}
                     </td>
-                    <td className="px-4 py-2">
-                      <VexEditButton vuln={v} onUpdate={fetchVulns} />
+                    <td className="px-4 py-2 whitespace-nowrap">
+                      <div className="flex gap-1">
+                        {!v.suppressed && <VexEditButton vuln={v} onUpdate={fetchVulns} />}
+                        <SuppressButton vuln={v} onUpdate={fetchVulns} />
+                      </div>
                     </td>
                   </tr>
                   {expandedVuln === v.id && (
@@ -1092,6 +1104,114 @@ function DependencyGraph({ nodes, edges, totalNodes, totalEdges }) {
             );
           })}
         </svg>
+      </div>
+    </div>
+  );
+}
+
+function SuppressButton({ vuln, onUpdate }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className={`px-2 py-1 text-xs rounded border ${vuln.suppressed ? "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100" : "border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+        title={vuln.suppressed ? "管理抑制" : "抑制此漏洞（風險接受）"}
+      >
+        {vuln.suppressed ? "已抑制" : "抑制"}
+      </button>
+      {open && <SuppressModal vuln={vuln} onClose={() => setOpen(false)} onUpdate={onUpdate} />}
+    </>
+  );
+}
+
+function SuppressModal({ vuln, onClose, onUpdate }) {
+  const [suppressing, setSuppressing] = useState(!vuln.suppressed);
+  const [until, setUntil] = useState(vuln.suppressed_until ? vuln.suppressed_until.slice(0, 10) : "");
+  const [reason, setReason] = useState(vuln.suppressed_reason || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch(`/vulnerabilities/${vuln.id}/suppress`, {
+        suppressed: suppressing,
+        suppressed_until: suppressing && until ? until : null,
+        suppressed_reason: suppressing && reason ? reason : null,
+      });
+      onUpdate();
+      onClose();
+    } catch (e) {
+      alert(e.response?.data?.detail || "操作失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
+        <h3 className="font-semibold text-gray-800 mb-1">漏洞抑制（風險接受）</h3>
+        <p className="text-xs text-gray-400 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setSuppressing(true)}
+              className={`flex-1 py-2 rounded text-sm font-medium border transition-colors ${suppressing ? "bg-amber-500 text-white border-amber-500" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
+            >
+              抑制此漏洞
+            </button>
+            <button
+              onClick={() => setSuppressing(false)}
+              className={`flex-1 py-2 rounded text-sm font-medium border transition-colors ${!suppressing ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
+            >
+              解除抑制
+            </button>
+          </div>
+
+          {suppressing && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  抑制原因 <span className="text-gray-400 font-normal">(選填)</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={3}
+                  placeholder="例：已通過風險評估，此環境不受影響，待下季修補計畫處理..."
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  有效期限 <span className="text-gray-400 font-normal">(選填，到期後自動回復)</span>
+                </label>
+                <input
+                  type="date"
+                  value={until}
+                  onChange={(e) => setUntil(e.target.value)}
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+              <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
+                抑制後此漏洞不計入嚴重度統計與 SLA，但仍記錄在案以供稽核。
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : suppressing ? "bg-amber-500 hover:bg-amber-600" : "bg-blue-600 hover:bg-blue-700"}`}
+          >
+            {saving ? "儲存中..." : suppressing ? "確認抑制" : "解除抑制"}
+          </button>
+        </div>
       </div>
     </div>
   );
