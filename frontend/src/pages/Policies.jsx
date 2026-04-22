@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { SkeletonTable } from "../components/Skeleton";
 
 const SEVERITY_OPTIONS = [
   { value: "any",      label: "任何嚴重度" },
@@ -176,7 +177,7 @@ export default function Policies() {
       )}
 
       {loading ? (
-        <div className="text-gray-400 text-center mt-8">載入中...</div>
+        <SkeletonTable rows={4} cols={5} />
       ) : rules.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">尚無規則</div>
       ) : (

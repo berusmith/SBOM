@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
 import { AUDIT_EVENT_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { SkeletonTable } from "../components/Skeleton";
 
 const EVENT_LABELS = {
   login_ok:        "登入成功",
@@ -90,7 +91,7 @@ export default function AdminActivity() {
   const orgs = [...new Map(events.filter(e => e.org_id).map(e => [e.org_id, e.org_name])).entries()];
   const allEventTypes = [...new Set(events.map(e => e.event_type))].sort();
 
-  if (loading) return <div className="text-gray-500 p-6">載入中...</div>;
+  if (loading) return <div className="p-6"><SkeletonTable rows={8} cols={5} /></div>;
 
   return (
     <div className="space-y-6">

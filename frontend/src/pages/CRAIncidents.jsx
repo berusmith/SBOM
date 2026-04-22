@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
+import { SkeletonTable } from "../components/Skeleton";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -65,7 +66,7 @@ export default function CRAIncidents() {
       )}
 
       {loading ? (
-        <div className="text-gray-400 text-center mt-8">載入中...</div>
+        <SkeletonTable rows={5} cols={5} />
       ) : incidents.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-10 text-center text-gray-400">
           <p className="text-lg mb-1">尚無 CRA 事件</p>

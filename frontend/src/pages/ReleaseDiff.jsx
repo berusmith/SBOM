@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR } from "../constants/colors";
+import { SkeletonTable } from "../components/Skeleton";
 
 export default function ReleaseDiff() {
   const [searchParams] = useSearchParams();
@@ -22,7 +23,7 @@ export default function ReleaseDiff() {
       .finally(() => setLoading(false));
   }, [productId, fromId, toId]);
 
-  if (loading) return <div className="p-8 text-center text-gray-400">載入中...</div>;
+  if (loading) return <div className="p-6"><SkeletonTable rows={6} cols={4} /></div>;
   if (error)   return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!diff)   return null;
 

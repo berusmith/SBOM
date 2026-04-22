@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
 
 function TopVulns() {
   const [items, setItems] = useState(null);
@@ -189,7 +190,12 @@ export default function Dashboard() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-gray-400 mt-8 text-center">載入中...</div>;
+  if (loading) return (
+    <div className="p-6 space-y-6">
+      <SkeletonStatCards count={4} />
+      <SkeletonTable rows={5} cols={5} />
+    </div>
+  );
   if (!stats) return <div className="text-red-400 mt-8 text-center">無法取得統計資料</div>;
 
   const totalVulns = stats.vulnerabilities.total;

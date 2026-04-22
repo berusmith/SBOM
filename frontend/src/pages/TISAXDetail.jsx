@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { TISAX_COMPLIANCE_STATUS, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
+import { SkeletonDetail } from "../components/Skeleton";
 
 const STATUS_CONFIG = TISAX_COMPLIANCE_STATUS;
 
@@ -205,7 +206,7 @@ export default function TISAXDetail() {
     } catch { toast.error("PDF 匯出失敗"); } finally { setExportingPdf(false); }
   };
 
-  if (!data) return <div className="text-gray-400 p-6">載入中...</div>;
+  if (!data) return <div className="p-6"><SkeletonDetail sections={3} /></div>;
 
   const { compliant = 0, near = 0, gap: gapCount = 0, unassessed = 0 } = data.by_status;
   const total = data.total_controls;

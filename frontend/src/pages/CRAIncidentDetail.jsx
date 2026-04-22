@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
+import { SkeletonDetail } from "../components/Skeleton";
 
 const STATES = [
   "detected", "pending_triage", "clock_running", "t24_submitted",
@@ -103,7 +104,7 @@ export default function CRAIncidentDetail() {
 
   useEffect(() => { fetch(); }, [incidentId]);
 
-  if (loading) return <div className="text-gray-400 text-center mt-8">載入中...</div>;
+  if (loading) return <div className="p-6"><SkeletonDetail sections={3} /></div>;
   if (!inc) return <div className="text-red-400 text-center mt-8">事件不存在</div>;
 
   const currentIdx = STATES.indexOf(inc.status);

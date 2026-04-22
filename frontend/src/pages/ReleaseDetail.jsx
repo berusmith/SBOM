@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
+import { SkeletonInline } from "../components/Skeleton";
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
@@ -947,7 +948,7 @@ export default function ReleaseDetail() {
       {tab === "dependency" && (
         <div className="bg-white rounded-lg shadow p-4">
           {!depGraph ? (
-            <div className="py-8 text-center text-gray-400">載入中...</div>
+            <SkeletonInline rows={5} />
           ) : !depGraph.has_data ? (
             <div className="py-8 text-center text-gray-400">
               <p className="text-base mb-2">此 SBOM 不含依賴關係資料</p>

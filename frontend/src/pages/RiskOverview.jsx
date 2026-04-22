@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { SkeletonTable } from "../components/Skeleton";
 
 function RiskBadge({ score }) {
   if (score >= 30) return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">極高</span>;
@@ -88,7 +89,7 @@ export default function RiskOverview() {
       </div>
 
       {loading ? (
-        <div className="text-gray-400 mt-8 text-center">載入中...</div>
+        <SkeletonTable rows={4} cols={6} />
       ) : rows.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">尚無客戶資料</div>
       ) : (
