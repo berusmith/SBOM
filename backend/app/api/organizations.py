@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin
+from app.core.security import hash_password
 from app.models.organization import Organization
 from app.models.product import Product
+from app.models.user import User
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
 from app.schemas.product import ProductCreate, ProductResponse
 
@@ -17,17 +19,44 @@ class OrganizationUpdate(BaseModel):
     name: str
 
 
-@router.post("", response_model=OrganizationResponse)
+@router.post("")
 def create_organization(payload: OrganizationCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    org = Organization(name=payload.name, license_status=payload.license_status)
+    if payload.username and len(payload.username.strip()) < 3:
+        raise HTTPException(status_code=400, detail="帳號至少 3 個字元")
+    if payload.password and len(payload.password) < 6:
+        raise HTTPException(status_code=400, detail="密碼至少 6 個字元")
+    if payload.username and db.query(User).filter(User.username == payload.username.strip()).first():
+        raise HTTPException(status_code=409, detail="帳號名稱已存在")
+
+    org = Organization(name=payload.name.strip(), license_status=payload.license_status)
     db.add(org)
     try:
-        db.commit()
+        db.flush()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="客戶名稱已存在")
+
+    account_created = False
+    if payload.username and payload.password:
+        user = User(
+            username=payload.username.strip(),
+            hashed_password=hash_password(payload.password),
+            role="viewer",
+            organization_id=org.id,
+        )
+        db.add(user)
+        account_created = True
+
+    db.commit()
     db.refresh(org)
-    return org
+    return {
+        "id": org.id,
+        "name": org.name,
+        "license_status": org.license_status,
+        "created_at": org.created_at,
+        "account_created": account_created,
+        "username": payload.username.strip() if account_created else None,
+    }
 
 
 @router.get("", response_model=list[OrganizationResponse])
