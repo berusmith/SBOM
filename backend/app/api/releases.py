@@ -1323,6 +1323,67 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
     }
 
 
+@router.get("/{release_id}/dependency-graph")
+def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        return {"has_data": False, "nodes": [], "edges": []}
+
+    with open(release.sbom_file_path, "rb") as f:
+        data = json.loads(f.read())
+
+    is_spdx = "spdxVersion" in data
+    node_map: dict = {}
+    edges: list = []
+
+    if is_spdx:
+        for pkg in data.get("packages", []):
+            sid = pkg.get("SPDXID", "")
+            if sid:
+                node_map[sid] = {"id": sid, "name": pkg.get("name", sid), "version": pkg.get("versionInfo", ""), "is_root": False}
+        for rel in data.get("relationships", []):
+            if rel.get("relationshipType") in ("DEPENDS_ON", "CONTAINS", "DYNAMIC_LINK", "STATIC_LINK"):
+                s, t = rel.get("spdxElementId"), rel.get("relatedSpdxElement")
+                if s and t and s in node_map and t in node_map and s != t:
+                    edges.append({"source": s, "target": t})
+    else:
+        meta_comp = data.get("metadata", {}).get("component", {})
+        if meta_comp:
+            ref = meta_comp.get("bom-ref") or "root"
+            node_map[ref] = {"id": ref, "name": meta_comp.get("name", "Root"), "version": meta_comp.get("version", ""), "is_root": True}
+        for comp in data.get("components", []):
+            ref = comp.get("bom-ref") or comp.get("name", "")
+            if ref:
+                node_map[ref] = {"id": ref, "name": comp.get("name", ref), "version": comp.get("version", ""), "is_root": False}
+        for dep in data.get("dependencies", []):
+            src = dep.get("ref")
+            for tgt in dep.get("dependsOn", []):
+                if src and tgt and src in node_map and tgt in node_map and src != tgt:
+                    edges.append({"source": src, "target": tgt})
+
+    # Mark nodes that have unresolved critical/high vulns
+    vuln_names: set = set()
+    for comp in db.query(Component).filter(Component.release_id == release_id).all():
+        if any(v.severity in ("critical", "high") and v.status not in ("fixed", "not_affected") for v in comp.vulnerabilities):
+            vuln_names.add(comp.name)
+
+    nodes = []
+    for n in node_map.values():
+        nodes.append({**n, "has_vuln": n["name"] in vuln_names})
+
+    return {
+        "has_data": len(edges) > 0,
+        "nodes": nodes[:200],
+        "edges": edges[:600],
+        "total_nodes": len(nodes),
+        "total_edges": len(edges),
+    }
+
+
 def _highest_severity(vulns) -> str | None:
     if not vulns:
         return None
