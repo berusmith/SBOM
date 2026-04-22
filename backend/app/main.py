@@ -70,6 +70,21 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE cra_incidents ADD COLUMN org_id TEXT REFERENCES organizations(id)"))
     conn.commit()
 
+    # Performance indexes — safe to run repeatedly via IF NOT EXISTS
+    for _idx in [
+        "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_severity  ON vulnerabilities(severity)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_status    ON vulnerabilities(status)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_is_kev    ON vulnerabilities(is_kev)",
+        "CREATE INDEX IF NOT EXISTS idx_vuln_epss      ON vulnerabilities(epss_score)",
+        "CREATE INDEX IF NOT EXISTS idx_comp_purl      ON components(purl)",
+        "CREATE INDEX IF NOT EXISTS idx_comp_name      ON components(name)",
+        "CREATE INDEX IF NOT EXISTS idx_cra_org        ON cra_incidents(org_id)",
+        "CREATE INDEX IF NOT EXISTS idx_cra_status     ON cra_incidents(status)",
+    ]:
+        conn.execute(text(_idx))
+    conn.commit()
+
 # Create any missing tables (new tables like audit_events)
 Base.metadata.create_all(bind=engine, checkfirst=True)
 

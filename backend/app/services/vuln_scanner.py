@@ -1,10 +1,13 @@
 """
 Query OSV.dev API for vulnerabilities by PURL.
-Uses individual /v1/query per component to get full details (batch API is too minimal).
+Uses concurrent requests (ThreadPoolExecutor) to scan multiple components in parallel.
 """
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import httpx
 
 OSV_QUERY_URL = "https://api.osv.dev/v1/query"
+_MAX_WORKERS = 10
 
 _TEXT_TO_CVSS = {
     "CRITICAL": 9.5,
@@ -71,28 +74,30 @@ def _numeric_to_severity(score) -> str:
     return "low"
 
 
-def scan_components(components: list[dict]) -> dict[str, list[dict]]:
+def _query_osv(purl: str) -> tuple:
+    """Query OSV.dev for a single PURL. Returns (purl, list_of_vulns)."""
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.post(OSV_QUERY_URL, json={"package": {"purl": purl}})
+            resp.raise_for_status()
+        vulns = [_parse_vuln(v) for v in resp.json().get("vulns", [])]
+        return purl, vulns
+    except httpx.HTTPError:
+        return purl, []
+
+
+def scan_components(components: list) -> dict:
     """
     Returns dict keyed by purl -> list of {cve_id, cvss_score, severity}.
-    Skips components without a purl.
+    Skips components without a purl. Uses concurrent HTTP requests.
     """
-    results: dict[str, list[dict]] = {}
+    purls = [c["purl"] for c in components if c.get("purl")]
+    results: dict = {}
 
-    with httpx.Client(timeout=30) as client:
-        for component in components:
-            purl = component.get("purl", "")
-            if not purl:
-                continue
-            try:
-                resp = client.post(
-                    OSV_QUERY_URL,
-                    json={"package": {"purl": purl}},
-                )
-                resp.raise_for_status()
-            except httpx.HTTPError:
-                continue
-
-            vulns = [_parse_vuln(v) for v in resp.json().get("vulns", [])]
+    with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
+        futures = {pool.submit(_query_osv, purl): purl for purl in purls}
+        for future in as_completed(futures):
+            purl, vulns = future.result()
             if vulns:
                 results[purl] = vulns
 

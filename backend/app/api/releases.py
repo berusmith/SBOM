@@ -11,10 +11,12 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.config import settings as _cfg
+from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin
 
@@ -385,34 +387,41 @@ def list_vulnerabilities(
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     _assert_release_org(release, org_scope, db)
-    components = db.query(Component).filter(Component.release_id == release_id).all()
-    result = []
-    for c in components:
-        for v in c.vulnerabilities:
-            result.append({
-                "id": v.id,
-                "component_name": c.name,
-                "component_version": c.version,
-                "cve_id": v.cve_id,
-                "cvss_score": v.cvss_score,
-                "severity": v.severity,
-                "status": v.status,
-                "justification": v.justification,
-                "response": v.response,
-                "detail": v.detail,
-                "epss_score": v.epss_score,
-                "epss_percentile": v.epss_percentile,
-                "is_kev": bool(v.is_kev),
-                "description": v.description,
-                "cwe": v.cwe,
-                "nvd_refs": json.loads(v.nvd_refs) if v.nvd_refs else [],
-                "cvss_v3_score": v.cvss_v3_score,
-                "cvss_v3_vector": v.cvss_v3_vector,
-                "cvss_v4_score": v.cvss_v4_score,
-                "cvss_v4_vector": v.cvss_v4_vector,
-            })
-    result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
-    return result[skip: skip + limit]
+    order_expr = func.coalesce(Vulnerability.epss_score, Vulnerability.cvss_score, 0)
+    rows = (
+        db.query(Vulnerability, Component.name.label("comp_name"), Component.version.label("comp_version"))
+        .join(Component, Component.id == Vulnerability.component_id)
+        .filter(Component.release_id == release_id)
+        .order_by(order_expr.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": v.id,
+            "component_name": comp_name,
+            "component_version": comp_version,
+            "cve_id": v.cve_id,
+            "cvss_score": v.cvss_score,
+            "severity": v.severity,
+            "status": v.status,
+            "justification": v.justification,
+            "response": v.response,
+            "detail": v.detail,
+            "epss_score": v.epss_score,
+            "epss_percentile": v.epss_percentile,
+            "is_kev": bool(v.is_kev),
+            "description": v.description,
+            "cwe": v.cwe,
+            "nvd_refs": json.loads(v.nvd_refs) if v.nvd_refs else [],
+            "cvss_v3_score": v.cvss_v3_score,
+            "cvss_v3_vector": v.cvss_v3_vector,
+            "cvss_v4_score": v.cvss_v4_score,
+            "cvss_v4_vector": v.cvss_v4_vector,
+        }
+        for v, comp_name, comp_version in rows
+    ]
 
 
 @router.get("/{release_id}/vulnerabilities/export")
@@ -999,9 +1008,6 @@ def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_sco
         "patch_rate": patch_rate,
         "avg_days_to_fix": avg_days_to_fix,
     }
-
-
-SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 
 
 def _highest_severity(vulns) -> str | None:

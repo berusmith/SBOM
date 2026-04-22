@@ -93,18 +93,17 @@ def batch_update_vex(payload: BatchVexUpdate, _admin: dict = Depends(require_adm
     if payload.response and payload.response not in VALID_RESPONSES:
         raise HTTPException(status_code=400, detail="Invalid response.")
 
+    vulns = db.query(Vulnerability).filter(Vulnerability.id.in_(payload.vuln_ids)).all()
+    vuln_map = {v.id: v for v in vulns}
+    not_found = [vid for vid in payload.vuln_ids if vid not in vuln_map]
+
     updated = 0
     skipped_locked = []
-    not_found = []
-    for vuln_id in payload.vuln_ids:
-        vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
-        if not vuln:
-            not_found.append(vuln_id)
-            continue
+    for vuln in vulns:
         try:
             _check_not_locked(vuln, db)
         except HTTPException:
-            skipped_locked.append(vuln_id)
+            skipped_locked.append(vuln.id)
             continue
         _apply_vex(vuln, payload.status, payload.justification, payload.response, payload.detail, payload.note, db)
         updated += 1

@@ -1,12 +1,15 @@
 """
 Send webhook and email alerts when new vulnerabilities are found.
 """
+import logging
 import smtplib
 from email.mime.text import MIMEText
 
 import httpx
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _get_config(db):
@@ -105,6 +108,7 @@ def notify_new_vulns(db, release_info: dict, new_vulns: list) -> dict:
     if cfg.webhook_url:
         err = send_webhook(cfg.webhook_url, payload)
         if err:
+            logger.error("Webhook notification failed for release %s: %s", release_info.get("release_id"), err)
             errors.append(f"Webhook: {err}")
         else:
             webhook_sent = True
@@ -112,6 +116,7 @@ def notify_new_vulns(db, release_info: dict, new_vulns: list) -> dict:
     if cfg.alert_email_to:
         err = send_email(subject, body, cfg.alert_email_to)
         if err:
+            logger.error("Email notification failed for release %s: %s", release_info.get("release_id"), err)
             errors.append(f"Email: {err}")
         else:
             email_sent = True
