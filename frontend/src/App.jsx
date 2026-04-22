@@ -28,6 +28,13 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+function ViewerOrgRedirect() {
+  const orgId = localStorage.getItem("org_id");
+  const role = localStorage.getItem("role");
+  if (role !== "admin" && orgId) return <Navigate to={`/organizations/${orgId}/products`} replace />;
+  return <Organizations />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -40,7 +47,7 @@ export default function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/organizations" element={<Organizations />} />
+                  <Route path="/organizations" element={<ViewerOrgRedirect />} />
                   <Route path="/organizations/:orgId/products" element={<Products />} />
                   <Route path="/products/:productId/releases" element={<Releases />} />
                   <Route path="/releases/:releaseId" element={<ReleaseDetail />} />

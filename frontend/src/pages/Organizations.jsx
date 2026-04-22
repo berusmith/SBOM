@@ -10,6 +10,7 @@ export default function Organizations() {
   const [editOrg, setEditOrg] = useState(null);
   const [editName, setEditName] = useState("");
   const navigate = useNavigate();
+  const isAdmin = localStorage.getItem("role") === "admin";
 
   const fetchOrgs = () => {
     api.get("/organizations").then((res) => setOrgs(res.data)).catch(() => {});
@@ -59,12 +60,14 @@ export default function Organizations() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">客戶管理</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
-        >
-          + 新增客戶
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+          >
+            + 新增客戶
+          </button>
+        )}
       </div>
 
       {showForm && (
@@ -151,18 +154,22 @@ export default function Organizations() {
                     >
                       查看產品
                     </button>
-                    <button
-                      onClick={() => { setEditOrg(org); setEditName(org.name); }}
-                      className="text-yellow-600 hover:underline text-xs"
-                    >
-                      編輯
-                    </button>
-                    <button
-                      onClick={() => handleDelete(org)}
-                      className="text-red-500 hover:underline text-xs"
-                    >
-                      刪除
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => { setEditOrg(org); setEditName(org.name); }}
+                          className="text-yellow-600 hover:underline text-xs"
+                        >
+                          編輯
+                        </button>
+                        <button
+                          onClick={() => handleDelete(org)}
+                          className="text-red-500 hover:underline text-xs"
+                        >
+                          刪除
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
