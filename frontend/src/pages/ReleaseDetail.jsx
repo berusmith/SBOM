@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Lock, Unlock, AlertTriangle, CheckCircle2, XCircle, Info } from "lucide-react";
 import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
@@ -380,7 +381,7 @@ export default function ReleaseDetail() {
             title="點擊查看 Policy 違規詳情"
             onClick={() => navigate("/policies")}
           >
-            ⚠ {violations.total} 項 Policy 違規
+            <AlertTriangle size={16} className="inline mr-1" /> {violations.total} 項 Policy 違規
           </span>
         )}
         {licenseViolations && licenseViolations.total > 0 && (
@@ -461,7 +462,7 @@ export default function ReleaseDetail() {
               onClick={() => locked ? handleLockToggle() : setConfirmLock(true)}
               className={`px-4 py-2 rounded text-sm text-white font-medium ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
             >
-              {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
+              {locked ? <><Unlock size={16} className="inline mr-1" /> 解鎖版本</> : <><Lock size={16} className="inline mr-1" /> 鎖定版本</>}
             </button>
 
             {/* 匯出 / 下載 dropdown */}
@@ -583,7 +584,9 @@ export default function ReleaseDetail() {
           integrity.status === "ok" ? "bg-green-50 text-green-700" :
           integrity.status === "tampered" ? "bg-red-50 text-red-700" : "bg-yellow-50 text-yellow-700"
         }`}>
-          <span>{integrity.status === "ok" ? "✓" : integrity.status === "tampered" ? "⚠" : "ℹ"}</span>
+          <span className="flex items-center gap-1">
+            {integrity.status === "ok" ? <CheckCircle2 size={16} /> : integrity.status === "tampered" ? <AlertTriangle size={16} /> : <Info size={16} />}
+          </span>
           <span>{integrity.message}</span>
           {integrity.stored_hash && (
             <span className="ml-2 font-mono text-xs opacity-60">SHA-256: {integrity.stored_hash.slice(0, 16)}…</span>
@@ -609,7 +612,7 @@ export default function ReleaseDetail() {
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">{gate.passed}/{gate.total} 通過</span>
               <span className={`px-3 py-1 rounded-full text-sm font-bold tracking-wide ${gate.overall === "pass" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
-                {gate.overall === "pass" ? "✓ PASS" : "✗ FAIL"}
+                {gate.overall === "pass" ? <><CheckCircle2 size={16} className="inline mr-1 text-green-600" /> PASS</> : <><XCircle size={16} className="inline mr-1 text-red-600" /> FAIL</>}
               </span>
             </div>
           </div>
@@ -1099,7 +1102,7 @@ function DependencyGraph({ nodes, edges, totalNodes, totalEdges }) {
       {selNode && (
         <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-sm flex items-center justify-between">
           <span><span className="font-semibold text-blue-800">{selNode.name}</span>{selNode.version && <span className="ml-1.5 text-xs text-gray-500">{selNode.version}</span>}
-            {selNode.has_vuln && <span className="ml-2 text-xs text-red-600 font-medium">⚠ 有未解決漏洞</span>}</span>
+            {selNode.has_vuln && <span className="ml-2 text-xs text-red-600 font-medium flex items-center gap-1"><AlertTriangle size={12} /> 有未解決漏洞</span>}</span>
           <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-xs">關閉</button>
         </div>
       )}

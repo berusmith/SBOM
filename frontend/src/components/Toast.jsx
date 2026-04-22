@@ -1,12 +1,13 @@
 import { createContext, useCallback, useContext, useState } from "react";
+import { Check, X, AlertTriangle, Info } from "lucide-react";
 
 const ToastContext = createContext(null);
 
 const ICONS = {
-  success: "✓",
-  error:   "✕",
-  warning: "⚠",
-  info:    "ℹ",
+  success: <Check size={16} />,
+  error:   <X size={16} />,
+  warning: <AlertTriangle size={16} />,
+  info:    <Info size={16} />,
 };
 
 const STYLES = {

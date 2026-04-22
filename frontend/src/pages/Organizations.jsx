@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
@@ -89,7 +90,7 @@ export default function Organizations() {
 
       {created && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm text-green-800">
-          <div className="font-semibold mb-1">✓ 客戶「{created.name}」已建立</div>
+          <div className="font-semibold mb-1 flex items-center gap-2"><Check size={16} /> 客戶「{created.name}」已建立</div>
           {created.account_created ? (
             <div>
               登入帳號已建立：<span className="font-mono font-medium">{created.username}</span>

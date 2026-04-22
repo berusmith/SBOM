@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
@@ -230,7 +231,7 @@ export default function Policies() {
                   {vc > 0 ? (
                     <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold text-sm">{vc}</span>
                   ) : (
-                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-lg">✓</span>
+                    <CheckCircle2 size={24} className="text-green-600" />
                   )}
                   <p className="text-xs text-gray-400 mt-0.5">違規</p>
                 </div>

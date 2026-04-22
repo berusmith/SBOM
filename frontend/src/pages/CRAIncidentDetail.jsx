@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Check, AlertTriangle, Clock } from "lucide-react";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
@@ -46,7 +47,9 @@ function DeadlineBar({ label, seconds, submitted }) {
             <div className="h-full bg-green-500 w-full" />
           </div>
         </div>
-        <div className="w-32 text-xs text-green-600 text-right font-medium">✓ 已提交</div>
+        <div className="w-32 text-xs text-green-600 text-right font-medium flex items-center justify-end gap-1">
+          <Check size={14} /> 已提交
+        </div>
       </div>
     );
   }
@@ -83,7 +86,7 @@ function DeadlineBar({ label, seconds, submitted }) {
         </div>
       </div>
       <div className={`w-32 text-xs font-mono text-right ${overdue ? "text-red-600 font-bold" : urgent ? "text-red-500 font-bold" : "text-gray-600"}`}>
-        {overdue ? "⚠ 已逾時" : `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`}
+        {overdue ? <span className="flex items-center justify-end gap-1"><AlertTriangle size={12} /> 已逾時</span> : `${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`}
       </div>
     </div>
   );
@@ -181,7 +184,7 @@ export default function CRAIncidentDetail() {
                 <div key={s} className={`flex items-center gap-2 text-xs py-1 ${active ? "font-bold text-gray-800" : done ? "text-green-600" : "text-gray-300"}`}>
                   <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-white text-xs
                     ${active ? "bg-blue-500" : done ? "bg-green-500" : "bg-gray-200"}`}>
-                    {done ? "✓" : idx + 1}
+                    {done ? <Check size={12} className="text-white" /> : idx + 1}
                   </span>
                   {STATE_LABEL[s]}
                 </div>
@@ -214,6 +217,9 @@ export default function CRAIncidentDetail() {
 }
 
 function ActionPanel({ inc, onUpdate }) {
+  const toast = useToast();
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [note, setNote] = useState("");
   const [enisaRef, setEnisaRef] = useState("");
   const [remDate, setRemDate] = useState("");
@@ -311,16 +317,16 @@ function ActionPanel({ inc, onUpdate }) {
               <button
                 onClick={handleStartClock}
                 disabled={saving}
-                className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
+                className={`px-4 py-2 text-sm text-white rounded flex items-center gap-2 ${saving ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
               >
-                🕐 確認受影響，啟動時鐘
+                <Clock size={16} /> 確認受影響，啟動時鐘
               </button>
               <button
                 onClick={() => setConfirmClose(true)}
                 disabled={closing}
-                className={`px-4 py-2 text-sm text-white rounded ${closing ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+                className={`px-4 py-2 text-sm text-white rounded flex items-center gap-2 ${closing ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
               >
-                ✓ 不受影響，關閉
+                <Check size={16} /> 不受影響，關閉
               </button>
             </>
           )}

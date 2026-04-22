@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Lock } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
@@ -172,7 +173,7 @@ export default function Releases() {
                 <tr key={r.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">
                     {r.version}
-                    {r.locked && <span className="ml-1.5 text-gray-400 text-xs">🔒</span>}
+                    {r.locked && <Lock size={14} className="inline ml-1.5 text-gray-400" />}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {formatDate(r.created_at)}

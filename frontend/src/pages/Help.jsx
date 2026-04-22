@@ -1,4 +1,24 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { Rocket, Package, CheckCircle2, HelpCircle, Factory, Search, Tag, AlertTriangle, FileText, Settings, X } from "lucide-react";
+
+// ──────────────────────────────────────────────
+// Icon helper
+// ──────────────────────────────────────────────
+function getIconComponent(iconKey, size = 16) {
+  const iconProps = { size, className: "inline text-gray-600 mr-1" };
+  const iconMap = {
+    rocket: <Rocket {...iconProps} />,
+    package: <Package {...iconProps} />,
+    check: <CheckCircle2 {...iconProps} />,
+    help: <HelpCircle {...iconProps} />,
+    factory: <Factory {...iconProps} />,
+    tag: <Tag {...iconProps} />,
+    alert: <AlertTriangle {...iconProps} />,
+    file: <FileText {...iconProps} />,
+    settings: <Settings {...iconProps} />,
+  };
+  return iconMap[iconKey] || null;
+}
 
 // ──────────────────────────────────────────────
 // Help content data
@@ -7,7 +27,7 @@ const SECTIONS = [
   {
     id: "quickstart",
     title: "快速入門",
-    icon: "🚀",
+    icon: "rocket",
     articles: [
       {
         id: "flow",
@@ -54,7 +74,7 @@ const SECTIONS = [
   {
     id: "sbom",
     title: "SBOM 上傳與掃描",
-    icon: "📦",
+    icon: "package",
     articles: [
       {
         id: "upload",
@@ -101,7 +121,7 @@ const SECTIONS = [
   {
     id: "vex",
     title: "VEX 標注指南",
-    icon: "🏷️",
+    icon: "tag",
     articles: [
       {
         id: "vex-what",
@@ -180,7 +200,7 @@ const SECTIONS = [
   {
     id: "cra",
     title: "CRA 事件管理",
-    icon: "🚨",
+    icon: "alert",
     articles: [
       {
         id: "cra-overview",
@@ -233,7 +253,7 @@ const SECTIONS = [
   {
     id: "reports",
     title: "報告與匯出",
-    icon: "📄",
+    icon: "file",
     articles: [
       {
         id: "report-types",
@@ -282,7 +302,7 @@ const SECTIONS = [
   {
     id: "compliance",
     title: "合規標準說明",
-    icon: "✅",
+    icon: "check",
     articles: [
       {
         id: "cra-art13",
@@ -322,7 +342,7 @@ const SECTIONS = [
   {
     id: "settings",
     title: "通知與設定",
-    icon: "⚙️",
+    icon: "settings",
     articles: [
       {
         id: "notifications",
@@ -381,7 +401,7 @@ const SECTIONS = [
   {
     id: "faq",
     title: "常見問題 FAQ",
-    icon: "❓",
+    icon: "help",
     articles: [
       {
         id: "faq-general",
@@ -469,7 +489,7 @@ const SECTIONS = [
   {
     id: "tisax",
     title: "TISAX 自評",
-    icon: "🏭",
+    icon: "factory",
     articles: [
       {
         id: "tisax-what",
@@ -743,7 +763,9 @@ function SearchResults({ query, onSelect }) {
   if (results.length === 0) {
     return (
       <div className="text-center py-16 text-gray-400">
-        <div className="text-4xl mb-3">🔍</div>
+        <div className="flex justify-center mb-3">
+          <Search size={48} />
+        </div>
         <div>找不到「{query}」相關內容</div>
       </div>
     );
@@ -759,7 +781,7 @@ function SearchResults({ query, onSelect }) {
             onClick={() => onSelect(section.id, article.id)}
             className="border border-gray-200 rounded-lg px-4 py-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
           >
-            <div className="text-xs text-gray-400 mb-1">{section.icon} {section.title}</div>
+            <div className="text-xs text-gray-400 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
             <div className="font-semibold text-blue-700">{highlight(article.title, query)}</div>
             <div className="text-sm text-gray-500 mt-1 line-clamp-2">
               {highlight(flattenText(article.content).slice(0, 150), query)}…
@@ -782,7 +804,7 @@ function ArticleView({ section, article, query }) {
 
   return (
     <div ref={ref} className="h-full overflow-y-auto">
-      <div className="text-xs text-gray-400 mb-1">{section.icon} {section.title}</div>
+      <div className="text-xs text-gray-400 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
       <h2 className="text-xl font-bold text-gray-900 mb-5 pb-3 border-b border-gray-200">
         {highlight(article.title, query)}
       </h2>
@@ -825,9 +847,11 @@ export default function Help() {
             placeholder="搜尋說明內容..."
             className="w-full border border-gray-300 rounded-lg px-4 py-2 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <span className="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
+          <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           {query && (
-            <button onClick={() => setQuery("")} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+            <button onClick={() => setQuery("")} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-1">
+              <X size={14} />
+            </button>
           )}
         </div>
         {/* Mobile sidebar toggle */}
@@ -849,7 +873,7 @@ export default function Help() {
             {SECTIONS.map((section) => (
               <div key={section.id}>
                 <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-3 pb-1">
-                  {section.icon} {section.title}
+                  {getIconComponent(section.icon, 14)} {section.title}
                 </div>
                 {section.articles.map((article) => (
                   <button

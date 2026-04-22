@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
@@ -9,7 +10,7 @@ import { formatDateTime } from "../utils/date";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
-  if (seconds === 0) return <span className="text-xs text-red-600 font-bold">⚠ {label} 已逾時</span>;
+  if (seconds === 0) return <span className="text-xs text-red-600 font-bold flex items-center gap-1"><AlertTriangle size={12} /> {label} 已逾時</span>;
 
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);

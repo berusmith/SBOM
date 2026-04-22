@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check, X } from "lucide-react";
 import api from "../api/client";
 import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
@@ -170,9 +171,9 @@ export default function TISAXAssessments() {
                 </div>
 
                 <div className="flex gap-3 text-xs">
-                  <span className="text-green-600">✓ 達標 {compliant}</span>
+                  <span className="text-green-600 flex items-center gap-1"><Check size={12} /> 達標 {compliant}</span>
                   <span className="text-yellow-500">≈ 接近 {near}</span>
-                  <span className="text-red-500">✗ 缺口 {gap}</span>
+                  <span className="text-red-500 flex items-center gap-1"><X size={12} /> 缺口 {gap}</span>
                   <span className="text-gray-400">— 未評 {unassessed}</span>
                 </div>
                 <div className="mt-3">
