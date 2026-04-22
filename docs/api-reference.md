@@ -55,7 +55,7 @@ Base URL: `http://localhost:9100`
 | POST | `/api/organizations/{org_id}/products` | 建立產品 |
 | DELETE | `/api/products/{product_id}` | 刪除產品（cascade） |
 | GET | `/api/products/{product_id}/releases` | 列出該產品所有版本 |
-| GET | `/api/products/{product_id}/vuln-trend` | 漏洞趨勢（各版本嚴重度數量） |
+| GET | `/api/products/{product_id}/vuln-trend` | 漏洞趨勢（各版本嚴重度數量）；`total` 僅計算未解決，`total_all` 含所有 |
 | GET | `/api/products/{product_id}/diff?v1={id}&v2={id}` | 兩版本漏洞差異 |
 
 ---
@@ -72,7 +72,7 @@ Base URL: `http://localhost:9100`
 | POST | `/api/releases/{release_id}/enrich-epss` | 更新 EPSS 分數 |
 | POST | `/api/releases/{release_id}/enrich-nvd` | 從 NVD 補充 CVE 詳情 |
 | GET | `/api/releases/{release_id}/components` | 列出所有元件 |
-| GET | `/api/releases/{release_id}/vulnerabilities` | 列出所有漏洞（含 VEX 狀態） |
+| GET | `/api/releases/{release_id}/vulnerabilities` | 列出所有漏洞（含 VEX 狀態、SLA、抑制狀態） |
 | GET | `/api/releases/{release_id}/vulnerabilities/export` | 下載漏洞 CSV |
 | GET | `/api/releases/{release_id}/compliance` | 合規摘要 |
 | GET | `/api/releases/{release_id}/report` | 下載 PDF 報告 |
@@ -85,6 +85,93 @@ Base URL: `http://localhost:9100`
 | POST | `/api/releases/{release_id}/lock` | 鎖定版本（禁止修改） |
 | POST | `/api/releases/{release_id}/unlock` | 解鎖版本 |
 | GET | `/api/releases/{release_id}/patch-stats` | 修補統計（修補率、平均天數） |
+| GET | `/api/releases/{release_id}/gate` | 發布品質閘門（5 項 PASS/FAIL 檢查） |
+| GET | `/api/releases/{release_id}/dependency-graph` | 依賴關係圖（節點 + 邊，適用 CycloneDX/SPDX） |
+| GET | `/api/releases/{release_id}/export/cyclonedx-xml` | 匯出 CycloneDX XML |
+| GET | `/api/releases/{release_id}/export/spdx-json` | 匯出 SPDX JSON |
+
+### POST /api/releases/{release_id}/sbom — 上傳回應
+
+```json
+{
+  "components_found": 42,
+  "vulnerabilities_found": 17,
+  "diff": {
+    "prev_version": "v1.0.0",
+    "components_added": 3,
+    "components_removed": 1,
+    "vulns_added": 5,
+    "vulns_removed": 2
+  }
+}
+```
+`diff` 欄位：若此 release 所屬 product 有前一個版本，自動計算差異；無前版本則為 `null`。
+
+### GET /api/releases/{release_id}/vulnerabilities — 漏洞項目欄位
+
+```json
+{
+  "id": "uuid",
+  "cve_id": "CVE-2021-44228",
+  "component_name": "log4j-core",
+  "component_version": "2.14.1",
+  "cvss_score": 10.0,
+  "cvss_v3_score": 10.0,
+  "cvss_v4_score": null,
+  "severity": "critical",
+  "status": "open",
+  "justification": null,
+  "response": null,
+  "detail": null,
+  "epss_score": 0.975,
+  "epss_percentile": 0.999,
+  "is_kev": true,
+  "description": "Apache Log4j2 遠端程式碼執行...",
+  "cwe": "CWE-917",
+  "nvd_refs": ["https://nvd.nist.gov/..."],
+  "sla_days": -3,
+  "sla_status": "overdue",
+  "suppressed": false,
+  "suppressed_until": null,
+  "suppressed_reason": null
+}
+```
+
+**sla_status 值：**
+- `overdue` — 已逾期（`sla_days` 為負，表示超過天數）
+- `warning` — 剩餘 ≤ 25% SLA 天數（即將到期）
+- `ok` — 正常
+- `na` — 不適用（已 fixed / not_affected，或無 scanned_at）
+
+**SLA 基準（Critical 已豁免列入抑制）：**
+
+| 嚴重度 | SLA 天數 |
+|--------|---------|
+| critical | 7 天 |
+| high | 30 天 |
+| medium | 90 天 |
+| low | 180 天 |
+
+已抑制（`suppressed=true`）的漏洞：`sla_status` 回傳 `na`，不計入逾期統計。
+
+### GET /api/releases/{release_id}/gate — 發布品質閘門
+
+```json
+{
+  "overall": "fail",
+  "passed": 3,
+  "total": 5,
+  "checks": [
+    { "id": "no_critical_open",   "label": "無 Critical 未修補",    "passed": false, "detail": "2 個 Critical open 漏洞" },
+    { "id": "untriaged_ratio",    "label": "未分類率 < 20%",         "passed": true,  "detail": "未分類 3 / 共 17 (17.6%)" },
+    { "id": "kev_resolved",       "label": "所有 KEV 已處置",        "passed": true,  "detail": "0 個 KEV 仍 open" },
+    { "id": "sbom_quality",       "label": "SBOM 品質 ≥ 70%",        "passed": true,  "detail": "品質分數 85%" },
+    { "id": "no_policy_block",    "label": "無 Policy Block 違規",   "passed": false, "detail": "1 個 block 等級違規" }
+  ]
+}
+```
+
+抑制的漏洞不計入 `no_critical_open` 與 `untriaged_ratio` 檢查。
 
 ---
 
@@ -95,26 +182,44 @@ Base URL: `http://localhost:9100`
 | PATCH | `/api/vulnerabilities/{vuln_id}/status` | 更新 VEX 狀態 |
 | PATCH | `/api/vulnerabilities/batch` | 批次更新 VEX 狀態 |
 | GET | `/api/vulnerabilities/{vuln_id}/history` | 查詢 VEX 變更歷程 |
+| PATCH | `/api/vulnerabilities/{vuln_id}/suppress` | 設定/解除抑制（風險接受） |
 
 **VEX 狀態更新 Request Body**
 ```json
 {
-  "status": "not_affected",  // open | in_triage | not_affected | affected | fixed
-  "justification": "code_not_present",  // 僅 not_affected 時有效
-  "response": null,                     // 僅 affected 時有效
-  "detail": "此元件在產品中未啟用相關功能"
+  "status": "not_affected",
+  "justification": "code_not_present",
+  "response": null,
+  "detail": "此元件在產品中未啟用相關功能",
+  "note": "已與開發確認"
 }
 ```
+
+**suppressed 更新 Request Body**
+```json
+{
+  "suppressed": true,
+  "suppressed_until": "2026-12-31",
+  "suppressed_reason": "已通過風險評估，待下季修補計畫處理"
+}
+```
+- `suppressed_until`：ISO 日期字串 `YYYY-MM-DD`（選填，不填表示永久抑制）
+- 到期後 `_is_suppressed()` 自動失效，不需排程工作
 
 **justification 有效值**（`status = not_affected` 時）
 - `code_not_present` — 程式碼不存在
 - `code_not_reachable` — 程式碼不可達
 - `requires_configuration` — 需特定設定才能觸發
 - `requires_dependency` — 需特定相依才能觸發
+- `requires_environment` — 需特定環境才能觸發
+- `protected_by_compiler` — 編譯器保護
+- `protected_at_runtime` — 執行期保護
+- `protected_at_perimeter` — 邊界防護
 - `protected_by_mitigating_control` — 已有緩解控制
 
 **response 有效值**（`status = affected` 時）
 - `update` — 計畫升級
+- `rollback` — 回滾版本
 - `workaround_available` — 提供 workaround
 - `will_not_fix` — 不修補
 - `can_not_fix` — 無法修補
@@ -155,6 +260,37 @@ final_submitted → closed
 | GET | `/api/stats` | 全平台摘要統計 |
 | GET | `/api/stats/risk-overview` | 各組織風險排行 |
 | GET | `/api/stats/top-threats` | 最高風險漏洞清單 |
+| GET | `/api/stats/top-risky-components` | 高風險元件排行（依累積 CVSS 分數） |
+
+**GET /api/stats 回應（含新增欄位）**
+```json
+{
+  "total_organizations": 5,
+  "total_products": 12,
+  "total_releases": 28,
+  "total_vulnerabilities": 340,
+  "open_critical": 7,
+  "open_high": 23,
+  "overdue_vulns": 4
+}
+```
+`overdue_vulns`：已逾 SLA 且未抑制的漏洞數。
+
+**GET /api/stats/top-risky-components 回應**
+```json
+[
+  {
+    "name": "log4j-core",
+    "version": "2.14.1",
+    "purl": "pkg:maven/...",
+    "vuln_count": 3,
+    "max_severity": "critical",
+    "total_cvss": 27.5,
+    "product_name": "工業閘道器 GA-200",
+    "release_version": "v2.1.0"
+  }
+]
+```
 
 ---
 
@@ -178,6 +314,18 @@ final_submitted → closed
 
 ---
 
+## 管理 Admin
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/admin/activity` | 查詢稽核日誌（支援日期篩選） |
+
+**查詢參數**
+- `date_from`：起始日期（`YYYY-MM-DD`，選填）
+- `date_to`：結束日期（`YYYY-MM-DD`，選填）
+
+---
+
 ## 錯誤代碼
 
 | HTTP | 情境 |
@@ -185,7 +333,7 @@ final_submitted → closed
 | 400 | 請求格式錯誤或業務規則違反 |
 | 401 | 未提供或過期的 JWT Token |
 | 404 | 資源不存在 |
-| 409 | 衝突（如：組織名稱重複） |
+| 409 | 衝突（如：組織名稱重複；或版本已鎖定） |
 | 422 | Pydantic 驗證失敗 |
 | 500 | 伺服器內部錯誤 |
 
