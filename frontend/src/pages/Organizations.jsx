@@ -71,7 +71,7 @@ export default function Organizations() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-col sm:flex-row gap-2">
+        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -150,7 +150,7 @@ export default function Organizations() {
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/organizations/${org.id}/products`)}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       查看產品
                     </button>
@@ -158,13 +158,13 @@ export default function Organizations() {
                       <>
                         <button
                           onClick={() => { setEditOrg(org); setEditName(org.name); }}
-                          className="text-yellow-600 hover:underline text-xs"
+                          className="text-yellow-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                         >
                           編輯
                         </button>
                         <button
                           onClick={() => handleDelete(org)}
-                          className="text-red-500 hover:underline text-xs"
+                          className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                         >
                           刪除
                         </button>

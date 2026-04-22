@@ -87,7 +87,7 @@ export default function CRAIncidents() {
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">事件標題</th>
-                <th className="px-4 py-3">觸發 CVE</th>
+                <th className="px-4 py-3 hidden sm:table-cell">觸發 CVE</th>
                 <th className="px-4 py-3">狀態</th>
                 <th className="px-4 py-3">時限</th>
                 <th className="px-4 py-3">建立時間</th>
@@ -101,8 +101,8 @@ export default function CRAIncidents() {
                   className="border-t hover:bg-gray-50 cursor-pointer"
                   onClick={() => navigate(`/cra/${inc.id}`)}
                 >
-                  <td className="px-4 py-3 font-medium text-gray-800">{inc.title}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-blue-700">
+                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[150px] sm:max-w-xs truncate">{inc.title}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-blue-700 hidden sm:table-cell">
                     {inc.trigger_cve_ids || "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -130,7 +130,7 @@ export default function CRAIncidents() {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={(e) => handleDelete(e, inc)}
-                      className="text-red-500 hover:underline text-xs"
+                      className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       刪除
                     </button>

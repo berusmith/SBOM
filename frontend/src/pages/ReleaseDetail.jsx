@@ -363,39 +363,39 @@ export default function ReleaseDetail() {
           </span>
         )}
         {components.length > 0 && (
-          <div className="ml-auto flex flex-wrap gap-2">
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2">
             <button
               onClick={handleRescan}
               disabled={rescanning}
-              className={`px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
             >
               {rescanning ? "掃描中..." : "重新掃描 CVE"}
             </button>
             <button
               onClick={handleEnrichNvd}
               disabled={enrichingNvd}
-              className={`px-4 py-2 rounded text-sm text-white ${enrichingNvd ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${enrichingNvd ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
             >
               {enrichingNvd ? "啟動中..." : "更新 NVD"}
             </button>
             <button
               onClick={handleEnrichEpss}
               disabled={enriching}
-              className={`px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
             >
               {enriching ? "更新中..." : "更新 EPSS"}
             </button>
             <button
               onClick={handleExportCsv}
               disabled={exportingCsv}
-              className={`px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
             >
               {exportingCsv ? "匯出中..." : "匯出 CSV"}
             </button>
             <button
               onClick={handleDownloadIec}
               disabled={downloadingIec}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
             >
               {downloadingIec ? "產生中..." : "IEC 62443-4-1"}
             </button>
@@ -411,7 +411,7 @@ export default function ReleaseDetail() {
                 finally { setDownloadingIec42(false); }
               }}
               disabled={downloadingIec42}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec42 ? "bg-gray-400" : "bg-teal-700 hover:bg-teal-800"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec42 ? "bg-gray-400" : "bg-teal-700 hover:bg-teal-800"}`}
             >
               {downloadingIec42 ? "產生中..." : "IEC 62443-4-2"}
             </button>
@@ -427,28 +427,28 @@ export default function ReleaseDetail() {
                 finally { setDownloadingIec33(false); }
               }}
               disabled={downloadingIec33}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingIec33 ? "bg-gray-400" : "bg-cyan-700 hover:bg-cyan-800"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec33 ? "bg-gray-400" : "bg-cyan-700 hover:bg-cyan-800"}`}
             >
               {downloadingIec33 ? "產生中..." : "IEC 62443-3-3"}
             </button>
             <button
               onClick={handleDownloadEvidence}
               disabled={downloadingEvidence}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingEvidence ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingEvidence ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
             >
               {downloadingEvidence ? "打包中..." : "下載證據包 ZIP"}
             </button>
             <button
               onClick={handleDownloadCsaf}
               disabled={downloadingCsaf}
-              className={`px-4 py-2 rounded text-sm text-white ${downloadingCsaf ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingCsaf ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
             >
               {downloadingCsaf ? "產生中..." : "匯出 CSAF VEX"}
             </button>
             <button
               onClick={handleDownloadReport}
               disabled={downloading}
-              className={`px-4 py-2 rounded text-sm text-white ${downloading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
             >
               {downloading ? "產生中..." : "下載 PDF 報告"}
             </button>
@@ -456,14 +456,14 @@ export default function ReleaseDetail() {
             <button
               onClick={handleCheckIntegrity}
               disabled={checkingIntegrity}
-              className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              className="w-full md:w-auto px-4 py-2 rounded text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
             >
               {checkingIntegrity ? "驗證中..." : "完整性驗證"}
             </button>
             {/* Lock / Unlock */}
             <button
               onClick={handleLockToggle}
-              className={`px-4 py-2 rounded text-sm text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
             >
               {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
             </button>
@@ -540,7 +540,7 @@ export default function ReleaseDetail() {
               <tbody>
                 {components.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-800 max-w-xs truncate">{c.name}</td>
+                    <td className="px-4 py-2 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
                     <td className="px-4 py-2 text-gray-500">{c.version || "—"}</td>
                     <td className="px-4 py-2 text-gray-500 text-xs">{c.license || "—"}</td>
                     <td className="px-4 py-2">{c.vuln_count || "—"}</td>
@@ -574,7 +574,7 @@ export default function ReleaseDetail() {
                 <select
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 >
                   <option value="">全部嚴重度</option>
                   {["critical","high","medium","low","info"].map((s) => (
@@ -584,7 +584,7 @@ export default function ReleaseDetail() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 >
                   <option value="">全部狀態</option>
                   {STATUS_OPTIONS.map((s) => (
@@ -629,13 +629,13 @@ export default function ReleaseDetail() {
                     CVE ID {sortField === "cve_id" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3">元件</th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden md:table-cell" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
                     CVSS {sortField === "cvss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
                     嚴重度 {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden sm:table-cell" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
                     EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3">VEX 狀態</th>
@@ -678,7 +678,7 @@ export default function ReleaseDetail() {
                       )}
                     </td>
                     <td className="px-4 py-2 text-gray-700">{v.component_name} {v.component_version}</td>
-                    <td className="px-4 py-2 text-xs">
+                    <td className="px-4 py-2 text-xs hidden md:table-cell">
                       {v.cvss_v4_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v4_score}</span>
@@ -700,7 +700,7 @@ export default function ReleaseDetail() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-xs">
+                    <td className="px-4 py-2 text-xs hidden sm:table-cell">
                       {v.epss_score != null ? (
                         <span className={`px-2 py-0.5 rounded font-medium ${
                           v.epss_score >= 0.5 ? "bg-red-100 text-red-700" :
@@ -781,7 +781,7 @@ export default function ReleaseDetail() {
       )}
       {/* Floating batch action bar */}
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-5 py-3 flex items-center gap-4 z-40">
+        <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white rounded-xl shadow-2xl px-3 sm:px-6 py-3 flex items-center gap-4 z-40">
           <span className="text-sm font-medium">已選 {selected.size} 筆</span>
           <select
             value={batchStatus}
@@ -855,7 +855,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold text-gray-800 mb-1">VEX 狀態更新</h3>
         <p className="text-xs text-gray-400 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
 

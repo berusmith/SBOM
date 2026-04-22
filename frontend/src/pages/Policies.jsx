@@ -195,7 +195,7 @@ export default function Policies() {
       {/* Rule form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-2 sm:mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-gray-800 mb-4">{editRule ? "編輯規則" : "新增規則"}</h3>
 
             <div className="space-y-3">

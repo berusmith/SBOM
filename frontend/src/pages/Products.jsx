@@ -111,17 +111,17 @@ export default function Products() {
               {products.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{p.description || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{p.description || "—"}</td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/products/${p.id}/releases`)}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       查看版本
                     </button>
                     <button
                       onClick={() => handleDelete(p)}
-                      className="text-red-500 hover:underline text-xs"
+                      className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       刪除
                     </button>

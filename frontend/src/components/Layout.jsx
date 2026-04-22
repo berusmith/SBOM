@@ -85,7 +85,7 @@ export default function Layout({ children }) {
             <div className="md:hidden flex items-center gap-2 ml-auto">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="text-gray-300 hover:text-white p-1 rounded"
+                className="text-gray-300 hover:text-white p-2 rounded"
                 aria-label="選單"
               >
                 {menuOpen ? (
@@ -137,7 +137,7 @@ export default function Layout({ children }) {
           )}
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">{children}</main>
     </div>
   );
 }

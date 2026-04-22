@@ -71,7 +71,7 @@ export default function RiskOverview() {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">跨客戶風險總覽</h1>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
         {[
           { label: "未修補 Critical", value: totalUnpatchedCritical, color: "bg-red-500" },
           { label: "未修補 High",     value: totalUnpatchedHigh,     color: "bg-orange-500" },
@@ -107,7 +107,7 @@ export default function RiskOverview() {
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left text-gray-500 font-medium whitespace-nowrap">修補率</th>
-                <th className="px-4 py-3 text-left text-gray-500 font-medium">進行中事件</th>
+                <th className="px-4 py-3 text-left text-gray-500 font-medium hidden sm:table-cell">進行中事件</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -130,11 +130,11 @@ export default function RiskOverview() {
                       : <span className="text-gray-400">0</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{row.total_vulns}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{row.org_name}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] sm:max-w-none truncate">{row.org_name}</td>
                   <td className="px-4 py-3 min-w-[140px]">
                     <PatchBar rate={row.patch_rate} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {row.active_incidents > 0
                       ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-semibold">{row.active_incidents} 件</span>
                       : <span className="text-gray-400 text-xs">—</span>}

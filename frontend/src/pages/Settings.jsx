@@ -162,7 +162,7 @@ export default function Settings() {
         {/* Logo upload */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">公司 Logo</label>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {brand?.has_logo && logoUrl ? (
               <>
                 <img

@@ -238,7 +238,7 @@ export default function TISAXDetail() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "達標", value: compliant, cls: "text-green-600" },
           { label: "接近", value: near,      cls: "text-yellow-500" },
@@ -279,7 +279,7 @@ export default function TISAXDetail() {
       )}
 
       {/* Tabs + export */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <div className="flex border border-gray-200 rounded-lg overflow-hidden text-sm">
           {["controls", "gap"].map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -298,13 +298,13 @@ export default function TISAXDetail() {
             <option value="compliant">達標</option>
           </select>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="sm:ml-auto flex gap-2">
           <button onClick={handleExportPdf} disabled={exportingPdf}
-            className="px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
+            className="w-full sm:w-auto px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50">
             {exportingPdf ? "產生中..." : "匯出 PDF"}
           </button>
           <button onClick={handleExportCsv} disabled={exporting}
-            className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50">
+            className="w-full sm:w-auto px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50">
             {exporting ? "匯出中..." : "匯出 CSV"}
           </button>
         </div>
@@ -353,8 +353,8 @@ export default function TISAXDetail() {
                         <th className="px-4 py-2 text-center">當前</th>
                         <th className="px-4 py-2 text-center">目標</th>
                         <th className="px-4 py-2 text-center">差距</th>
-                        <th className="px-4 py-2 text-left">負責人</th>
-                        <th className="px-4 py-2 text-left">預計完成</th>
+                        <th className="px-4 py-2 text-left hidden sm:table-cell">負責人</th>
+                        <th className="px-4 py-2 text-left hidden sm:table-cell">預計完成</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -367,8 +367,8 @@ export default function TISAXDetail() {
                           <td className="px-4 py-2 text-center font-bold text-red-600">
                             -{c.target_maturity - c.current_maturity}
                           </td>
-                          <td className="px-4 py-2 text-gray-500 text-xs">{c.owner || "—"}</td>
-                          <td className="px-4 py-2 text-gray-500 text-xs">{c.due_date || "—"}</td>
+                          <td className="px-4 py-2 text-gray-500 text-xs hidden sm:table-cell">{c.owner || "—"}</td>
+                          <td className="px-4 py-2 text-gray-500 text-xs hidden sm:table-cell">{c.due_date || "—"}</td>
                         </tr>
                       ))}
                     </tbody>

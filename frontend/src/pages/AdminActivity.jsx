@@ -69,8 +69,8 @@ export default function AdminActivity() {
                 <th className="px-4 py-2 text-left">客戶</th>
                 <th className="px-4 py-2 text-right">登入次數</th>
                 <th className="px-4 py-2 text-right">SBOM 上傳</th>
-                <th className="px-4 py-2 text-right">漏洞掃描</th>
-                <th className="px-4 py-2 text-right">報告下載</th>
+                <th className="px-4 py-2 text-right hidden sm:table-cell">漏洞掃描</th>
+                <th className="px-4 py-2 text-right hidden sm:table-cell">報告下載</th>
                 <th className="px-4 py-2 text-left">最後登入</th>
               </tr>
             </thead>
@@ -80,8 +80,8 @@ export default function AdminActivity() {
                   <td className="px-4 py-2 font-medium text-gray-800">{row.org_name}</td>
                   <td className="px-4 py-2 text-right text-gray-600">{row.login_count}</td>
                   <td className="px-4 py-2 text-right text-gray-600">{row.sbom_uploads}</td>
-                  <td className="px-4 py-2 text-right text-gray-600">{row.vuln_scans}</td>
-                  <td className="px-4 py-2 text-right text-gray-600">{row.report_downloads}</td>
+                  <td className="px-4 py-2 text-right text-gray-600 hidden sm:table-cell">{row.vuln_scans}</td>
+                  <td className="px-4 py-2 text-right text-gray-600 hidden sm:table-cell">{row.report_downloads}</td>
                   <td className="px-4 py-2 text-gray-500 text-xs">{fmtDate(row.last_login)}</td>
                 </tr>
               ))}
@@ -95,12 +95,12 @@ export default function AdminActivity() {
 
       {/* Event feed */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+        <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <h2 className="font-semibold text-gray-700 text-sm">詳細活動紀錄</h2>
           <select
             value={filterOrg}
             onChange={e => setFilterOrg(e.target.value)}
-            className="ml-auto border border-gray-200 rounded px-2 py-1 text-xs text-gray-600"
+            className="w-full sm:w-auto sm:ml-auto border border-gray-200 rounded px-2 py-1 text-xs text-gray-600"
           >
             <option value="">所有客戶</option>
             {orgs.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
@@ -108,7 +108,7 @@ export default function AdminActivity() {
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value)}
-            className="border border-gray-200 rounded px-2 py-1 text-xs text-gray-600"
+            className="w-full sm:w-auto border border-gray-200 rounded px-2 py-1 text-xs text-gray-600"
           >
             <option value="">所有事件</option>
             {Object.entries(EVENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}

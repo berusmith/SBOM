@@ -33,7 +33,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm mx-4 sm:mx-0">
         <h1 className="text-xl font-bold text-gray-800 mb-1">SBOM Platform</h1>
         <p className="text-sm text-gray-400 mb-6">請登入以繼續</p>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +62,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded text-sm text-white font-medium ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full py-2.5 rounded text-sm text-white font-medium ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
           >
             {loading ? "登入中..." : "登入"}
           </button>
