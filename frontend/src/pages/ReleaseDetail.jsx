@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
@@ -40,6 +40,8 @@ export default function ReleaseDetail() {
   const toast = useToast();
   const { releaseId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { orgId, orgName, productId, productName, version: releaseVersion } = location.state || {};
   const fileRef = useRef();
 
   const [tab, setTab] = useState("components");
@@ -344,10 +346,24 @@ export default function ReleaseDetail() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm">
-          ← 返回
-        </button>
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {productId ? (
+          <div className="flex items-center gap-2 text-sm flex-wrap">
+            <button onClick={() => navigate("/organizations")} className="text-blue-600 hover:underline">客戶管理</button>
+            {orgId && orgName && (
+              <>
+                <span className="text-gray-400">/</span>
+                <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{orgName}</button>
+              </>
+            )}
+            <span className="text-gray-400">/</span>
+            <button onClick={() => navigate(`/products/${productId}/releases`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{productName || productId}</button>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">{releaseVersion || releaseId}</span>
+          </div>
+        ) : (
+          <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm">← 返回</button>
+        )}
         {violations && violations.total > 0 && (
           <span
             className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${

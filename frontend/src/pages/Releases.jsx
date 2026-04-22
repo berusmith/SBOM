@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 
@@ -7,6 +7,8 @@ export default function Releases() {
   const toast = useToast();
   const { productId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { orgId, orgName } = location.state || {};
   const [releases, setReleases] = useState([]);
   const [productName, setProductName] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -55,10 +57,18 @@ export default function Releases() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-1 flex-wrap">
         <button onClick={() => navigate("/organizations")} className="text-blue-600 hover:underline text-sm">
           客戶管理
         </button>
+        {orgId && orgName && (
+          <>
+            <span className="text-gray-400">/</span>
+            <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline text-sm">
+              {orgName}
+            </button>
+          </>
+        )}
         <span className="text-gray-400">/</span>
         <span className="text-sm text-gray-600">{productName || productId}</span>
       </div>
@@ -125,7 +135,7 @@ export default function Releases() {
             </select>
             <button
               disabled={!diffFrom || !diffTo || diffFrom === diffTo}
-              onClick={() => navigate(`/releases/diff?product=${productId}&from=${diffFrom}&to=${diffTo}`)}
+              onClick={() => navigate(`/releases/diff?product=${productId}&from=${diffFrom}&to=${diffTo}`, { state: { orgId, orgName, productId, productName } })}
               className="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-40"
             >
               開始比對
@@ -184,7 +194,7 @@ export default function Releases() {
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
-                      onClick={() => navigate(`/releases/${r.id}`)}
+                      onClick={() => navigate(`/releases/${r.id}`, { state: { orgId, orgName, productId, productName, version: r.version } })}
                       className="text-blue-600 hover:underline text-xs"
                     >
                       詳細

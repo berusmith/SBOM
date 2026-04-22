@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
@@ -7,6 +7,8 @@ import { SkeletonTable } from "../components/Skeleton";
 export default function ReleaseDiff() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { orgId, orgName, productName } = location.state || {};
   const productId  = searchParams.get("product");
   const fromId     = searchParams.get("from");
   const toId       = searchParams.get("to");
@@ -31,7 +33,23 @@ export default function ReleaseDiff() {
 
   return (
     <div>
-      <button onClick={() => navigate(-1)} className="text-blue-600 hover:underline text-sm mb-4 block">← 返回</button>
+      <div className="flex items-center gap-2 text-sm mb-4 flex-wrap">
+        <button onClick={() => navigate("/organizations")} className="text-blue-600 hover:underline">客戶管理</button>
+        {orgId && orgName && (
+          <>
+            <span className="text-gray-400">/</span>
+            <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{orgName}</button>
+          </>
+        )}
+        {productId && (
+          <>
+            <span className="text-gray-400">/</span>
+            <button onClick={() => navigate(`/products/${productId}/releases`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{productName || productId}</button>
+          </>
+        )}
+        <span className="text-gray-400">/</span>
+        <span className="text-gray-600">版本比對</span>
+      </div>
 
       <h2 className="text-xl font-bold text-gray-800 mb-1">{diff.product_name} — 版本比對</h2>
       <p className="text-sm text-gray-500 mb-6">

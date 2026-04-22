@@ -126,7 +126,7 @@ export default function Products() {
                   <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{p.description || "—"}</td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
-                      onClick={() => navigate(`/products/${p.id}/releases`)}
+                      onClick={() => navigate(`/products/${p.id}/releases`, { state: { orgId, orgName } })}
                       className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       查看版本
