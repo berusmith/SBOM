@@ -82,6 +82,10 @@ export default function ReleaseDetail() {
   const [sbomQuality, setSbomQuality] = useState(null);
   const [gate, setGate] = useState(null);
   const [depGraph, setDepGraph] = useState(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
+  const exportMenuRef = useRef();
+  const advancedMenuRef = useRef();
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
@@ -134,6 +138,16 @@ export default function ReleaseDetail() {
     } catch { setIntegrity({ status: "error", message: "驗證失敗" }); }
     finally { setCheckingIntegrity(false); }
   };
+
+  // 點擊 dropdown 外部時關閉
+  React.useEffect(() => {
+    function handleClick(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false);
+      if (advancedMenuRef.current && !advancedMenuRef.current.contains(e.target)) setAdvancedMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -404,140 +418,139 @@ export default function ReleaseDetail() {
           </span>
         )}
         {components.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+
+            {/* 主要操作 */}
             <button
               onClick={handleRescan}
               disabled={rescanning}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"}`}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50`}
             >
               {rescanning ? "掃描中..." : "重新掃描 CVE"}
             </button>
             <button
-              onClick={handleEnrichNvd}
-              disabled={enrichingNvd}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${enrichingNvd ? "bg-gray-400" : "bg-cyan-600 hover:bg-cyan-700"}`}
-            >
-              {enrichingNvd ? "啟動中..." : "更新 NVD"}
-            </button>
-            <button
-              onClick={handleEnrichEpss}
-              disabled={enriching}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${enriching ? "bg-gray-400" : "bg-violet-600 hover:bg-violet-700"}`}
-            >
-              {enriching ? "更新中..." : "更新 EPSS"}
-            </button>
-            <button
-              onClick={handleExportCsv}
-              disabled={exportingCsv}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
-            >
-              {exportingCsv ? "匯出中..." : "匯出 CSV"}
-            </button>
-            <button
-              onClick={async () => {
-                setExportingCdx(true);
-                try {
-                  const resp = await api.get(`/releases/${releaseId}/export/cyclonedx-xml`, { responseType: "blob" });
-                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
-                  const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
-                  URL.revokeObjectURL(url);
-                } catch { toast.error("匯出失敗"); } finally { setExportingCdx(false); }
-              }}
-              disabled={exportingCdx}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCdx ? "bg-gray-400" : "bg-teal-500 hover:bg-teal-600"}`}
-            >
-              {exportingCdx ? "匯出中..." : "CycloneDX XML"}
-            </button>
-            <button
-              onClick={async () => {
-                setExportingSpdx(true);
-                try {
-                  const resp = await api.get(`/releases/${releaseId}/export/spdx-json`, { responseType: "blob" });
-                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
-                  const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
-                  URL.revokeObjectURL(url);
-                } catch { toast.error("匯出失敗"); } finally { setExportingSpdx(false); }
-              }}
-              disabled={exportingSpdx}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingSpdx ? "bg-gray-400" : "bg-indigo-500 hover:bg-indigo-600"}`}
-            >
-              {exportingSpdx ? "匯出中..." : "SPDX JSON"}
-            </button>
-            <button
-              onClick={handleDownloadIec}
-              disabled={downloadingIec}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
-            >
-              {downloadingIec ? "產生中..." : "IEC 62443-4-1"}
-            </button>
-            <button
-              onClick={async () => {
-                setDownloadingIec42(true);
-                try {
-                  const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
-                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
-                  const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
-                  URL.revokeObjectURL(url);
-                } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                finally { setDownloadingIec42(false); }
-              }}
-              disabled={downloadingIec42}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec42 ? "bg-gray-400" : "bg-teal-700 hover:bg-teal-800"}`}
-            >
-              {downloadingIec42 ? "產生中..." : "IEC 62443-4-2"}
-            </button>
-            <button
-              onClick={async () => {
-                setDownloadingIec33(true);
-                try {
-                  const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
-                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
-                  const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
-                  URL.revokeObjectURL(url);
-                } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                finally { setDownloadingIec33(false); }
-              }}
-              disabled={downloadingIec33}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingIec33 ? "bg-gray-400" : "bg-cyan-700 hover:bg-cyan-800"}`}
-            >
-              {downloadingIec33 ? "產生中..." : "IEC 62443-3-3"}
-            </button>
-            <button
-              onClick={handleDownloadEvidence}
-              disabled={downloadingEvidence}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingEvidence ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
-            >
-              {downloadingEvidence ? "打包中..." : "下載證據包 ZIP"}
-            </button>
-            <button
-              onClick={handleDownloadCsaf}
-              disabled={downloadingCsaf}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloadingCsaf ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
-            >
-              {downloadingCsaf ? "產生中..." : "匯出 CSAF VEX"}
-            </button>
-            <button
               onClick={handleDownloadReport}
               disabled={downloading}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${downloading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"}`}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${downloading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50`}
             >
               {downloading ? "產生中..." : "下載 PDF 報告"}
             </button>
-            {/* Integrity check */}
-            <button
-              onClick={handleCheckIntegrity}
-              disabled={checkingIntegrity}
-              className="w-full md:w-auto px-4 py-2 rounded text-sm border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-            >
-              {checkingIntegrity ? "驗證中..." : "完整性驗證"}
-            </button>
-            {/* Lock / Unlock */}
             <button
               onClick={handleLockToggle}
-              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
             >
               {locked ? "🔓 解鎖版本" : "🔒 鎖定版本"}
             </button>
+
+            {/* 匯出 / 下載 dropdown */}
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                onClick={() => { setExportMenuOpen(o => !o); setAdvancedMenuOpen(false); }}
+                className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+              >
+                匯出 / 下載 <span className="text-xs">▾</span>
+              </button>
+              {exportMenuOpen && (
+                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px] py-1">
+                  {[
+                    { label: exportingCsv ? "匯出中..." : "匯出 CSV", disabled: exportingCsv, onClick: () => { handleExportCsv(); setExportMenuOpen(false); } },
+                  ].map((item, i) => (
+                    <button key={i} onClick={item.onClick} disabled={item.disabled}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                      {item.label}
+                    </button>
+                  ))}
+                  <button disabled={exportingCdx} onClick={async () => {
+                    setExportMenuOpen(false); setExportingCdx(true);
+                    try {
+                      const resp = await api.get(`/releases/${releaseId}/export/cyclonedx-xml`, { responseType: "blob" });
+                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
+                      const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { toast.error("匯出失敗"); } finally { setExportingCdx(false); }
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {exportingCdx ? "匯出中..." : "CycloneDX XML"}
+                  </button>
+                  <button disabled={exportingSpdx} onClick={async () => {
+                    setExportMenuOpen(false); setExportingSpdx(true);
+                    try {
+                      const resp = await api.get(`/releases/${releaseId}/export/spdx-json`, { responseType: "blob" });
+                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
+                      const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { toast.error("匯出失敗"); } finally { setExportingSpdx(false); }
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {exportingSpdx ? "匯出中..." : "SPDX JSON"}
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button disabled={downloadingIec} onClick={() => { setExportMenuOpen(false); handleDownloadIec(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {downloadingIec ? "產生中..." : "IEC 62443-4-1 報告"}
+                  </button>
+                  <button disabled={downloadingIec42} onClick={async () => {
+                    setExportMenuOpen(false); setDownloadingIec42(true);
+                    try {
+                      const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
+                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                      const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                    finally { setDownloadingIec42(false); }
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {downloadingIec42 ? "產生中..." : "IEC 62443-4-2 報告"}
+                  </button>
+                  <button disabled={downloadingIec33} onClick={async () => {
+                    setExportMenuOpen(false); setDownloadingIec33(true);
+                    try {
+                      const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
+                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                      const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                    finally { setDownloadingIec33(false); }
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button disabled={downloadingEvidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {downloadingEvidence ? "打包中..." : "證據包 ZIP"}
+                  </button>
+                  <button disabled={downloadingCsaf} onClick={() => { setExportMenuOpen(false); handleDownloadCsaf(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {downloadingCsaf ? "產生中..." : "CSAF VEX"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 進階操作 dropdown */}
+            <div className="relative" ref={advancedMenuRef}>
+              <button
+                onClick={() => { setAdvancedMenuOpen(o => !o); setExportMenuOpen(false); }}
+                className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+              >
+                進階操作 <span className="text-xs">▾</span>
+              </button>
+              {advancedMenuOpen && (
+                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
+                  <button disabled={enrichingNvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {enrichingNvd ? "啟動中..." : "更新 NVD 資料"}
+                  </button>
+                  <button disabled={enriching} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {enriching ? "更新中..." : "更新 EPSS 分數"}
+                  </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button disabled={checkingIntegrity} onClick={() => { setAdvancedMenuOpen(false); handleCheckIntegrity(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    {checkingIntegrity ? "驗證中..." : "完整性驗證"}
+                  </button>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
       </div>
