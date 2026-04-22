@@ -842,8 +842,8 @@ export default function Help() {
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Sidebar */}
         <aside className={`
-          ${sidebarOpen ? "block absolute z-10 bg-white shadow-lg rounded-lg p-3 w-64 top-36" : "hidden"}
-          md:block md:relative md:z-auto md:bg-transparent md:shadow-none md:p-0 md:w-52 lg:w-60 shrink-0
+          ${sidebarOpen ? "block fixed left-4 right-4 top-32 bottom-4 md:static z-40 bg-white shadow-lg rounded-lg p-3 w-auto overflow-y-auto" : "hidden"}
+          md:block md:relative md:z-auto md:bg-transparent md:shadow-none md:rounded-none md:p-0 md:w-52 lg:w-60 shrink-0 md:bottom-auto
         `}>
           <nav className="space-y-1">
             {SECTIONS.map((section) => (

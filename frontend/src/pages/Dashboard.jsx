@@ -212,7 +212,7 @@ export default function Dashboard() {
       <CRACountdown />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
         {[
           { label: "客戶數",      value: stats.organizations,                     color: "bg-blue-500",   link: "/organizations" },
           { label: "產品數",      value: stats.products,                          color: "bg-indigo-500", link: "/organizations" },
