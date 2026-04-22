@@ -59,11 +59,54 @@ const STATUS = [
   { key: "fixed",        label: "Fixed",        color: "bg-blue-400" },
 ];
 
+function ViewerOnboarding({ orgId }) {
+  const navigate = useNavigate();
+  const steps = [
+    { num: 1, title: "前往產品列表", desc: "點擊左側「客戶管理」進入您的產品列表", action: () => navigate(`/organizations/${orgId}/products`), actionLabel: "立即前往" },
+    { num: 2, title: "建立產品", desc: "點擊「+ 新增產品」，輸入產品名稱與版本資訊", action: null, actionLabel: null },
+    { num: 3, title: "上傳 SBOM 並掃描", desc: "進入版本頁面，上傳 CycloneDX 或 SPDX JSON 檔案，點擊「掃描漏洞」", action: null, actionLabel: null },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl border-2 border-dashed border-blue-200 p-6 mb-6">
+      <div className="flex items-start gap-4">
+        <div className="bg-blue-100 text-blue-600 rounded-full p-3 shrink-0">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div className="flex-1">
+          <h2 className="font-semibold text-gray-800 mb-1">歡迎使用 SBOM 平台</h2>
+          <p className="text-sm text-gray-500 mb-4">尚未有任何漏洞資料。請依照以下步驟開始分析您的產品安全狀態：</p>
+          <div className="space-y-3">
+            {steps.map((s) => (
+              <div key={s.num} className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{s.num}</div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">{s.title}</span>
+                    {s.action && (
+                      <button onClick={s.action} className="text-xs text-blue-600 hover:underline">{s.actionLabel} →</button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [riskOverview, setRiskOverview] = useState([]);
   const [topThreats, setTopThreats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const role = localStorage.getItem("role") || "viewer";
+  const orgId = localStorage.getItem("org_id") || "";
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -115,10 +158,27 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {totalVulns === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
-          尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。
+      {/* Viewer quick-access banner */}
+      {role === "viewer" && orgId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 mb-6 flex items-center justify-between gap-3">
+          <p className="text-sm text-blue-700">您的漏洞資料已依您的組織範圍顯示。</p>
+          <button
+            onClick={() => navigate(`/organizations/${orgId}/products`)}
+            className="text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap shrink-0"
+          >
+            前往產品列表 →
+          </button>
         </div>
+      )}
+
+      {totalVulns === 0 ? (
+        role === "viewer" && orgId ? (
+          <ViewerOnboarding orgId={orgId} />
+        ) : (
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+            尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。
+          </div>
+        )
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 

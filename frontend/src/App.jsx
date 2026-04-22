@@ -17,6 +17,8 @@ import Help from "./pages/Help";
 import AdminActivity from "./pages/AdminActivity";
 import TISAXAssessments from "./pages/TISAXAssessments";
 import TISAXDetail from "./pages/TISAXDetail";
+import Profile from "./pages/Profile";
+import Users from "./pages/Users";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -64,6 +66,8 @@ export default function App() {
                   <Route path="/admin/activity" element={<RequireAdmin><AdminActivity /></RequireAdmin>} />
                   <Route path="/tisax" element={<TISAXAssessments />} />
                   <Route path="/tisax/:assessmentId" element={<TISAXDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin/users" element={<RequireAdmin><Users /></RequireAdmin>} />
                 </Routes>
               </Layout>
             </RequireAuth>

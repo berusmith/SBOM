@@ -70,6 +70,16 @@ with engine.connect() as conn:
         conn.execute(text("ALTER TABLE cra_incidents ADD COLUMN org_id TEXT REFERENCES organizations(id)"))
     conn.commit()
 
+    # alert_config — add monitoring columns
+    alert_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(alert_config)"))} if "alert_config" in _existing_tables else set()
+    for col, typedef in [
+        ("monitor_interval_hours", "INTEGER DEFAULT 24"),
+        ("monitor_last_run",       "DATETIME"),
+    ]:
+        if col not in alert_cols and "alert_config" in _existing_tables:
+            conn.execute(text(f"ALTER TABLE alert_config ADD COLUMN {col} {typedef}"))
+    conn.commit()
+
     # Performance indexes — safe to run repeatedly via IF NOT EXISTS
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",
@@ -126,6 +136,18 @@ app.include_router(policies.router, dependencies=_auth)
 app.include_router(users.router, dependencies=_auth)
 app.include_router(admin.router, dependencies=_auth)
 app.include_router(tisax.router, dependencies=_auth)
+
+
+@app.on_event("startup")
+def _start_monitor():
+    from app.services import monitor
+    monitor.start()
+
+
+@app.on_event("shutdown")
+def _stop_monitor():
+    from app.services import monitor
+    monitor.stop()
 
 
 @app.get("/health")

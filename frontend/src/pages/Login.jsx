@@ -19,6 +19,7 @@ export default function Login() {
       const me = await api.get("/auth/me");
       localStorage.setItem("role", me.data.role || "viewer");
       localStorage.setItem("org_id", me.data.org_id || "");
+      localStorage.setItem("username", me.data.username || username);
       if (me.data.role !== "admin" && me.data.org_id) {
         navigate(`/organizations/${me.data.org_id}/products`, { replace: true });
       } else {

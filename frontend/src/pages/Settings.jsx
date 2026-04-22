@@ -9,9 +9,14 @@ export default function Settings() {
   const [cfg, setCfg] = useState(null);
   const [webhook, setWebhook] = useState("");
   const [email, setEmail] = useState("");
+  const [intervalHours, setIntervalHours] = useState(24);
   const [saving, setSaving] = useState(false);
   const [testingWh, setTestingWh] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+
+  // Monitor status
+  const [monitorStatus, setMonitorStatus] = useState(null);
+  const [triggering, setTriggering] = useState(false);
 
   // Brand settings
   const [brand, setBrand] = useState(null);
@@ -32,7 +37,12 @@ export default function Settings() {
       setCfg(r.data);
       setWebhook(r.data.webhook_url || "");
       setEmail(r.data.alert_email_to || "");
+      setIntervalHours(r.data.monitor_interval_hours ?? 24);
     }).catch(() => {});
+  };
+
+  const fetchMonitorStatus = () => {
+    api.get("/settings/monitor").then((r) => setMonitorStatus(r.data)).catch(() => {});
   };
 
   const fetchBrand = () => {
@@ -55,19 +65,42 @@ export default function Settings() {
   useEffect(() => {
     fetchCfg();
     fetchBrand();
+    fetchMonitorStatus();
     api.get("/auth/me").then((r) => setCurrentRole(r.data.role)).catch(() => {});
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.patch("/settings/alerts", { webhook_url: webhook, alert_email_to: email });
+      await api.patch("/settings/alerts", {
+        webhook_url: webhook,
+        alert_email_to: email,
+        monitor_interval_hours: intervalHours,
+      });
       flash("ok", "通知設定已儲存");
       fetchCfg();
+      fetchMonitorStatus();
     } catch (e) {
       flash("err", e.response?.data?.detail || "儲存失敗");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTriggerScan = async () => {
+    setTriggering(true);
+    try {
+      const r = await api.post("/settings/monitor/trigger");
+      if (r.data.status === "already_running") {
+        flash("ok", "掃描已在執行中");
+      } else {
+        flash("ok", "已啟動全域掃描，完成後若有新漏洞將發送通知");
+        setTimeout(fetchMonitorStatus, 3000);
+      }
+    } catch (e) {
+      flash("err", e.response?.data?.detail || "啟動失敗");
+    } finally {
+      setTriggering(false);
     }
   };
 
@@ -264,6 +297,63 @@ export default function Settings() {
         >
           {savingBrand ? "儲存中..." : "儲存品牌設定"}
         </button>
+      </div>
+
+      {/* ── Continuous monitoring ── */}
+      <div className="bg-white rounded-lg shadow p-5 mb-4">
+        <h3 className="font-semibold text-gray-700 mb-1">持續漏洞監控</h3>
+        <p className="text-xs text-gray-400 mb-4">系統定期對所有版本重新掃描 OSV.dev，發現新 CVE 時自動發送通知</p>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">掃描頻率</label>
+            <select
+              value={intervalHours}
+              onChange={(e) => setIntervalHours(Number(e.target.value))}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value={0}>停用</option>
+              <option value={6}>每 6 小時</option>
+              <option value={12}>每 12 小時</option>
+              <option value={24}>每 24 小時</option>
+              <option value={48}>每 48 小時</option>
+              <option value={72}>每 72 小時</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleTriggerScan}
+            disabled={triggering}
+            className="sm:mt-5 px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          >
+            {triggering ? "啟動中..." : "立即掃描一次"}
+          </button>
+        </div>
+
+        {monitorStatus && (
+          <div className="bg-gray-50 rounded p-3 text-xs text-gray-500 space-y-1">
+            <div className="flex gap-4 flex-wrap">
+              <span>
+                狀態：
+                <span className={monitorStatus.is_scanning ? "text-blue-600 font-medium" : "text-gray-600"}>
+                  {monitorStatus.is_scanning ? "掃描中..." : "閒置"}
+                </span>
+              </span>
+              {monitorStatus.last_run && (
+                <span>
+                  上次執行：{new Date(monitorStatus.last_run).toLocaleString("zh-TW")}
+                  {monitorStatus.last_run_new_count > 0 && (
+                    <span className="ml-1 text-orange-500 font-medium">（+{monitorStatus.last_run_new_count} 新漏洞）</span>
+                  )}
+                </span>
+              )}
+              {!monitorStatus.last_run && <span className="text-gray-400">尚未執行過</span>}
+              {monitorStatus.next_run && (
+                <span>下次排程：{new Date(monitorStatus.next_run).toLocaleString("zh-TW")}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Webhook ── */}

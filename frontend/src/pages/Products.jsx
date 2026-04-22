@@ -96,7 +96,17 @@ export default function Products() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {products.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">尚無產品，點擊「新增產品」開始</div>
+          <div className="p-8 text-center">
+            <div className="text-gray-300 text-5xl mb-3">📦</div>
+            <p className="text-gray-600 font-medium mb-1">尚無產品</p>
+            <p className="text-sm text-gray-400 mb-4">點擊右上角「+ 新增產品」新增您的第一個產品，<br />然後在版本頁面上傳 SBOM 檔案進行漏洞掃描。</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            >
+              + 新增第一個產品
+            </button>
+          </div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[360px]">

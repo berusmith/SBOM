@@ -45,19 +45,35 @@ def _get_or_create_brand(db: Session) -> BrandConfig:
 def get_alert_settings(db: Session = Depends(get_db)):
     cfg = _get_or_create_alert(db)
     return {
-        "webhook_url": cfg.webhook_url or "",
-        "alert_email_to": cfg.alert_email_to or "",
-        "smtp_configured": bool(settings.SMTP_HOST and settings.SMTP_USER),
-        "smtp_host": settings.SMTP_HOST,
-        "smtp_port": settings.SMTP_PORT,
-        "smtp_user": settings.SMTP_USER,
-        "smtp_from": settings.SMTP_FROM or settings.SMTP_USER,
+        "webhook_url":            cfg.webhook_url or "",
+        "alert_email_to":         cfg.alert_email_to or "",
+        "monitor_interval_hours": cfg.monitor_interval_hours if cfg.monitor_interval_hours is not None else 24,
+        "smtp_configured":        bool(settings.SMTP_HOST and settings.SMTP_USER),
+        "smtp_host":              settings.SMTP_HOST,
+        "smtp_port":              settings.SMTP_PORT,
+        "smtp_user":              settings.SMTP_USER,
+        "smtp_from":              settings.SMTP_FROM or settings.SMTP_USER,
     }
 
 
+# ── Monitor endpoints ─────────────────────────────────────────────
+
+@router.get("/monitor")
+def get_monitor_status():
+    from app.services.monitor import get_status
+    return get_status()
+
+
+@router.post("/monitor/trigger")
+def trigger_monitor():
+    from app.services.monitor import trigger
+    return trigger()
+
+
 class AlertSettingsUpdate(BaseModel):
-    webhook_url: Optional[str] = None
-    alert_email_to: Optional[str] = None
+    webhook_url:            Optional[str] = None
+    alert_email_to:         Optional[str] = None
+    monitor_interval_hours: Optional[int] = None
 
 
 @router.patch("/alerts")
@@ -67,6 +83,10 @@ def update_alert_settings(payload: AlertSettingsUpdate, db: Session = Depends(ge
         cfg.webhook_url = payload.webhook_url.strip()
     if payload.alert_email_to is not None:
         cfg.alert_email_to = payload.alert_email_to.strip()
+    if payload.monitor_interval_hours is not None:
+        if payload.monitor_interval_hours not in (0, 6, 12, 24, 48, 72):
+            raise HTTPException(status_code=400, detail="interval_hours 必須為 0/6/12/24/48/72")
+        cfg.monitor_interval_hours = payload.monitor_interval_hours
     db.commit()
     db.refresh(cfg)
     return {"webhook_url": cfg.webhook_url or "", "alert_email_to": cfg.alert_email_to or ""}

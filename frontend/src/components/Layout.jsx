@@ -8,6 +8,7 @@ const ALL_NAV = [
   { path: "/policies",        label: "Policy",   adminOnly: false },
   { path: "/cra",             label: "CRA 事件", adminOnly: false },
   { path: "/tisax",           label: "TISAX",    adminOnly: false },
+  { path: "/admin/users",     label: "帳號管理", adminOnly: true  },
   { path: "/admin/activity",  label: "使用紀錄", adminOnly: true  },
   { path: "/settings",        label: "通知設定", adminOnly: true  },
   { path: "/help",            label: "說明",     adminOnly: false },
@@ -29,10 +30,13 @@ export default function Layout({ children }) {
     setMenuOpen(false);
   };
 
+  const username = localStorage.getItem("username") || "";
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("org_id");
+    localStorage.removeItem("username");
     navigate("/login", { replace: true });
   };
 
@@ -74,12 +78,17 @@ export default function Layout({ children }) {
               />
               <button type="submit" className="text-gray-400 hover:text-white px-1 text-sm">⌕</button>
             </form>
-            <button
-              onClick={handleLogout}
-              className="hidden md:block text-sm text-gray-400 hover:text-white transition-colors shrink-0"
-            >
-              登出
-            </button>
+            <div className="hidden md:flex items-center gap-3 shrink-0">
+              <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
+                {username || "帳號"}
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-400 hover:text-white transition-colors"
+              >
+                登出
+              </button>
+            </div>
 
             {/* Mobile: search icon + hamburger */}
             <div className="md:hidden flex items-center gap-2 ml-auto">
@@ -127,6 +136,13 @@ export default function Layout({ children }) {
                 />
                 <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">搜尋</button>
               </form>
+              <Link
+                to="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="block px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded"
+              >
+                {username || "帳號設定"}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="block w-full text-left px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded"

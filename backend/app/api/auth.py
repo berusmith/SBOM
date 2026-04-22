@@ -68,3 +68,22 @@ def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)
 @router.get("/me")
 def me(user: dict = Depends(get_current_user)):
     return {"username": user["username"], "role": user["role"], "org_id": user.get("org_id")}
+
+
+class ChangePasswordPayload(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/change-password", status_code=204)
+def change_password(payload: ChangePasswordPayload, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="新密碼至少 8 個字元")
+    db_user = db.query(UserModel).filter(UserModel.username == user["username"]).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="帳號不存在")
+    if not verify_password(payload.current_password, db_user.hashed_password):
+        raise HTTPException(status_code=400, detail="目前密碼不正確")
+    db_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
+    logger.info("PASSWORD_CHANGE user=%s", user["username"])
