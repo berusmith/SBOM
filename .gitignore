@@ -8,6 +8,10 @@ venv/
 
 # Secrets
 deploy/.env.server
+ssh-key-*
+
+# Local scratch
+archive/
 
 # Database & uploads
 backend/sbom.db
