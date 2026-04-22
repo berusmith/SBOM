@@ -86,9 +86,13 @@ export default function ReleaseDetail() {
   const [locked, setLocked] = useState(false);
   const [integrity, setIntegrity] = useState(null);
   const [checkingIntegrity, setCheckingIntegrity] = useState(false);
+  const [sbomQuality, setSbomQuality] = useState(null);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
+  };
+  const fetchQuality = () => {
+    api.get(`/releases/${releaseId}/sbom-quality`).then((r) => setSbomQuality(r.data)).catch(() => setSbomQuality(null));
   };
   const fetchVulns = () => {
     api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => {});
@@ -105,6 +109,7 @@ export default function ReleaseDetail() {
     fetchVulns();
     fetchViolations();
     fetchRelease();
+    fetchQuality();
   }, [releaseId]);
 
   const handleLockToggle = async () => {
@@ -140,6 +145,7 @@ export default function ReleaseDetail() {
       setUploadResult({ ok: true, ...res.data });
       fetchComponents();
       fetchVulns();
+      fetchQuality();
     } catch (err) {
       setUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
@@ -491,6 +497,40 @@ export default function ReleaseDetail() {
           🔒 <span>此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。</span>
         </div>
       )}
+
+      {/* SBOM Quality Score */}
+      {sbomQuality && (() => {
+        const gradeColor = {A:"text-green-600",B:"text-blue-600",C:"text-yellow-600",D:"text-red-600"}[sbomQuality.grade] || "text-gray-600";
+        const gradeBg   = {A:"bg-green-50 border-green-200",B:"bg-blue-50 border-blue-200",C:"bg-yellow-50 border-yellow-200",D:"bg-red-50 border-red-200"}[sbomQuality.grade] || "bg-gray-50 border-gray-200";
+        return (
+          <div className={`mb-4 rounded-lg border p-4 ${gradeBg}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <span className="text-sm font-semibold text-gray-700">SBOM 品質評分</span>
+                <span className="ml-2 text-xs text-gray-400">NTIA 最低要求（7 項）</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-500">{sbomQuality.passed}/{sbomQuality.total} 通過</span>
+                <span className={`text-2xl font-bold ${gradeColor}`}>{sbomQuality.grade}</span>
+                <span className={`text-lg font-bold ${gradeColor}`}>{sbomQuality.score}%</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {sbomQuality.checks.map((c) => (
+                <div key={c.id} className="flex items-start gap-2 text-xs">
+                  <span className={`mt-0.5 shrink-0 font-bold ${c.passed ? "text-green-500" : "text-red-400"}`}>
+                    {c.passed ? "✓" : "✗"}
+                  </span>
+                  <div>
+                    <span className={`font-medium ${c.passed ? "text-gray-700" : "text-gray-500"}`}>{c.label}</span>
+                    <span className="ml-1 text-gray-400">{c.detail}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Severity summary */}
       {vulns.length > 0 && (
