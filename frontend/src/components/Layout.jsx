@@ -7,6 +7,7 @@ const ALL_NAV = [
   { path: "/risk-overview",   label: "風險總覽", adminOnly: false },
   { path: "/policies",        label: "Policy",   adminOnly: false },
   { path: "/cra",             label: "CRA 事件", adminOnly: false },
+  { path: "/tisax",           label: "TISAX",    adminOnly: false },
   { path: "/admin/activity",  label: "使用紀錄", adminOnly: true  },
   { path: "/settings",        label: "通知設定", adminOnly: true  },
   { path: "/help",            label: "說明",     adminOnly: false },
