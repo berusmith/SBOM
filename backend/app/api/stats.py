@@ -1,6 +1,8 @@
+from collections import defaultdict
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
 from app.core.deps import get_org_scope
@@ -186,6 +188,44 @@ def get_risk_overview(org_scope: str | None = Depends(get_org_scope), db: Sessio
 
     result.sort(key=lambda x: x["risk_score"], reverse=True)
     return result
+
+
+@router.get("/top-risky-components")
+def get_top_risky_components(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    comp_q = db.query(Component).options(joinedload(Component.vulnerabilities))
+    if org_scope:
+        comp_q = (
+            comp_q
+            .join(Release, Release.id == Component.release_id)
+            .join(Product, Product.id == Release.product_id)
+            .filter(Product.organization_id == org_scope)
+        )
+
+    agg = defaultdict(lambda: {"release_ids": set(), "unpatched_ch": 0, "max_epss": None})
+    for comp in comp_q.all():
+        key = (comp.name, comp.version or "")
+        agg[key]["release_ids"].add(comp.release_id)
+        for v in comp.vulnerabilities:
+            if v.severity in ("critical", "high") and v.status not in ("fixed", "not_affected"):
+                agg[key]["unpatched_ch"] += 1
+            if v.epss_score is not None:
+                cur = agg[key]["max_epss"]
+                if cur is None or v.epss_score > cur:
+                    agg[key]["max_epss"] = v.epss_score
+
+    result = [
+        {
+            "name":          name,
+            "version":       version,
+            "release_count": len(data["release_ids"]),
+            "unpatched_ch":  data["unpatched_ch"],
+            "max_epss":      round(data["max_epss"], 4) if data["max_epss"] is not None else None,
+        }
+        for (name, version), data in agg.items()
+        if data["unpatched_ch"] > 0
+    ]
+    result.sort(key=lambda x: (x["unpatched_ch"], x["release_count"]), reverse=True)
+    return result[:5]
 
 
 @router.get("/top-threats")

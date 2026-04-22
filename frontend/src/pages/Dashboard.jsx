@@ -104,6 +104,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [riskOverview, setRiskOverview] = useState([]);
   const [topThreats, setTopThreats] = useState(null);
+  const [riskyComponents, setRiskyComponents] = useState([]);
   const [loading, setLoading] = useState(true);
   const role = localStorage.getItem("role") || "viewer";
   const orgId = localStorage.getItem("org_id") || "";
@@ -114,10 +115,12 @@ export default function Dashboard() {
       api.get("/stats"),
       api.get("/stats/risk-overview"),
       api.get("/stats/top-threats"),
-    ]).then(([s, r, t]) => {
+      api.get("/stats/top-risky-components"),
+    ]).then(([s, r, t, rc]) => {
       setStats(s.data);
       setRiskOverview(r.data);
       setTopThreats(t.data);
+      setRiskyComponents(rc.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -342,6 +345,64 @@ export default function Dashboard() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Top risky components */}
+      {riskyComponents.length > 0 && (
+        <div className="mt-4 bg-white rounded-lg shadow p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-gray-700">高風險元件</h2>
+            <span className="text-xs text-gray-400">跨版本 Critical/High 未處理漏洞最多</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b">
+                  <th className="pb-2 pr-4">元件</th>
+                  <th className="pb-2 pr-4 text-center">版本數</th>
+                  <th className="pb-2 pr-4 text-center">未處理 C/H</th>
+                  <th className="pb-2 text-center">最高 EPSS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {riskyComponents.map((c, i) => (
+                  <tr
+                    key={i}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate(`/search?q=${encodeURIComponent(c.name)}`)}
+                  >
+                    <td className="py-2.5 pr-4">
+                      <span className="font-medium text-gray-800">{c.name}</span>
+                      {c.version && <span className="ml-1.5 text-xs text-gray-400">{c.version}</span>}
+                    </td>
+                    <td className="py-2.5 pr-4 text-center">
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                        {c.release_count} 個版本
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-4 text-center">
+                      <span className={`font-bold text-sm ${c.unpatched_ch >= 5 ? "text-red-600" : "text-orange-500"}`}>
+                        {c.unpatched_ch}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-center">
+                      {c.max_epss != null ? (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          c.max_epss >= 0.5 ? "bg-red-100 text-red-700" :
+                          c.max_epss >= 0.1 ? "bg-orange-100 text-orange-700" :
+                          "bg-gray-100 text-gray-500"
+                        }`}>
+                          {(c.max_epss * 100).toFixed(1)}%
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-gray-400">點擊元件名稱可在全域搜尋中查看所有受影響版本</p>
         </div>
       )}
 
