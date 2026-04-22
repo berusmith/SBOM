@@ -9,7 +9,7 @@ const ALL_NAV = [
   { path: "/cra",             label: "CRA 事件", adminOnly: false },
   { path: "/tisax",           label: "TISAX",    adminOnly: false },
   { path: "/admin/users",     label: "帳號管理", adminOnly: true  },
-  { path: "/admin/activity",  label: "使用紀錄", adminOnly: true  },
+  { path: "/admin/activity",  label: "稽核日誌", adminOnly: true  },
   { path: "/settings",        label: "通知設定", adminOnly: true  },
   { path: "/help",            label: "說明",     adminOnly: false },
 ];

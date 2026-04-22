@@ -30,15 +30,30 @@ def _serialize_event(e: AuditEvent) -> dict:
 def get_activity(
     _admin: dict = Depends(require_admin),
     db: Session = Depends(get_db),
-    limit: int = Query(100, le=500),
+    limit: int = Query(200, le=500),
     org_id: str | None = None,
     event_type: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
 ):
+    from datetime import datetime, timezone
     q = db.query(AuditEvent).order_by(AuditEvent.created_at.desc())
     if org_id:
         q = q.filter(AuditEvent.org_id == org_id)
     if event_type:
         q = q.filter(AuditEvent.event_type == event_type)
+    if date_from:
+        try:
+            dt = datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc)
+            q = q.filter(AuditEvent.created_at >= dt)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+            q = q.filter(AuditEvent.created_at <= dt)
+        except ValueError:
+            pass
     return [_serialize_event(e) for e in q.limit(limit).all()]
 
 
