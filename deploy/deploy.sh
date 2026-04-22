@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# 本機執行：build 前端、同步檔案、重啟後端
-# 執行方式（在 sbom-platform/ 目錄下）: bash deploy/deploy.sh
+# 執行方式（在 D:/projects/SBOM/ 目錄下）: bash deploy/deploy.sh
 set -e
 
-KEY="../ssh-key-2026-04-21.key"
+KEY="./ssh-key-2026-04-21.key"
 SERVER="opc@161.33.130.101"
 REMOTE="/var/www/sbom"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no"
@@ -16,22 +15,22 @@ npm run build
 cd ..
 
 echo "=== [2/4] 同步後端程式碼 ==="
-rsync -az --delete \
-  --exclude __pycache__ \
-  --exclude "*.pyc" \
-  --exclude ".env" \
-  --exclude "sbom.db" \
-  --exclude "sbom.db-shm" \
-  --exclude "sbom.db-wal" \
-  --exclude "uploads/" \
-  --exclude "venv/" \
-  -e "ssh -i $KEY -o StrictHostKeyChecking=no" \
-  backend/ "$SERVER:$REMOTE/backend/"
+tar -czf - \
+  --exclude='backend/__pycache__' \
+  --exclude='backend/**/__pycache__' \
+  --exclude='backend/**/*.pyc' \
+  --exclude='backend/.env' \
+  --exclude='backend/sbom.db' \
+  --exclude='backend/sbom.db-shm' \
+  --exclude='backend/sbom.db-wal' \
+  --exclude='backend/uploads' \
+  --exclude='backend/venv' \
+  backend/ \
+| $SSH "$SERVER" "mkdir -p $REMOTE && tar -xzf - -C $REMOTE"
 
 echo "=== [3/4] 同步前端靜態檔（僅 dist/）==="
-rsync -az --delete \
-  -e "ssh -i $KEY -o StrictHostKeyChecking=no" \
-  frontend/dist/ "$SERVER:$REMOTE/frontend/dist/"
+tar -czf - frontend/dist/ \
+| $SSH "$SERVER" "mkdir -p $REMOTE/frontend && tar -xzf - --strip-components=1 -C $REMOTE/frontend"
 
 echo "=== [4/4] 安裝新依賴並重啟後端 ==="
 $SSH "$SERVER" bash -s << 'REMOTE_CMD'

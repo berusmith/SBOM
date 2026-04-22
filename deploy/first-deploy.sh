@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # 第一次部署用：上傳設定檔、執行 setup、首次同步
-# 執行方式（在 sbom-platform/ 目錄下）: bash deploy/first-deploy.sh
+# 執行方式（在 D:/projects/SBOM/ 目錄下）: bash deploy/first-deploy.sh
 set -e
 
-KEY="../ssh-key-2026-04-21.key"
+KEY="./ssh-key-2026-04-21.key"
 SERVER="opc@161.33.130.101"
 SSH="ssh -i $KEY -o StrictHostKeyChecking=no"
 
