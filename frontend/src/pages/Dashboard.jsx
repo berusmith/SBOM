@@ -140,13 +140,14 @@ export default function Dashboard() {
       <CRACountdown />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
         {[
           { label: "客戶數",      value: stats.organizations,                     color: "bg-blue-500",   link: "/organizations" },
           { label: "產品數",      value: stats.products,                          color: "bg-indigo-500", link: "/organizations" },
           { label: "版本數",      value: stats.releases,                          color: "bg-purple-500", link: "/organizations" },
           { label: "元件數",      value: stats.components,                        color: "bg-teal-500",   link: null },
           { label: "CRA 進行中", value: stats.cra_incidents?.active ?? 0,        color: stats.cra_incidents?.active > 0 ? "bg-red-500" : "bg-gray-400", link: "/cra" },
+          { label: "SLA 逾期",   value: stats.overdue_vulns ?? 0,               color: (stats.overdue_vulns ?? 0) > 0 ? "bg-red-600" : "bg-gray-400", link: "/risk-overview" },
         ].map((c) => (
           <div
             key={c.label}

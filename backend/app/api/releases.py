@@ -46,6 +46,20 @@ _active_enrichments: set[str] = set()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
+_SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
+
+
+def _sla_info(vuln) -> dict:
+    if vuln.status in ("fixed", "not_affected") or vuln.severity not in _SLA_DAYS or not vuln.scanned_at:
+        return {"sla_days": None, "sla_status": "n/a"}
+    scanned = vuln.scanned_at
+    if scanned.tzinfo is None:
+        scanned = scanned.replace(tzinfo=timezone.utc)
+    elapsed = (datetime.now(timezone.utc) - scanned).days
+    remaining = _SLA_DAYS[vuln.severity] - elapsed
+    status = "overdue" if remaining < 0 else "warning" if remaining <= 7 else "ok"
+    return {"sla_days": remaining, "sla_status": status}
+
 
 def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
     """Returns (product, org). Raises 403 if viewer tries to access another org's release."""
@@ -420,6 +434,7 @@ def list_vulnerabilities(
             "cvss_v3_vector": v.cvss_v3_vector,
             "cvss_v4_score": v.cvss_v4_score,
             "cvss_v4_vector": v.cvss_v4_vector,
+            **_sla_info(v),
         }
         for v, comp_name, comp_version in rows
     ]

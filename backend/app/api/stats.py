@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
@@ -82,6 +83,26 @@ def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depe
     active_incidents = inc_q.filter(CRAIncident.status != "closed").count()
     total_incidents  = inc_q.count()
 
+    # Overdue SLA count
+    _SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
+    now = datetime.now(timezone.utc)
+    overdue_count = 0
+    active_vulns = (
+        base
+        .filter(
+            Vulnerability.status.notin_(["fixed", "not_affected"]),
+            Vulnerability.scanned_at.isnot(None),
+        )
+        .with_entities(Vulnerability.severity, Vulnerability.scanned_at)
+        .all()
+    )
+    for sev, scanned_at in active_vulns:
+        if sev not in _SLA_DAYS:
+            continue
+        ts = scanned_at.replace(tzinfo=timezone.utc) if scanned_at.tzinfo is None else scanned_at
+        if (now - ts).days > _SLA_DAYS[sev]:
+            overdue_count += 1
+
     return {
         "organizations": orgs,
         "products": products,
@@ -101,6 +122,7 @@ def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depe
             "total": total_incidents,
             "active": active_incidents,
         },
+        "overdue_vulns": overdue_count,
     }
 
 

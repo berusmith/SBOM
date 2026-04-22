@@ -762,6 +762,7 @@ export default function ReleaseDetail() {
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden sm:table-cell" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
                     EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
+                  <th className="px-4 py-3 hidden lg:table-cell">SLA</th>
                   <th className="px-4 py-3">VEX 狀態</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -834,6 +835,21 @@ export default function ReleaseDetail() {
                           {(v.epss_score * 100).toFixed(1)}%
                         </span>
                       ) : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-2 hidden lg:table-cell">
+                      {v.sla_status === "overdue" ? (
+                        <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
+                          逾 {Math.abs(v.sla_days)} 天
+                        </span>
+                      ) : v.sla_status === "warning" ? (
+                        <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                          剩 {v.sla_days} 天
+                        </span>
+                      ) : v.sla_status === "ok" ? (
+                        <span className="text-xs text-gray-400">{v.sla_days} 天</span>
+                      ) : (
+                        <span className="text-gray-200">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLOR[v.status] || "bg-gray-100 text-gray-600"}`}>
