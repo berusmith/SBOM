@@ -83,6 +83,7 @@ export default function ReleaseDetail() {
   const [batchStatus, setBatchStatus] = useState("in_triage");
   const [batching, setBatching] = useState(false);
   const [violations, setViolations] = useState(null);
+  const [licenseViolations, setLicenseViolations] = useState(null);
   const [locked, setLocked] = useState(false);
   const [integrity, setIntegrity] = useState(null);
   const [checkingIntegrity, setCheckingIntegrity] = useState(false);
@@ -99,6 +100,7 @@ export default function ReleaseDetail() {
   };
   const fetchViolations = () => {
     api.get(`/policies/releases/${releaseId}/violations`).then((r) => setViolations(r.data)).catch(() => {});
+    api.get(`/licenses/releases/${releaseId}/violations`).then((r) => setLicenseViolations(r.data)).catch(() => {});
   };
   const fetchRelease = () => {
     api.get(`/releases/${releaseId}`).then((r) => setLocked(r.data.locked ?? false)).catch(() => {});
@@ -337,6 +339,19 @@ export default function ReleaseDetail() {
             onClick={() => navigate("/policies")}
           >
             ⚠ {violations.total} 項 Policy 違規
+          </span>
+        )}
+        {licenseViolations && licenseViolations.total > 0 && (
+          <span
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer ${
+              licenseViolations.block_count > 0
+                ? "bg-purple-700 text-white"
+                : "bg-purple-100 text-purple-700"
+            }`}
+            title="點擊查看 License 違規詳情"
+            onClick={() => navigate("/policies")}
+          >
+            ⚖ {licenseViolations.total} 個 License 違規
           </span>
         )}
       </div>
