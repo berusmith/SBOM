@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatDate } from "../utils/date";
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -203,7 +204,7 @@ export default function Users() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-400 text-xs">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : "—"}
+                      {formatDate(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right flex justify-end gap-2">
                       <button onClick={() => openEdit(u)}

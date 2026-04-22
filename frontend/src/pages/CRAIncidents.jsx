@@ -5,6 +5,7 @@ import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonTable } from "../components/Skeleton";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatDateTime } from "../utils/date";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -122,7 +123,7 @@ export default function CRAIncidents() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">
-                    {inc.created_at ? new Date(inc.created_at).toLocaleString("zh-TW") : "—"}
+                    {formatDateTime(inc.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button

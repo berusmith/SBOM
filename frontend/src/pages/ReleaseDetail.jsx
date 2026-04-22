@@ -5,6 +5,7 @@ import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/co
 import { useToast } from "../components/Toast";
 import { SkeletonInline } from "../components/Skeleton";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatDateTime } from "../utils/date";
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
@@ -954,7 +955,7 @@ export default function ReleaseDetail() {
                                 <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
                                   <span className="text-gray-300 mt-0.5">▸</span>
                                   <span className="font-mono text-gray-400 shrink-0">
-                                    {h.changed_at ? new Date(h.changed_at).toLocaleString("zh-TW") : "—"}
+                                    {formatDateTime(h.changed_at)}
                                   </span>
                                   <span>
                                     <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>

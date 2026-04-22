@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatDate } from "../utils/date";
 
 export default function Organizations() {
   const toast = useToast();
@@ -196,7 +197,7 @@ export default function Organizations() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500">
-                    {new Date(org.created_at).toLocaleDateString("zh-TW")}
+                    {formatDate(org.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button

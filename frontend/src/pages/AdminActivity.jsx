@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/client";
 import { AUDIT_EVENT_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
+import { formatDateTime, formatDateForFilename } from "../utils/date";
 
 const EVENT_LABELS = {
   login_ok:        "登入成功",
@@ -26,7 +27,7 @@ const EVENT_LABELS = {
 
 function fmtDate(iso) {
   if (!iso) return "-";
-  return new Date(iso).toLocaleString("zh-TW", { hour12: false });
+  return formatDateTime(iso).replace("—", "-");
 }
 
 function exportCsv(events) {
@@ -44,7 +45,7 @@ function exportCsv(events) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `audit_log_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `audit_log_${formatDateForFilename()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

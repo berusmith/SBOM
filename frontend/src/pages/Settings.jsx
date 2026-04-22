@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "../api/client";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatDate, formatDateTime } from "../utils/date";
 
 export default function Settings() {
   // Current user role
@@ -342,7 +343,7 @@ export default function Settings() {
               </span>
               {monitorStatus.last_run && (
                 <span>
-                  上次執行：{new Date(monitorStatus.last_run).toLocaleString("zh-TW")}
+                  上次執行：{formatDateTime(monitorStatus.last_run)}
                   {monitorStatus.last_run_new_count > 0 && (
                     <span className="ml-1 text-orange-500 font-medium">（+{monitorStatus.last_run_new_count} 新漏洞）</span>
                   )}
@@ -350,7 +351,7 @@ export default function Settings() {
               )}
               {!monitorStatus.last_run && <span className="text-gray-400">尚未執行過</span>}
               {monitorStatus.next_run && (
-                <span>下次排程：{new Date(monitorStatus.next_run).toLocaleString("zh-TW")}</span>
+                <span>下次排程：{formatDateTime(monitorStatus.next_run)}</span>
               )}
             </div>
           </div>
@@ -537,7 +538,7 @@ function UserManagement({ flash }) {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800">{u.username}</p>
-                <p className="text-xs text-gray-400">{u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : ""}</p>
+                <p className="text-xs text-gray-400">{u.created_at ? formatDate(u.created_at) : ""}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
