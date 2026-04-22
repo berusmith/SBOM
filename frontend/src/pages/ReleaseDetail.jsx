@@ -69,6 +69,8 @@ export default function ReleaseDetail() {
   const [rescanResult, setRescanResult] = useState(null);
   const [enriching, setEnriching] = useState(false);
   const [exportingCsv, setExportingCsv] = useState(false);
+  const [exportingCdx, setExportingCdx] = useState(false);
+  const [exportingSpdx, setExportingSpdx] = useState(false);
   const [enrichingNvd, setEnrichingNvd] = useState(false);
   const [nvdMsg, setNvdMsg] = useState(null);
   const [expandedVuln, setExpandedVuln] = useState(null);
@@ -412,6 +414,36 @@ export default function ReleaseDetail() {
               className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCsv ? "bg-gray-400" : "bg-emerald-600 hover:bg-emerald-700"}`}
             >
               {exportingCsv ? "匯出中..." : "匯出 CSV"}
+            </button>
+            <button
+              onClick={async () => {
+                setExportingCdx(true);
+                try {
+                  const resp = await api.get(`/releases/${releaseId}/export/cyclonedx-xml`, { responseType: "blob" });
+                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
+                  const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch { alert("匯出失敗"); } finally { setExportingCdx(false); }
+              }}
+              disabled={exportingCdx}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCdx ? "bg-gray-400" : "bg-teal-500 hover:bg-teal-600"}`}
+            >
+              {exportingCdx ? "匯出中..." : "CycloneDX XML"}
+            </button>
+            <button
+              onClick={async () => {
+                setExportingSpdx(true);
+                try {
+                  const resp = await api.get(`/releases/${releaseId}/export/spdx-json`, { responseType: "blob" });
+                  const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
+                  const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch { alert("匯出失敗"); } finally { setExportingSpdx(false); }
+              }}
+              disabled={exportingSpdx}
+              className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingSpdx ? "bg-gray-400" : "bg-indigo-500 hover:bg-indigo-600"}`}
+            >
+              {exportingSpdx ? "匯出中..." : "SPDX JSON"}
             </button>
             <button
               onClick={handleDownloadIec}

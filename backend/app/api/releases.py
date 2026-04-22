@@ -929,6 +929,123 @@ def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope),
     )
 
 
+@router.get("/{release_id}/export/cyclonedx-xml")
+def export_cyclonedx_xml(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    import xml.etree.ElementTree as ET
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+
+    NS = "http://cyclonedx.org/schema/bom/1.4"
+    ET.register_namespace("", NS)
+    bom = ET.Element(f"{{{NS}}}bom", {"version": "1", "serialNumber": f"urn:uuid:{uuid.uuid4()}"})
+
+    # metadata
+    meta = ET.SubElement(bom, f"{{{NS}}}metadata")
+    ET.SubElement(meta, f"{{{NS}}}timestamp").text = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if product:
+        mc = ET.SubElement(meta, f"{{{NS}}}component", {"type": "application"})
+        ET.SubElement(mc, f"{{{NS}}}name").text = product.name
+        ET.SubElement(mc, f"{{{NS}}}version").text = release.version or ""
+
+    # components
+    comps_el = ET.SubElement(bom, f"{{{NS}}}components")
+    for c in components:
+        cel = ET.SubElement(comps_el, f"{{{NS}}}component", {"type": "library"})
+        ET.SubElement(cel, f"{{{NS}}}name").text = c.name or ""
+        if c.version:
+            ET.SubElement(cel, f"{{{NS}}}version").text = c.version
+        if c.purl:
+            ET.SubElement(cel, f"{{{NS}}}purl").text = c.purl
+        if c.license:
+            lics_el = ET.SubElement(cel, f"{{{NS}}}licenses")
+            lic_el  = ET.SubElement(lics_el, f"{{{NS}}}license")
+            ET.SubElement(lic_el, f"{{{NS}}}id").text = c.license
+
+    xml_bytes = ET.tostring(bom, encoding="unicode", xml_declaration=False)
+    xml_bytes = f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_bytes}'
+    prod_name = (product.name if product else "sbom").replace(" ", "_")
+    filename = f"cyclonedx_{prod_name}_{release.version or release_id[:8]}.xml"
+    return Response(
+        content=xml_bytes.encode("utf-8"),
+        media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{release_id}/export/spdx-json")
+def export_spdx_json(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+
+    doc_name = f"{product.name if product else 'sbom'}-{release.version or release_id[:8]}"
+    doc = {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": doc_name,
+        "documentNamespace": f"https://sbom-platform/spdx/{release_id}",
+        "creationInfo": {
+            "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "creators": ["Tool: SBOM Platform"],
+        },
+        "packages": [],
+        "relationships": [],
+    }
+
+    # Root package
+    root_spdxid = "SPDXRef-Package-root"
+    doc["packages"].append({
+        "SPDXID": root_spdxid,
+        "name": product.name if product else "unknown",
+        "versionInfo": release.version or "unknown",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": False,
+    })
+    doc["relationships"].append({
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": root_spdxid,
+    })
+
+    for i, c in enumerate(components):
+        spdxid = f"SPDXRef-Package-{i}"
+        pkg: dict = {
+            "SPDXID": spdxid,
+            "name": c.name or "",
+            "versionInfo": c.version or "NOASSERTION",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": False,
+        }
+        if c.license:
+            pkg["licenseDeclared"] = c.license
+            pkg["licenseConcluded"] = c.license
+        else:
+            pkg["licenseDeclared"] = "NOASSERTION"
+            pkg["licenseConcluded"] = "NOASSERTION"
+        if c.purl:
+            pkg["externalRefs"] = [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": c.purl}]
+        doc["packages"].append(pkg)
+        doc["relationships"].append({
+            "spdxElementId": root_spdxid,
+            "relationshipType": "CONTAINS",
+            "relatedSpdxElement": spdxid,
+        })
+
+    prod_name = (product.name if product else "sbom").replace(" ", "_")
+    filename = f"spdx_{prod_name}_{release.version or release_id[:8]}.json"
+    return Response(
+        content=json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/{release_id}/sbom-quality")
 def sbom_quality(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
