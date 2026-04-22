@@ -376,9 +376,23 @@ export default function ReleaseDetail() {
         </label>
         {uploadResult && (
           <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
-            {uploadResult.ok
-              ? `完成：${uploadResult.components_found} 個元件，${uploadResult.vulnerabilities_found} 個漏洞`
-              : `失敗：${uploadResult.msg}`}
+            {uploadResult.ok ? (
+          <span>
+            完成：{uploadResult.components_found} 個元件，{uploadResult.vulnerabilities_found} 個漏洞
+            {uploadResult.diff && (
+              <span className="ml-2 text-gray-500">
+                ｜相較 <span className="font-medium text-gray-700">{uploadResult.diff.prev_version}</span>：
+                {uploadResult.diff.components_added > 0 && <span className="text-orange-600"> +{uploadResult.diff.components_added} 元件</span>}
+                {uploadResult.diff.components_removed > 0 && <span className="text-blue-600"> -{uploadResult.diff.components_removed} 元件</span>}
+                {uploadResult.diff.vulns_added > 0 && <span className="text-red-600"> +{uploadResult.diff.vulns_added} 漏洞</span>}
+                {uploadResult.diff.vulns_removed > 0 && <span className="text-green-600"> -{uploadResult.diff.vulns_removed} 漏洞</span>}
+                {uploadResult.diff.components_added === 0 && uploadResult.diff.components_removed === 0 &&
+                 uploadResult.diff.vulns_added === 0 && uploadResult.diff.vulns_removed === 0 &&
+                  <span className="text-green-600"> 無差異</span>}
+              </span>
+            )}
+          </span>
+        ) : `失敗：${uploadResult.msg}`}
           </span>
         )}
         {nvdMsg && (

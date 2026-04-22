@@ -129,6 +129,26 @@ def upload_sbom(
     release.sbom_hash = hashlib.sha256(content).hexdigest()
     db.commit()
 
+    # Capture previous release snapshot for diff (before we wipe this release's components)
+    prev_release = (
+        db.query(Release)
+        .filter(
+            Release.product_id == release.product_id,
+            Release.id != release_id,
+            Release.sbom_file_path.isnot(None),
+        )
+        .order_by(Release.created_at.desc())
+        .first()
+    )
+    prev_purls: set[str] = set()
+    prev_cves: set[str] = set()
+    if prev_release:
+        prev_comps = db.query(Component).filter(Component.release_id == prev_release.id).all()
+        prev_purls = {c.purl for c in prev_comps if c.purl}
+        for pc in prev_comps:
+            for pv in pc.vulnerabilities:
+                prev_cves.add(pv.cve_id)
+
     # delete existing components for this release (re-upload scenario)
     db.query(Component).filter(Component.release_id == release_id).delete()
     db.commit()
@@ -182,9 +202,26 @@ def upload_sbom(
     audit.record(db, "sbom_upload", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
     db.commit()
 
+    # Compute diff vs previous release
+    diff: dict | None = None
+    if prev_release:
+        new_purls = {c["purl"] for c in parsed if c.get("purl")}
+        new_cves: set[str] = set()
+        for comp, _ in component_objs:
+            for v in comp.vulnerabilities:
+                new_cves.add(v.cve_id)
+        diff = {
+            "prev_version":       prev_release.version,
+            "components_added":   len(new_purls - prev_purls),
+            "components_removed": len(prev_purls - new_purls),
+            "vulns_added":        len(new_cves - prev_cves),
+            "vulns_removed":      len(prev_cves - new_cves),
+        }
+
     return {
-        "components_found": len(parsed),
+        "components_found":    len(parsed),
         "vulnerabilities_found": vuln_count,
+        "diff":                diff,
     }
 
 
