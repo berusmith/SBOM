@@ -1,6 +1,7 @@
 """
 Generate a PDF vulnerability report for a Release using fpdf2.
 """
+from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from io import BytesIO

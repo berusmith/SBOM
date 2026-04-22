@@ -161,6 +161,7 @@ npm run dev
 | Email 通知 | 新漏洞發現時寄送 Email |
 | 全域元件搜尋 | 跨所有客戶搜尋元件名稱 |
 | 報告品牌化 | Logo 上傳、公司名稱、主題色、頁尾文字 |
+| 說明中心 | 內建 Help Center（/help），24 篇文章，全文搜尋 |
 
 ---
 
@@ -175,12 +176,12 @@ Schema 遷移：main.py 啟動時 ALTER TABLE（無 Alembic）
 
 ### 資料模型（cascade delete）
 ```
-Organization → Product → Release → Component → Vulnerability
+Organization → Product → Release → Component → Vulnerability → VexHistory
+                               └── VexStatement（release 層級，CSAF 匯出用）
+                               └── ComplianceMap
+
 CRAIncident（org 層級，獨立）
-VexHistory（vulnerability 層級）
-PolicyRule（全域）
-BrandConfig（全域單筆）
-AlertConfig（全域單筆）
+User / PolicyRule / BrandConfig / AlertConfig（全域）
 ```
 
 ### 外部 API
@@ -196,6 +197,22 @@ AlertConfig（全域單筆）
 ## API 文件
 
 後端啟動後，開啟：**http://localhost:9100/docs**
+
+離線版 API 參考文件：[docs/api-reference.md](docs/api-reference.md)
+
+---
+
+## 說明文件
+
+| 文件 | 說明 |
+|------|------|
+| [docs/user-manual.md](docs/user-manual.md) | 顧問操作 SOP（8 步驟 + 情境） |
+| [docs/api-reference.md](docs/api-reference.md) | 完整 API 端點參考 |
+| [docs/db-schema.md](docs/db-schema.md) | 資料表欄位說明 |
+| [docs/phase2-spec.md](docs/phase2-spec.md) | Phase 2 功能規格 |
+| [deploy/ORACLE_CLOUD_SETUP.md](deploy/ORACLE_CLOUD_SETUP.md) | 生產環境部署指南 |
+
+平台內建說明中心：登入後點選導覽列 **說明**，或直接開啟 `http://localhost:3000/help`
 
 ---
 

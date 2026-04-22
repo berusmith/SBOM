@@ -32,15 +32,27 @@ export default function Policies() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
+  // License rules
+  const [licenseRules, setLicenseRules] = useState([]);
+  const [licenseSummary, setLicenseSummary] = useState(null);
+  const [showLicenseForm, setShowLicenseForm] = useState(false);
+  const [editLicenseRule, setEditLicenseRule] = useState(null);
+  const [licenseForm, setLicenseForm] = useState({ license_id: "", label: "", action: "warn", enabled: true });
+  const [savingLicense, setSavingLicense] = useState(false);
+
   const flash = (type, text) => { setMsg({ type, text }); setTimeout(() => setMsg(null), 4000); };
 
   const fetchAll = () => {
     Promise.all([
       api.get("/policies"),
       api.get("/policies/violations/summary"),
-    ]).then(([r1, r2]) => {
+      api.get("/licenses/rules"),
+      api.get("/licenses/violations/summary"),
+    ]).then(([r1, r2, r3, r4]) => {
       setRules(r1.data);
       setSummary(r2.data);
+      setLicenseRules(r3.data);
+      setLicenseSummary(r4.data);
     }).catch(() => {}).finally(() => setLoading(false));
   };
 
@@ -95,6 +107,46 @@ export default function Policies() {
 
   const violationCount = (ruleId) =>
     summary?.by_rule?.find((x) => x.rule_id === ruleId)?.violation_count ?? 0;
+
+  const licenseViolationCount = (ruleId) =>
+    licenseSummary?.by_rule?.find((x) => x.rule_id === ruleId)?.violation_count ?? 0;
+
+  const openCreateLicense = () => {
+    setEditLicenseRule(null);
+    setLicenseForm({ license_id: "", label: "", action: "warn", enabled: true });
+    setShowLicenseForm(true);
+  };
+  const openEditLicense = (r) => {
+    setEditLicenseRule(r);
+    setLicenseForm({ license_id: r.license_id, label: r.label || "", action: r.action, enabled: r.enabled });
+    setShowLicenseForm(true);
+  };
+  const handleSaveLicense = async () => {
+    if (!licenseForm.license_id.trim()) { flash("err", "請填寫 License ID"); return; }
+    setSavingLicense(true);
+    try {
+      if (editLicenseRule) {
+        await api.patch(`/licenses/rules/${editLicenseRule.id}`, licenseForm);
+        flash("ok", "規則已更新");
+      } else {
+        await api.post("/licenses/rules", licenseForm);
+        flash("ok", "規則已建立");
+      }
+      setShowLicenseForm(false);
+      fetchAll();
+    } catch (e) {
+      flash("err", e.response?.data?.detail || "儲存失敗");
+    } finally { setSavingLicense(false); }
+  };
+  const handleToggleLicense = async (r) => {
+    try { await api.patch(`/licenses/rules/${r.id}`, { enabled: !r.enabled }); fetchAll(); }
+    catch { flash("err", "更新失敗"); }
+  };
+  const handleDeleteLicense = async (r) => {
+    if (!window.confirm(`確定刪除「${r.label || r.license_id}」？`)) return;
+    try { await api.delete(`/licenses/rules/${r.id}`); flash("ok", "規則已刪除"); fetchAll(); }
+    catch { flash("err", "刪除失敗"); }
+  };
 
   return (
     <div>
@@ -192,10 +244,125 @@ export default function Policies() {
         </div>
       )}
 
+      {/* ── License Compliance Section ── */}
+      <div className="mt-10">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">License 合規政策</h2>
+            <p className="text-xs text-gray-400 mt-0.5">標記含有特定開源授權的元件，防止 Copyleft / 非商用授權進入產品</p>
+          </div>
+          <button onClick={openCreateLicense}
+            className="px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+            + 新增 License 規則
+          </button>
+        </div>
+
+        {licenseSummary && (
+          <div className={`mb-5 rounded-lg px-5 py-3 flex items-center gap-4 ${licenseSummary.total_violations > 0 ? "bg-orange-50 border border-orange-200" : "bg-green-50 border border-green-200"}`}>
+            <span className={`text-2xl font-bold ${licenseSummary.total_violations > 0 ? "text-orange-600" : "text-green-600"}`}>
+              {licenseSummary.total_violations}
+            </span>
+            <div>
+              <p className={`font-semibold text-sm ${licenseSummary.total_violations > 0 ? "text-orange-700" : "text-green-700"}`}>
+                {licenseSummary.total_violations > 0 ? "個元件含有受管控授權" : "目前無 License 違規"}
+              </p>
+              <p className="text-xs text-gray-500">已啟用 {licenseRules.filter((r) => r.enabled).length} 條規則</p>
+            </div>
+          </div>
+        )}
+
+        {licenseRules.length === 0 ? (
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-400">尚無 License 規則</div>
+        ) : (
+          <div className="space-y-2">
+            {licenseRules.map((rule) => {
+              const vc = licenseViolationCount(rule.id);
+              return (
+                <div key={rule.id} className={`bg-white rounded-lg shadow p-4 flex items-center gap-4 ${!rule.enabled ? "opacity-50" : ""}`}>
+                  <button onClick={() => handleToggleLicense(rule)}
+                    className={`w-10 h-6 rounded-full transition-colors shrink-0 ${rule.enabled ? "bg-purple-500" : "bg-gray-300"}`}>
+                    <div className={`w-4 h-4 bg-white rounded-full mx-auto transition-transform ${rule.enabled ? "translate-x-2" : "-translate-x-2"}`} />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-gray-800">{rule.label}</span>
+                      <span className="px-2 py-0.5 rounded text-xs font-mono bg-gray-100 text-gray-600">{rule.license_id}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${rule.action === "block" ? "bg-gray-800 text-white" : "bg-orange-100 text-orange-700"}`}>
+                        {rule.action === "block" ? "阻擋" : "警告"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-center">
+                    {vc > 0
+                      ? <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-sm">{vc}</span>
+                      : <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-lg">✓</span>}
+                    <p className="text-xs text-gray-400 mt-0.5">元件</p>
+                  </div>
+                  <div className="shrink-0 flex gap-2">
+                    <button onClick={() => openEditLicense(rule)} className="text-xs text-blue-600 hover:underline">編輯</button>
+                    <button onClick={() => handleDeleteLicense(rule)} className="text-xs text-red-500 hover:underline">刪除</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* License rule form modal */}
+      {showLicenseForm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowLicenseForm(false)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-800 mb-4">{editLicenseRule ? "編輯 License 規則" : "新增 License 規則"}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">License SPDX ID <span className="text-red-400">*</span></label>
+                <input value={licenseForm.license_id}
+                  onChange={(e) => setLicenseForm({ ...licenseForm, license_id: e.target.value })}
+                  placeholder="例：GPL-3.0、AGPL-3.0、LGPL-2.1"
+                  className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                <p className="text-xs text-gray-400 mt-0.5">使用 SPDX 識別碼，系統會對元件授權做子字串比對</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">顯示名稱</label>
+                <input value={licenseForm.label}
+                  onChange={(e) => setLicenseForm({ ...licenseForm, label: e.target.value })}
+                  placeholder="例：GNU GPL v3"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">動作</label>
+                <div className="flex gap-4">
+                  {[{ v: "warn", l: "警告（標記元件）" }, { v: "block", l: "阻擋（強制違規）" }].map((o) => (
+                    <label key={o.v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input type="radio" value={o.v} checked={licenseForm.action === o.v}
+                        onChange={() => setLicenseForm({ ...licenseForm, action: o.v })} />
+                      {o.l}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={licenseForm.enabled}
+                  onChange={(e) => setLicenseForm({ ...licenseForm, enabled: e.target.checked })} />
+                啟用此規則
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={() => setShowLicenseForm(false)} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
+              <button onClick={handleSaveLicense} disabled={savingLicense}
+                className={`px-4 py-2 text-sm text-white rounded ${savingLicense ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}>
+                {savingLicense ? "儲存中..." : "儲存"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Rule form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-2 sm:mx-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold text-gray-800 mb-4">{editRule ? "編輯規則" : "新增規則"}</h3>
 
             <div className="space-y-3">
@@ -217,7 +384,7 @@ export default function Policies() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">嚴重度條件</label>
                   <select

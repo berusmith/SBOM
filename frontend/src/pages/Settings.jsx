@@ -2,13 +2,21 @@ import { useEffect, useRef, useState } from "react";
 import api from "../api/client";
 
 export default function Settings() {
+  // Current user role
+  const [currentRole, setCurrentRole] = useState(null);
+
   // Alert settings
   const [cfg, setCfg] = useState(null);
   const [webhook, setWebhook] = useState("");
   const [email, setEmail] = useState("");
+  const [intervalHours, setIntervalHours] = useState(24);
   const [saving, setSaving] = useState(false);
   const [testingWh, setTestingWh] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
+
+  // Monitor status
+  const [monitorStatus, setMonitorStatus] = useState(null);
+  const [triggering, setTriggering] = useState(false);
 
   // Brand settings
   const [brand, setBrand] = useState(null);
@@ -29,7 +37,12 @@ export default function Settings() {
       setCfg(r.data);
       setWebhook(r.data.webhook_url || "");
       setEmail(r.data.alert_email_to || "");
+      setIntervalHours(r.data.monitor_interval_hours ?? 24);
     }).catch(() => {});
+  };
+
+  const fetchMonitorStatus = () => {
+    api.get("/settings/monitor").then((r) => setMonitorStatus(r.data)).catch(() => {});
   };
 
   const fetchBrand = () => {
@@ -49,18 +62,45 @@ export default function Settings() {
     }).catch(() => {});
   };
 
-  useEffect(() => { fetchCfg(); fetchBrand(); }, []);
+  useEffect(() => {
+    fetchCfg();
+    fetchBrand();
+    fetchMonitorStatus();
+    api.get("/auth/me").then((r) => setCurrentRole(r.data.role)).catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.patch("/settings/alerts", { webhook_url: webhook, alert_email_to: email });
+      await api.patch("/settings/alerts", {
+        webhook_url: webhook,
+        alert_email_to: email,
+        monitor_interval_hours: intervalHours,
+      });
       flash("ok", "通知設定已儲存");
       fetchCfg();
+      fetchMonitorStatus();
     } catch (e) {
       flash("err", e.response?.data?.detail || "儲存失敗");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTriggerScan = async () => {
+    setTriggering(true);
+    try {
+      const r = await api.post("/settings/monitor/trigger");
+      if (r.data.status === "already_running") {
+        flash("ok", "掃描已在執行中");
+      } else {
+        flash("ok", "已啟動全域掃描，完成後若有新漏洞將發送通知");
+        setTimeout(fetchMonitorStatus, 3000);
+      }
+    } catch (e) {
+      flash("err", e.response?.data?.detail || "啟動失敗");
+    } finally {
+      setTriggering(false);
     }
   };
 
@@ -144,6 +184,9 @@ export default function Settings() {
         </div>
       )}
 
+      {/* ── User management (admin only) ── */}
+      {currentRole === "admin" && <UserManagement flash={flash} />}
+
       {/* ── Brand settings ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">報告品牌設定</h3>
@@ -152,7 +195,7 @@ export default function Settings() {
         {/* Logo upload */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">公司 Logo</label>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             {brand?.has_logo && logoUrl ? (
               <>
                 <img
@@ -213,7 +256,7 @@ export default function Settings() {
         {/* Primary color */}
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-1">主題色（報告標題/表頭）</label>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <input
               type="color"
               value={primaryColor}
@@ -254,6 +297,63 @@ export default function Settings() {
         >
           {savingBrand ? "儲存中..." : "儲存品牌設定"}
         </button>
+      </div>
+
+      {/* ── Continuous monitoring ── */}
+      <div className="bg-white rounded-lg shadow p-5 mb-4">
+        <h3 className="font-semibold text-gray-700 mb-1">持續漏洞監控</h3>
+        <p className="text-xs text-gray-400 mb-4">系統定期對所有版本重新掃描 OSV.dev，發現新 CVE 時自動發送通知</p>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">掃描頻率</label>
+            <select
+              value={intervalHours}
+              onChange={(e) => setIntervalHours(Number(e.target.value))}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value={0}>停用</option>
+              <option value={6}>每 6 小時</option>
+              <option value={12}>每 12 小時</option>
+              <option value={24}>每 24 小時</option>
+              <option value={48}>每 48 小時</option>
+              <option value={72}>每 72 小時</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleTriggerScan}
+            disabled={triggering}
+            className="sm:mt-5 px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          >
+            {triggering ? "啟動中..." : "立即掃描一次"}
+          </button>
+        </div>
+
+        {monitorStatus && (
+          <div className="bg-gray-50 rounded p-3 text-xs text-gray-500 space-y-1">
+            <div className="flex gap-4 flex-wrap">
+              <span>
+                狀態：
+                <span className={monitorStatus.is_scanning ? "text-blue-600 font-medium" : "text-gray-600"}>
+                  {monitorStatus.is_scanning ? "掃描中..." : "閒置"}
+                </span>
+              </span>
+              {monitorStatus.last_run && (
+                <span>
+                  上次執行：{new Date(monitorStatus.last_run).toLocaleString("zh-TW")}
+                  {monitorStatus.last_run_new_count > 0 && (
+                    <span className="ml-1 text-orange-500 font-medium">（+{monitorStatus.last_run_new_count} 新漏洞）</span>
+                  )}
+                </span>
+              )}
+              {!monitorStatus.last_run && <span className="text-gray-400">尚未執行過</span>}
+              {monitorStatus.next_run && (
+                <span>下次排程：{new Date(monitorStatus.next_run).toLocaleString("zh-TW")}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Webhook ── */}
@@ -314,6 +414,154 @@ export default function Settings() {
       >
         {saving ? "儲存中..." : "儲存通知設定"}
       </button>
+    </div>
+  );
+}
+
+function UserManagement({ flash }) {
+  const [users, setUsers] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ username: "", password: "", role: "viewer" });
+  const [saving, setSaving] = useState(false);
+
+  const fetchUsers = () => api.get("/users").then((r) => setUsers(r.data)).catch(() => {});
+  useEffect(() => { fetchUsers(); }, []);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!form.username.trim() || !form.password.trim()) return;
+    setSaving(true);
+    try {
+      await api.post("/users", form);
+      flash("ok", "使用者已建立");
+      setForm({ username: "", password: "", role: "viewer" });
+      setShowForm(false);
+      fetchUsers();
+    } catch (err) {
+      flash("err", err.response?.data?.detail || "建立失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleRole = async (u) => {
+    const newRole = u.role === "admin" ? "viewer" : "admin";
+    try {
+      await api.patch(`/users/${u.id}`, { role: newRole });
+      fetchUsers();
+    } catch (err) {
+      flash("err", err.response?.data?.detail || "更新失敗");
+    }
+  };
+
+  const handleDelete = async (u) => {
+    if (!window.confirm(`確定要刪除使用者「${u.username}」？`)) return;
+    try {
+      await api.delete(`/users/${u.id}`);
+      flash("ok", "使用者已刪除");
+      fetchUsers();
+    } catch (err) {
+      flash("err", err.response?.data?.detail || "刪除失敗");
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-5 mb-4">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold text-gray-700">使用者管理</h3>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          + 新增使用者
+        </button>
+      </div>
+      <p className="text-xs text-gray-400 mb-4">管理可登入此平台的帳號，僅 admin 可見此設定</p>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-gray-50 rounded p-4 mb-4 flex flex-col sm:flex-row gap-2 items-end flex-wrap">
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-600 mb-1">帳號</label>
+            <input
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              placeholder="username"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-xs font-medium text-gray-600 mb-1">密碼（至少 6 字元）</label>
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">角色</label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="viewer">Viewer（唯讀）</option>
+              <option value="admin">Admin（管理員）</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving}
+              className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+              {saving ? "建立中..." : "建立"}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)}
+              className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">
+              取消
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="space-y-2">
+        {users.map((u) => (
+          <div key={u.id} className="flex items-center justify-between py-2 border-b last:border-0">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">
+                {u.username[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">{u.username}</p>
+                <p className="text-xs text-gray-400">{u.created_at ? new Date(u.created_at).toLocaleDateString("zh-TW") : ""}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {!u.is_active && (
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">已停用</span>
+              )}
+              <button
+                onClick={() => handleToggleRole(u)}
+                className={`px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer transition-colors ${
+                  u.role === "admin"
+                    ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+                title="點擊切換角色"
+              >
+                {u.role === "admin" ? "Admin" : "Viewer"}
+              </button>
+              <button
+                onClick={() => handleDelete(u)}
+                className="text-xs text-red-500 hover:underline"
+              >
+                刪除
+              </button>
+            </div>
+          </div>
+        ))}
+        {users.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-3">尚無使用者</p>
+        )}
+      </div>
     </div>
   );
 }

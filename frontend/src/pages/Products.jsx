@@ -96,9 +96,20 @@ export default function Products() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {products.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">尚無產品，點擊「新增產品」開始</div>
+          <div className="p-8 text-center">
+            <div className="text-gray-300 text-5xl mb-3">📦</div>
+            <p className="text-gray-600 font-medium mb-1">尚無產品</p>
+            <p className="text-sm text-gray-400 mb-4">點擊右上角「+ 新增產品」新增您的第一個產品，<br />然後在版本頁面上傳 SBOM 檔案進行漏洞掃描。</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            >
+              + 新增第一個產品
+            </button>
+          </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[360px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">產品名稱</th>
@@ -110,17 +121,17 @@ export default function Products() {
               {products.map((p) => (
                 <tr key={p.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{p.description || "—"}</td>
+                  <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{p.description || "—"}</td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/products/${p.id}/releases`)}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       查看版本
                     </button>
                     <button
                       onClick={() => handleDelete(p)}
-                      className="text-red-500 hover:underline text-xs"
+                      className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
                       刪除
                     </button>
@@ -129,6 +140,7 @@ export default function Products() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

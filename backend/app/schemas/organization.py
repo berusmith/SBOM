@@ -7,6 +7,8 @@ from pydantic import BaseModel
 class OrganizationCreate(BaseModel):
     name: str
     license_status: Literal["active", "trial", "expired"] = "trial"
+    username: Optional[str] = None
+    password: Optional[str] = None
 
 
 class OrganizationResponse(BaseModel):

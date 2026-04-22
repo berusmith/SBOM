@@ -14,11 +14,29 @@ import Settings from "./pages/Settings";
 import RiskOverview from "./pages/RiskOverview";
 import Policies from "./pages/Policies";
 import Help from "./pages/Help";
+import AdminActivity from "./pages/AdminActivity";
+import TISAXAssessments from "./pages/TISAXAssessments";
+import TISAXDetail from "./pages/TISAXDetail";
+import Profile from "./pages/Profile";
+import Users from "./pages/Users";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/login" replace />;
   return children;
+}
+
+function RequireAdmin({ children }) {
+  const role = localStorage.getItem("role");
+  if (role !== "admin") return <Navigate to="/" replace />;
+  return children;
+}
+
+function ViewerOrgRedirect() {
+  const orgId = localStorage.getItem("org_id");
+  const role = localStorage.getItem("role");
+  if (role !== "admin" && orgId) return <Navigate to={`/organizations/${orgId}/products`} replace />;
+  return <Organizations />;
 }
 
 export default function App() {
@@ -33,7 +51,7 @@ export default function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
-                  <Route path="/organizations" element={<Organizations />} />
+                  <Route path="/organizations" element={<ViewerOrgRedirect />} />
                   <Route path="/organizations/:orgId/products" element={<Products />} />
                   <Route path="/products/:productId/releases" element={<Releases />} />
                   <Route path="/releases/:releaseId" element={<ReleaseDetail />} />
@@ -41,10 +59,15 @@ export default function App() {
                   <Route path="/cra/:incidentId" element={<CRAIncidentDetail />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/releases/diff" element={<ReleaseDiff />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
                   <Route path="/risk-overview" element={<RiskOverview />} />
                   <Route path="/policies" element={<Policies />} />
                   <Route path="/help" element={<Help />} />
+                  <Route path="/admin/activity" element={<RequireAdmin><AdminActivity /></RequireAdmin>} />
+                  <Route path="/tisax" element={<TISAXAssessments />} />
+                  <Route path="/tisax/:assessmentId" element={<TISAXDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin/users" element={<RequireAdmin><Users /></RequireAdmin>} />
                 </Routes>
               </Layout>
             </RequireAuth>

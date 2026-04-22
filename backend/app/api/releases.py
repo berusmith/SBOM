@@ -2,16 +2,25 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import os
 import uuid
 import zipfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core import audit
+from app.core.config import settings as _cfg
+from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
+from app.core.deps import get_org_scope, require_admin
+
+logger = logging.getLogger(__name__)
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
 from app.models.product import Product
@@ -19,16 +28,57 @@ from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.models.brand_config import BrandConfig
-from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report
+from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report
 from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Use env-configured path in production; auto-detect from source tree in dev
+UPLOAD_DIR = (
+    Path(_cfg.UPLOAD_DIR)
+    if _cfg.UPLOAD_DIR
+    else Path(__file__).resolve().parent.parent.parent / "uploads"
+)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+_active_enrichments: set[str] = set()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
+
+_SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
+
+
+def _is_suppressed(vuln) -> bool:
+    if not vuln.suppressed:
+        return False
+    if vuln.suppressed_until is None:
+        return True
+    ts = vuln.suppressed_until
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) < ts
+
+
+def _sla_info(vuln) -> dict:
+    if _is_suppressed(vuln) or vuln.status in ("fixed", "not_affected") or vuln.severity not in _SLA_DAYS or not vuln.scanned_at:
+        return {"sla_days": None, "sla_status": "n/a"}
+    scanned = vuln.scanned_at
+    if scanned.tzinfo is None:
+        scanned = scanned.replace(tzinfo=timezone.utc)
+    elapsed = (datetime.now(timezone.utc) - scanned).days
+    remaining = _SLA_DAYS[vuln.severity] - elapsed
+    status = "overdue" if remaining < 0 else "warning" if remaining <= 7 else "ok"
+    return {"sla_days": remaining, "sla_status": status}
+
+
+def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
+    """Returns (product, org). Raises 403 if viewer tries to access another org's release."""
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    if org_scope and (not product or product.organization_id != org_scope):
+        raise HTTPException(status_code=403, detail="無權存取此版本")
+    return product, org
 
 
 def _enrich_kev(vulns: list, db) -> None:
@@ -58,6 +108,7 @@ def _enrich_epss(vulns: list, db) -> None:
 def upload_sbom(
     release_id: str,
     file: UploadFile = File(...),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
     release = db.query(Release).filter(Release.id == release_id).first()
@@ -66,22 +117,48 @@ def upload_sbom(
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳 SBOM")
 
-    content = file.file.read()
+    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+    content = file.file.read(MAX_SIZE + 1)
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="SBOM 檔案超過 50MB 上限")
 
-    # parse SBOM
+    # validate then parse SBOM
     try:
+        sbom_parser.validate(content, file.filename)
         parsed = sbom_parser.parse(content, file.filename)
-    except (ValueError, Exception) as e:
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
         raise HTTPException(status_code=400, detail=f"SBOM 解析失敗：{e}")
 
-    # save file + compute hash
-    filename = f"{release_id}_{file.filename}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
+    # save file + compute hash (strip path separators to prevent traversal)
+    safe_name = Path(file.filename or "sbom.json").name
+    filepath = UPLOAD_DIR / f"{release_id}_{safe_name}"
     with open(filepath, "wb") as f:
         f.write(content)
-    release.sbom_file_path = filepath
+    release.sbom_file_path = str(filepath)
     release.sbom_hash = hashlib.sha256(content).hexdigest()
     db.commit()
+
+    # Capture previous release snapshot for diff (before we wipe this release's components)
+    prev_release = (
+        db.query(Release)
+        .filter(
+            Release.product_id == release.product_id,
+            Release.id != release_id,
+            Release.sbom_file_path.isnot(None),
+        )
+        .order_by(Release.created_at.desc())
+        .first()
+    )
+    prev_purls: set[str] = set()
+    prev_cves: set[str] = set()
+    if prev_release:
+        prev_comps = db.query(Component).filter(Component.release_id == prev_release.id).all()
+        prev_purls = {c.purl for c in prev_comps if c.purl}
+        for pc in prev_comps:
+            for pv in pc.vulnerabilities:
+                prev_cves.add(pv.cve_id)
 
     # delete existing components for this release (re-upload scenario)
     db.query(Component).filter(Component.release_id == release_id).delete()
@@ -119,6 +196,7 @@ def upload_sbom(
                 cve_id=cve_id,
                 cvss_score=v["cvss_score"],
                 severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
                 status="open",
             ))
             vuln_count += 1
@@ -129,14 +207,37 @@ def upload_sbom(
     _enrich_epss(all_vulns, db)
     _enrich_kev(all_vulns, db)
 
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    label = f"{org.name if org else ''} / {product.name if product else ''} / {release.version}"
+    audit.record(db, "sbom_upload", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
+    db.commit()
+
+    # Compute diff vs previous release
+    diff: dict | None = None
+    if prev_release:
+        new_purls = {c["purl"] for c in parsed if c.get("purl")}
+        new_cves: set[str] = set()
+        for comp, _ in component_objs:
+            for v in comp.vulnerabilities:
+                new_cves.add(v.cve_id)
+        diff = {
+            "prev_version":       prev_release.version,
+            "components_added":   len(new_purls - prev_purls),
+            "components_removed": len(prev_purls - new_purls),
+            "vulns_added":        len(new_cves - prev_cves),
+            "vulns_removed":      len(prev_cves - new_cves),
+        }
+
     return {
-        "components_found": len(parsed),
+        "components_found":    len(parsed),
         "vulnerabilities_found": vuln_count,
+        "diff":                diff,
     }
 
 
 @router.post("/{release_id}/rescan")
-def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
+def rescan_vulnerabilities(release_id: str, admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -172,6 +273,7 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
                 cve_id=cve_id,
                 cvss_score=v["cvss_score"],
                 severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
                 status="open",
             ))
             new_count += 1
@@ -218,6 +320,12 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
             "release_id": release_id,
         }, new_vuln_details[:new_count])
 
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    label = f"{org.name if org else ''} / {product.name if product else ''} / {release.version}"
+    audit.record(db, "vuln_scan", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
+    db.commit()
+
     return {
         "components_scanned": len(comp_list),
         "new_vulnerabilities_found": new_count,
@@ -225,7 +333,7 @@ def rescan_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/enrich-epss")
-def enrich_epss(release_id: str, db: Session = Depends(get_db)):
+def enrich_epss(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -240,7 +348,9 @@ def enrich_epss(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/enrich-nvd")
-def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    if release_id in _active_enrichments:
+        raise HTTPException(status_code=409, detail="此版本的 NVD 補充正在執行中，請稍後")
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -254,11 +364,15 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session =
 
     def _task():
         from app.core.database import SessionLocal
+        _active_enrichments.add(release_id)
         _db = SessionLocal()
         try:
             _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
             enrich_vulns_nvd(_vulns, _db)
+        except Exception as exc:
+            logger.error("NVD 補充失敗 release_id=%s: %s", release_id, exc)
         finally:
+            _active_enrichments.discard(release_id)
             _db.close()
 
     background_tasks.add_task(_task)
@@ -271,10 +385,11 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, db: Session =
 
 
 @router.get("/{release_id}")
-def get_release(release_id: str, db: Session = Depends(get_db)):
+def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     return {
         "id": release.id,
         "version": release.version,
@@ -286,10 +401,13 @@ def get_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{release_id}", status_code=204)
-def delete_release(release_id: str, db: Session = Depends(get_db)):
+def delete_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法刪除")
     if release.sbom_file_path and os.path.exists(release.sbom_file_path):
         os.remove(release.sbom_file_path)
     db.delete(release)
@@ -297,10 +415,11 @@ def delete_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/components")
-def list_components(release_id: str, db: Session = Depends(get_db)):
+def list_components(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     components = db.query(Component).filter(Component.release_id == release_id).all()
     result = []
     for c in components:
@@ -318,45 +437,66 @@ def list_components(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/vulnerabilities")
-def list_vulnerabilities(release_id: str, db: Session = Depends(get_db)):
+def list_vulnerabilities(
+    release_id: str,
+    skip: int = 0,
+    limit: int = 500,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    if limit > 1000:
+        limit = 1000
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-    components = db.query(Component).filter(Component.release_id == release_id).all()
-    result = []
-    for c in components:
-        for v in c.vulnerabilities:
-            result.append({
-                "id": v.id,
-                "component_name": c.name,
-                "component_version": c.version,
-                "cve_id": v.cve_id,
-                "cvss_score": v.cvss_score,
-                "severity": v.severity,
-                "status": v.status,
-                "justification": v.justification,
-                "response": v.response,
-                "detail": v.detail,
-                "epss_score": v.epss_score,
-                "epss_percentile": v.epss_percentile,
-                "is_kev": bool(v.is_kev),
-                "description": v.description,
-                "cwe": v.cwe,
-                "nvd_refs": json.loads(v.nvd_refs) if v.nvd_refs else [],
-                "cvss_v3_score": v.cvss_v3_score,
-                "cvss_v3_vector": v.cvss_v3_vector,
-                "cvss_v4_score": v.cvss_v4_score,
-                "cvss_v4_vector": v.cvss_v4_vector,
-            })
-    result.sort(key=lambda x: x["epss_score"] or x["cvss_score"] or 0, reverse=True)
-    return result
+    _assert_release_org(release, org_scope, db)
+    order_expr = func.coalesce(Vulnerability.epss_score, Vulnerability.cvss_score, 0)
+    rows = (
+        db.query(Vulnerability, Component.name.label("comp_name"), Component.version.label("comp_version"))
+        .join(Component, Component.id == Vulnerability.component_id)
+        .filter(Component.release_id == release_id)
+        .order_by(order_expr.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": v.id,
+            "component_name": comp_name,
+            "component_version": comp_version,
+            "cve_id": v.cve_id,
+            "cvss_score": v.cvss_score,
+            "severity": v.severity,
+            "status": v.status,
+            "justification": v.justification,
+            "response": v.response,
+            "detail": v.detail,
+            "epss_score": v.epss_score,
+            "epss_percentile": v.epss_percentile,
+            "is_kev": bool(v.is_kev),
+            "description": v.description,
+            "cwe": v.cwe,
+            "nvd_refs": json.loads(v.nvd_refs) if v.nvd_refs else [],
+            "cvss_v3_score": v.cvss_v3_score,
+            "cvss_v3_vector": v.cvss_v3_vector,
+            "cvss_v4_score": v.cvss_v4_score,
+            "cvss_v4_vector": v.cvss_v4_vector,
+            **_sla_info(v),
+            "suppressed":        _is_suppressed(v),
+            "suppressed_until":  v.suppressed_until.isoformat() if v.suppressed_until else None,
+            "suppressed_reason": v.suppressed_reason,
+        }
+        for v, comp_name, comp_version in rows
+    ]
 
 
 @router.get("/{release_id}/vulnerabilities/export")
-def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
+def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
 
     product = db.query(Product).filter(Product.id == release.product_id).first()
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
@@ -403,13 +543,16 @@ def list_compliance(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/report")
-def download_report(release_id: str, db: Session = Depends(get_db)):
+def download_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
 
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -468,13 +611,15 @@ def download_report(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/compliance/iec62443")
-def download_iec62443_report(release_id: str, db: Session = Depends(get_db)):
+def download_iec62443_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -523,14 +668,87 @@ def download_iec62443_report(release_id: str, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/{release_id}/evidence-package")
-def download_evidence_package(release_id: str, db: Session = Depends(get_db)):
+@router.get("/{release_id}/compliance/iec62443-4-2")
+def download_iec62443_42_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    if not components_raw:
+        raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
 
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components = [{"name": c.name, "version": c.version, "license": c.license,
+                   "vuln_count": len(c.vulnerabilities),
+                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+    vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
+              "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
+             for c in components_raw for v in c.vulnerabilities]
+
+    pdf_bytes = iec62443_42_report.generate(
+        org_name=org.name if org else "Unknown",
+        product_name=product.name if product else "Unknown",
+        version=release.version,
+        components=components,
+        vulns=vulns,
+    )
+    safe = (product.name if product else "report").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="IEC62443_4-2_{safe}_{release.version}.pdf"'})
+
+
+@router.get("/{release_id}/compliance/iec62443-3-3")
+def download_iec62443_33_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    if not components_raw:
+        raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
+
+    components = [{"name": c.name, "version": c.version, "license": c.license,
+                   "vuln_count": len(c.vulnerabilities),
+                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+    vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
+              "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
+             for c in components_raw for v in c.vulnerabilities]
+
+    org_id = product.organization_id if product else None
+    incidents_raw = db.query(CRAIncident).all() if org_id else []
+    cra_incidents = [{"status": i.status} for i in incidents_raw]
+
+    pdf_bytes = iec62443_33_report.generate(
+        org_name=org.name if org else "Unknown",
+        product_name=product.name if product else "Unknown",
+        version=release.version,
+        components=components,
+        vulns=vulns,
+        cra_incidents=cra_incidents,
+    )
+    safe = (product.name if product else "report").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="IEC62443_3-3_{safe}_{release.version}.pdf"'})
+
+
+@router.get("/{release_id}/evidence-package")
+def download_evidence_package(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -679,13 +897,15 @@ def download_evidence_package(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/csaf")
-def export_csaf(release_id: str, db: Session = Depends(get_db)):
+def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -775,11 +995,199 @@ def export_csaf(release_id: str, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/{release_id}/integrity")
-def verify_integrity(release_id: str, db: Session = Depends(get_db)):
+@router.get("/{release_id}/export/cyclonedx-xml")
+def export_cyclonedx_xml(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    import xml.etree.ElementTree as ET
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+
+    NS = "http://cyclonedx.org/schema/bom/1.4"
+    ET.register_namespace("", NS)
+    bom = ET.Element(f"{{{NS}}}bom", {"version": "1", "serialNumber": f"urn:uuid:{uuid.uuid4()}"})
+
+    # metadata
+    meta = ET.SubElement(bom, f"{{{NS}}}metadata")
+    ET.SubElement(meta, f"{{{NS}}}timestamp").text = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if product:
+        mc = ET.SubElement(meta, f"{{{NS}}}component", {"type": "application"})
+        ET.SubElement(mc, f"{{{NS}}}name").text = product.name
+        ET.SubElement(mc, f"{{{NS}}}version").text = release.version or ""
+
+    # components
+    comps_el = ET.SubElement(bom, f"{{{NS}}}components")
+    for c in components:
+        cel = ET.SubElement(comps_el, f"{{{NS}}}component", {"type": "library"})
+        ET.SubElement(cel, f"{{{NS}}}name").text = c.name or ""
+        if c.version:
+            ET.SubElement(cel, f"{{{NS}}}version").text = c.version
+        if c.purl:
+            ET.SubElement(cel, f"{{{NS}}}purl").text = c.purl
+        if c.license:
+            lics_el = ET.SubElement(cel, f"{{{NS}}}licenses")
+            lic_el  = ET.SubElement(lics_el, f"{{{NS}}}license")
+            ET.SubElement(lic_el, f"{{{NS}}}id").text = c.license
+
+    xml_bytes = ET.tostring(bom, encoding="unicode", xml_declaration=False)
+    xml_bytes = f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_bytes}'
+    prod_name = (product.name if product else "sbom").replace(" ", "_")
+    filename = f"cyclonedx_{prod_name}_{release.version or release_id[:8]}.xml"
+    return Response(
+        content=xml_bytes.encode("utf-8"),
+        media_type="application/xml",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{release_id}/export/spdx-json")
+def export_spdx_json(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+
+    doc_name = f"{product.name if product else 'sbom'}-{release.version or release_id[:8]}"
+    doc = {
+        "spdxVersion": "SPDX-2.3",
+        "dataLicense": "CC0-1.0",
+        "SPDXID": "SPDXRef-DOCUMENT",
+        "name": doc_name,
+        "documentNamespace": f"https://sbom-platform/spdx/{release_id}",
+        "creationInfo": {
+            "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "creators": ["Tool: SBOM Platform"],
+        },
+        "packages": [],
+        "relationships": [],
+    }
+
+    # Root package
+    root_spdxid = "SPDXRef-Package-root"
+    doc["packages"].append({
+        "SPDXID": root_spdxid,
+        "name": product.name if product else "unknown",
+        "versionInfo": release.version or "unknown",
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": False,
+    })
+    doc["relationships"].append({
+        "spdxElementId": "SPDXRef-DOCUMENT",
+        "relationshipType": "DESCRIBES",
+        "relatedSpdxElement": root_spdxid,
+    })
+
+    for i, c in enumerate(components):
+        spdxid = f"SPDXRef-Package-{i}"
+        pkg: dict = {
+            "SPDXID": spdxid,
+            "name": c.name or "",
+            "versionInfo": c.version or "NOASSERTION",
+            "downloadLocation": "NOASSERTION",
+            "filesAnalyzed": False,
+        }
+        if c.license:
+            pkg["licenseDeclared"] = c.license
+            pkg["licenseConcluded"] = c.license
+        else:
+            pkg["licenseDeclared"] = "NOASSERTION"
+            pkg["licenseConcluded"] = "NOASSERTION"
+        if c.purl:
+            pkg["externalRefs"] = [{"referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": c.purl}]
+        doc["packages"].append(pkg)
+        doc["relationships"].append({
+            "spdxElementId": root_spdxid,
+            "relationshipType": "CONTAINS",
+            "relatedSpdxElement": spdxid,
+        })
+
+    prod_name = (product.name if product else "sbom").replace(" ", "_")
+    filename = f"spdx_{prod_name}_{release.version or release_id[:8]}.json"
+    return Response(
+        content=json.dumps(doc, ensure_ascii=False, indent=2).encode("utf-8"),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{release_id}/sbom-quality")
+def sbom_quality(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        raise HTTPException(status_code=404, detail="尚未上傳 SBOM 檔案")
+
+    with open(release.sbom_file_path, "rb") as f:
+        data = json.loads(f.read())
+
+    is_spdx = "spdxVersion" in data
+    checks = _check_ntia(data, is_spdx)
+    passed = sum(1 for c in checks if c["passed"])
+    score = round(passed / len(checks) * 100)
+    grade = "A" if passed >= 6 else "B" if passed >= 4 else "C" if passed >= 2 else "D"
+    return {"score": score, "grade": grade, "passed": passed, "total": len(checks), "checks": checks}
+
+
+def _pct(items: list, pred) -> float:
+    if not items:
+        return 0.0
+    return sum(1 for i in items if pred(i)) / len(items)
+
+
+def _check_ntia(data: dict, is_spdx: bool) -> list[dict]:
+    def ok(passed, detail=""):
+        return {"passed": passed, "detail": detail}
+
+    if is_spdx:
+        pkgs = [p for p in data.get("packages", []) if p.get("name")]
+        has_supplier = any(
+            p.get("supplier", "") not in ("", "NOASSERTION", "NONE")
+            for p in pkgs
+        )
+        version_pct = _pct(pkgs, lambda p: p.get("versionInfo", "") not in ("", "NOASSERTION", "NONE"))
+        purl_pct = _pct(pkgs, lambda p: any(
+            r.get("referenceType") == "purl" for r in p.get("externalRefs", [])
+        ))
+        has_deps = bool(data.get("relationships"))
+        has_author = bool(data.get("creationInfo", {}).get("creators"))
+        has_ts = bool(data.get("creationInfo", {}).get("created"))
+        fmt = "SPDX"
+    else:
+        comps = data.get("components", [])
+        has_supplier = any(
+            c.get("supplier", {}).get("name") or c.get("author")
+            for c in comps
+        )
+        version_pct = _pct(comps, lambda c: bool(c.get("version", "").strip()))
+        purl_pct = _pct(comps, lambda c: bool(c.get("purl") or c.get("cpe")))
+        has_deps = bool(data.get("dependencies"))
+        meta = data.get("metadata", {})
+        has_author = bool(meta.get("authors") or meta.get("component", {}).get("author"))
+        has_ts = bool(meta.get("timestamp"))
+        fmt = "CycloneDX"
+
+    threshold = 0.8
+    return [
+        {"id": "supplier",     "label": "供應商名稱",   **ok(has_supplier, f"{'有' if has_supplier else '無'}供應商欄位（{fmt}）")},
+        {"id": "name",         "label": "元件名稱",     **ok(True, "上傳驗證已確保所有元件有名稱")},
+        {"id": "version",      "label": "元件版本",     **ok(version_pct >= threshold, f"{version_pct*100:.0f}% 元件有版本（門檻 80%）")},
+        {"id": "unique_id",    "label": "唯一識別碼",   **ok(purl_pct >= threshold, f"{purl_pct*100:.0f}% 元件有 PURL/CPE（門檻 80%）")},
+        {"id": "dependencies", "label": "相依關係",     **ok(has_deps, f"{'有' if has_deps else '無'}相依關係區塊")},
+        {"id": "author",       "label": "SBOM 作者",    **ok(has_author, f"{'有' if has_author else '無'}作者 metadata")},
+        {"id": "timestamp",    "label": "時間戳記",     **ok(has_ts, f"{'有' if has_ts else '無'}時間戳記 metadata")},
+    ]
+
+
+@router.get("/{release_id}/integrity")
+def verify_integrity(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         return {"status": "no_file", "message": "尚未上傳 SBOM 檔案"}
     if not release.sbom_hash:
@@ -796,7 +1204,7 @@ def verify_integrity(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/lock")
-def lock_release(release_id: str, db: Session = Depends(get_db)):
+def lock_release(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -808,7 +1216,7 @@ def lock_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{release_id}/unlock")
-def unlock_release(release_id: str, db: Session = Depends(get_db)):
+def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -818,10 +1226,11 @@ def unlock_release(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/patch-stats")
-def get_patch_stats(release_id: str, db: Session = Depends(get_db)):
+def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
 
     components = db.query(Component).filter(Component.release_id == release_id).all()
     vulns = [v for c in components for v in c.vulnerabilities]
@@ -855,7 +1264,138 @@ def get_patch_stats(release_id: str, db: Session = Depends(get_db)):
     }
 
 
-SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
+@router.get("/{release_id}/gate")
+def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    from app.models.license_rule import LicenseRule
+    from app.api.licenses import _matches as _lic_matches
+
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+    vulns = [v for c in components for v in c.vulnerabilities]
+
+    checks = []
+
+    # 1. SBOM uploaded
+    has_sbom = bool(release.sbom_hash)
+    checks.append({"id": "sbom_uploaded", "label": "SBOM 已上傳",
+                   "passed": has_sbom,
+                   "detail": "已上傳 SBOM 並計算 hash" if has_sbom else "尚未上傳 SBOM"})
+
+    # 2. No Critical open/affected vulns (excluding suppressed)
+    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected") and not _is_suppressed(v)]
+    no_critical = len(critical_open) == 0
+    checks.append({"id": "no_critical", "label": "無未處理 Critical 漏洞",
+                   "passed": no_critical,
+                   "detail": f"發現 {len(critical_open)} 個 Critical 漏洞未處理" if not no_critical else "無未處理 Critical 漏洞"})
+
+    # 3. No block-level license violations
+    rules = db.query(LicenseRule).filter(LicenseRule.enabled == True).all()  # noqa: E712
+    block_violations = sum(
+        1 for comp in components if comp.license
+        for rule in rules if rule.action == "block" and _lic_matches(rule.license_id, comp.license)
+    )
+    no_block_lic = block_violations == 0
+    checks.append({"id": "no_block_license", "label": "無 Block 等級 License",
+                   "passed": no_block_lic,
+                   "detail": f"{block_violations} 個元件觸發 block License 規則" if not no_block_lic else "無 block 等級 License 違規"})
+
+    # 4. SBOM quality >= B (4/7 passed)
+    quality_grade = None
+    quality_passed = None
+    if release.sbom_file_path and os.path.exists(release.sbom_file_path):
+        try:
+            with open(release.sbom_file_path, "rb") as f:
+                sbom_data = json.loads(f.read())
+            is_spdx = "spdxVersion" in sbom_data
+            q_checks = _check_ntia(sbom_data, is_spdx)
+            quality_passed = sum(1 for c in q_checks if c["passed"])
+            quality_grade = "A" if quality_passed >= 6 else "B" if quality_passed >= 4 else "C" if quality_passed >= 2 else "D"
+        except Exception:
+            pass
+    good_quality = quality_grade in ("A", "B")
+    grade_str = f"等級 {quality_grade}（{quality_passed}/7）" if quality_grade else "無 SBOM 可評分"
+    checks.append({"id": "sbom_quality", "label": "SBOM 品質 ≥ B 級",
+                   "passed": good_quality, "detail": grade_str})
+
+    # 5. All vulns have been triaged (no open/in_triage, suppressed ones are exempt)
+    untriaged = [v for v in vulns if v.status in ("open", "in_triage") and not _is_suppressed(v)]
+    all_triaged = len(untriaged) == 0
+    checks.append({"id": "all_triaged", "label": "所有漏洞已完成分類",
+                   "passed": all_triaged,
+                   "detail": f"{len(untriaged)} 個漏洞仍為 open/in_triage" if not all_triaged else f"全部 {len(vulns)} 個漏洞已分類"})
+
+    passed_count = sum(1 for c in checks if c["passed"])
+    return {
+        "overall": "pass" if passed_count == len(checks) else "fail",
+        "passed": passed_count,
+        "total": len(checks),
+        "checks": checks,
+    }
+
+
+@router.get("/{release_id}/dependency-graph")
+def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        return {"has_data": False, "nodes": [], "edges": []}
+
+    with open(release.sbom_file_path, "rb") as f:
+        data = json.loads(f.read())
+
+    is_spdx = "spdxVersion" in data
+    node_map: dict = {}
+    edges: list = []
+
+    if is_spdx:
+        for pkg in data.get("packages", []):
+            sid = pkg.get("SPDXID", "")
+            if sid:
+                node_map[sid] = {"id": sid, "name": pkg.get("name", sid), "version": pkg.get("versionInfo", ""), "is_root": False}
+        for rel in data.get("relationships", []):
+            if rel.get("relationshipType") in ("DEPENDS_ON", "CONTAINS", "DYNAMIC_LINK", "STATIC_LINK"):
+                s, t = rel.get("spdxElementId"), rel.get("relatedSpdxElement")
+                if s and t and s in node_map and t in node_map and s != t:
+                    edges.append({"source": s, "target": t})
+    else:
+        meta_comp = data.get("metadata", {}).get("component", {})
+        if meta_comp:
+            ref = meta_comp.get("bom-ref") or "root"
+            node_map[ref] = {"id": ref, "name": meta_comp.get("name", "Root"), "version": meta_comp.get("version", ""), "is_root": True}
+        for comp in data.get("components", []):
+            ref = comp.get("bom-ref") or comp.get("name", "")
+            if ref:
+                node_map[ref] = {"id": ref, "name": comp.get("name", ref), "version": comp.get("version", ""), "is_root": False}
+        for dep in data.get("dependencies", []):
+            src = dep.get("ref")
+            for tgt in dep.get("dependsOn", []):
+                if src and tgt and src in node_map and tgt in node_map and src != tgt:
+                    edges.append({"source": src, "target": tgt})
+
+    # Mark nodes that have unresolved critical/high vulns
+    vuln_names: set = set()
+    for comp in db.query(Component).filter(Component.release_id == release_id).all():
+        if any(v.severity in ("critical", "high") and v.status not in ("fixed", "not_affected") for v in comp.vulnerabilities):
+            vuln_names.add(comp.name)
+
+    nodes = []
+    for n in node_map.values():
+        nodes.append({**n, "has_vuln": n["name"] in vuln_names})
+
+    return {
+        "has_data": len(edges) > 0,
+        "nodes": nodes[:200],
+        "edges": edges[:600],
+        "total_nodes": len(nodes),
+        "total_edges": len(edges),
+    }
 
 
 def _highest_severity(vulns) -> str | None:

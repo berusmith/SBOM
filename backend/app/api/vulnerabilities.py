@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_admin
 from app.models.component import Component
 from app.models.release import Release
 from app.models.vex_history import VexHistory
@@ -82,7 +83,7 @@ def _apply_vex(vuln: Vulnerability, status: str, justification, response, detail
 
 
 @router.patch("/batch")
-def batch_update_vex(payload: BatchVexUpdate, db: Session = Depends(get_db)):
+def batch_update_vex(payload: BatchVexUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     if not payload.vuln_ids:
         raise HTTPException(status_code=400, detail="未提供漏洞 ID")
     if payload.status not in VALID_STATUSES:
@@ -92,24 +93,27 @@ def batch_update_vex(payload: BatchVexUpdate, db: Session = Depends(get_db)):
     if payload.response and payload.response not in VALID_RESPONSES:
         raise HTTPException(status_code=400, detail="Invalid response.")
 
+    vulns = db.query(Vulnerability).filter(Vulnerability.id.in_(payload.vuln_ids)).all()
+    vuln_map = {v.id: v for v in vulns}
+    not_found = [vid for vid in payload.vuln_ids if vid not in vuln_map]
+
     updated = 0
-    for vuln_id in payload.vuln_ids:
-        vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
-        if not vuln:
-            continue
+    skipped_locked = []
+    for vuln in vulns:
         try:
             _check_not_locked(vuln, db)
         except HTTPException:
-            continue  # skip locked releases silently in batch
+            skipped_locked.append(vuln.id)
+            continue
         _apply_vex(vuln, payload.status, payload.justification, payload.response, payload.detail, payload.note, db)
         updated += 1
 
     db.commit()
-    return {"updated": updated}
+    return {"updated": updated, "skipped_locked": skipped_locked, "not_found": not_found}
 
 
 @router.patch("/{vuln_id}/status")
-def update_vex(vuln_id: str, payload: VexUpdate, db: Session = Depends(get_db)):
+def update_vex(vuln_id: str, payload: VexUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     if payload.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {VALID_STATUSES}")
     if payload.justification and payload.justification not in VALID_JUSTIFICATIONS:
@@ -131,6 +135,35 @@ def update_vex(vuln_id: str, payload: VexUpdate, db: Session = Depends(get_db)):
         "response": vuln.response,
         "detail": vuln.detail,
     }
+
+
+class SuppressUpdate(BaseModel):
+    suppressed: bool
+    suppressed_until: Optional[str] = None   # ISO date "YYYY-MM-DD"
+    suppressed_reason: Optional[str] = None
+
+
+@router.patch("/{vuln_id}/suppress")
+def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    _check_not_locked(vuln, db)
+    vuln.suppressed = payload.suppressed
+    if payload.suppressed:
+        if payload.suppressed_until:
+            try:
+                vuln.suppressed_until = datetime.fromisoformat(payload.suppressed_until).replace(tzinfo=timezone.utc)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="suppressed_until 格式錯誤，請用 YYYY-MM-DD")
+        else:
+            vuln.suppressed_until = None
+        vuln.suppressed_reason = payload.suppressed_reason or None
+    else:
+        vuln.suppressed_until = None
+        vuln.suppressed_reason = None
+    db.commit()
+    return {"id": vuln_id, "suppressed": vuln.suppressed, "suppressed_until": vuln.suppressed_until.isoformat() if vuln.suppressed_until else None}
 
 
 @router.get("/{vuln_id}/history")

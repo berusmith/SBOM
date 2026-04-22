@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
+from app.core.deps import get_org_scope, require_admin
 from app.models.component import Component
 from app.models.product import Product
 from app.models.release import Release
@@ -12,10 +13,12 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 
 @router.post("/{product_id}/releases", response_model=ReleaseResponse)
-def create_release(product_id: str, payload: ReleaseCreate, db: Session = Depends(get_db)):
+def create_release(product_id: str, payload: ReleaseCreate, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權在此產品建立版本")
     release = Release(product_id=product_id, version=payload.version)
     db.add(release)
     db.commit()
@@ -24,21 +27,78 @@ def create_release(product_id: str, payload: ReleaseCreate, db: Session = Depend
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: str, db: Session = Depends(get_db)):
+def delete_product(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權刪除此產品")
     db.delete(product)
     db.commit()
 
 
 @router.get("/{product_id}/releases")
-def list_releases(product_id: str, db: Session = Depends(get_db)):
+def list_releases(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    releases = db.query(Release).filter(Release.product_id == product_id).all()
-    return {"product_name": product.name, "releases": releases}
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
+    releases = (
+        db.query(Release)
+        .options(selectinload(Release.components).selectinload(Component.vulnerabilities))
+        .filter(Release.product_id == product_id)
+        .order_by(Release.created_at)
+        .all()
+    )
+    result = []
+    for r in releases:
+        vulns = [v for c in r.components for v in c.vulnerabilities]
+        unresolved = [v for v in vulns if v.status not in ("fixed", "not_affected")]
+        result.append({
+            "id": r.id,
+            "version": r.version,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "has_sbom": bool(r.sbom_file_path),
+            "locked": r.locked or False,
+            "vuln_critical": sum(1 for v in unresolved if v.severity == "critical"),
+            "vuln_high": sum(1 for v in unresolved if v.severity == "high"),
+            "vuln_total": len(vulns),
+        })
+    return {"product_name": product.name, "releases": result}
+
+
+@router.get("/{product_id}/vuln-trend")
+def vuln_trend(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
+
+    releases = (
+        db.query(Release)
+        .options(selectinload(Release.components).selectinload(Component.vulnerabilities))
+        .filter(Release.product_id == product_id)
+        .order_by(Release.created_at)
+        .all()
+    )
+    result = []
+    for r in releases:
+        all_vulns = [v for c in r.components for v in c.vulnerabilities]
+        unresolved = [v for v in all_vulns if v.status not in ("fixed", "not_affected")]
+        counts = {s: 0 for s in ("critical", "high", "medium", "low", "info")}
+        for v in unresolved:
+            sev = v.severity or "info"
+            counts[sev] = counts.get(sev, 0) + 1
+        result.append({
+            "release_id": r.id,
+            "version": r.version,
+            "total": len(unresolved),
+            "total_all": len(all_vulns),
+            **counts,
+        })
+    return result
 
 
 @router.get("/{product_id}/diff")
@@ -46,11 +106,14 @@ def diff_releases(
     product_id: str,
     from_release: str = Query(..., alias="from"),
     to_release: str = Query(..., alias="to"),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
 
     rel_from = db.query(Release).filter(Release.id == from_release, Release.product_id == product_id).first()
     rel_to   = db.query(Release).filter(Release.id == to_release,   Release.product_id == product_id).first()

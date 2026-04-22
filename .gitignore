@@ -6,8 +6,17 @@ __pycache__/
 venv/
 .env
 
+# Secrets
+deploy/.env.server
+ssh-key-*
+
+# Local scratch
+archive/
+
 # Database & uploads
 backend/sbom.db
+backend/sbom.db-shm
+backend/sbom.db-wal
 backend/uploads/
 
 # Node
