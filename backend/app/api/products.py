@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import get_org_scope, require_admin
 from app.models.component import Component
 from app.models.product import Product
 from app.models.release import Release
@@ -34,10 +34,12 @@ def delete_product(product_id: str, _admin: dict = Depends(require_admin), db: S
 
 
 @router.get("/{product_id}/releases")
-def list_releases(product_id: str, db: Session = Depends(get_db)):
+def list_releases(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
     releases = (
         db.query(Release)
         .options(selectinload(Release.components).selectinload(Component.vulnerabilities))
@@ -63,10 +65,12 @@ def list_releases(product_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{product_id}/vuln-trend")
-def vuln_trend(product_id: str, db: Session = Depends(get_db)):
+def vuln_trend(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
 
     releases = (
         db.query(Release)
@@ -96,11 +100,14 @@ def diff_releases(
     product_id: str,
     from_release: str = Query(..., alias="from"),
     to_release: str = Query(..., alias="to"),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此產品")
 
     rel_from = db.query(Release).filter(Release.id == from_release, Release.product_id == product_id).first()
     rel_to   = db.query(Release).filter(Release.id == to_release,   Release.product_id == product_id).first()

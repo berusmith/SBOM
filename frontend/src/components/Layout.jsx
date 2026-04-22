@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-const navItems = [
-  { path: "/",              label: "儀表板" },
-  { path: "/organizations", label: "客戶管理" },
-  { path: "/risk-overview", label: "風險總覽" },
-  { path: "/policies",      label: "Policy" },
-  { path: "/cra",           label: "🚨 CRA 事件" },
-  { path: "/settings",      label: "通知設定" },
-  { path: "/help",          label: "說明" },
+const ALL_NAV = [
+  { path: "/",                label: "儀表板",   adminOnly: false },
+  { path: "/organizations",   label: "客戶管理", adminOnly: true  },
+  { path: "/risk-overview",   label: "風險總覽", adminOnly: false },
+  { path: "/policies",        label: "Policy",   adminOnly: false },
+  { path: "/cra",             label: "CRA 事件", adminOnly: false },
+  { path: "/admin/activity",  label: "使用紀錄", adminOnly: true  },
+  { path: "/settings",        label: "通知設定", adminOnly: true  },
+  { path: "/help",            label: "說明",     adminOnly: false },
 ];
 
 export default function Layout({ children }) {
@@ -16,6 +17,8 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [searchQ, setSearchQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const role = localStorage.getItem("role") || "viewer";
+  const navItems = ALL_NAV.filter(item => !item.adminOnly || role === "admin");
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -27,6 +30,8 @@ export default function Layout({ children }) {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("org_id");
     navigate("/login", { replace: true });
   };
 

@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import get_org_scope, require_admin
 from app.models.organization import Organization
 from app.models.product import Product
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
@@ -31,8 +31,11 @@ def create_organization(payload: OrganizationCreate, _admin: dict = Depends(requ
 
 
 @router.get("", response_model=list[OrganizationResponse])
-def list_organizations(db: Session = Depends(get_db)):
-    return db.query(Organization).all()
+def list_organizations(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    q = db.query(Organization)
+    if org_scope:
+        q = q.filter(Organization.id == org_scope)
+    return q.all()
 
 
 @router.post("/{org_id}/products", response_model=ProductResponse)
@@ -72,5 +75,7 @@ def delete_organization(org_id: str, _admin: dict = Depends(require_admin), db: 
 
 
 @router.get("/{org_id}/products", response_model=list[ProductResponse])
-def list_products(org_id: str, db: Session = Depends(get_db)):
+def list_products(org_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    if org_scope and org_scope != org_id:
+        raise HTTPException(status_code=403, detail="無權存取此組織")
     return db.query(Product).filter(Product.organization_id == org_id).all()

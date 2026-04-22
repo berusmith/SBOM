@@ -13,9 +13,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Up
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.config import settings as _cfg
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import get_org_scope, require_admin
 
 logger = logging.getLogger(__name__)
 from app.models.component import Component
@@ -42,6 +43,15 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 _active_enrichments: set[str] = set()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
+
+
+def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
+    """Returns (product, org). Raises 403 if viewer tries to access another org's release."""
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    if org_scope and (not product or product.organization_id != org_scope):
+        raise HTTPException(status_code=403, detail="無權存取此版本")
+    return product, org
 
 
 def _enrich_kev(vulns: list, db) -> None:
@@ -71,7 +81,7 @@ def _enrich_epss(vulns: list, db) -> None:
 def upload_sbom(
     release_id: str,
     file: UploadFile = File(...),
-    _admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     release = db.query(Release).filter(Release.id == release_id).first()
@@ -150,6 +160,12 @@ def upload_sbom(
     _enrich_epss(all_vulns, db)
     _enrich_kev(all_vulns, db)
 
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    label = f"{org.name if org else ''} / {product.name if product else ''} / {release.version}"
+    audit.record(db, "sbom_upload", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
+    db.commit()
+
     return {
         "components_found": len(parsed),
         "vulnerabilities_found": vuln_count,
@@ -157,7 +173,7 @@ def upload_sbom(
 
 
 @router.post("/{release_id}/rescan")
-def rescan_vulnerabilities(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def rescan_vulnerabilities(release_id: str, admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -240,6 +256,12 @@ def rescan_vulnerabilities(release_id: str, _admin: dict = Depends(require_admin
             "release_id": release_id,
         }, new_vuln_details[:new_count])
 
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
+    label = f"{org.name if org else ''} / {product.name if product else ''} / {release.version}"
+    audit.record(db, "vuln_scan", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
+    db.commit()
+
     return {
         "components_scanned": len(comp_list),
         "new_vulnerabilities_found": new_count,
@@ -299,10 +321,11 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict 
 
 
 @router.get("/{release_id}")
-def get_release(release_id: str, db: Session = Depends(get_db)):
+def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     return {
         "id": release.id,
         "version": release.version,
@@ -327,10 +350,11 @@ def delete_release(release_id: str, _admin: dict = Depends(require_admin), db: S
 
 
 @router.get("/{release_id}/components")
-def list_components(release_id: str, db: Session = Depends(get_db)):
+def list_components(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     components = db.query(Component).filter(Component.release_id == release_id).all()
     result = []
     for c in components:
@@ -352,6 +376,7 @@ def list_vulnerabilities(
     release_id: str,
     skip: int = 0,
     limit: int = 500,
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
     if limit > 1000:
@@ -359,6 +384,7 @@ def list_vulnerabilities(
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     components = db.query(Component).filter(Component.release_id == release_id).all()
     result = []
     for c in components:
@@ -390,10 +416,11 @@ def list_vulnerabilities(
 
 
 @router.get("/{release_id}/vulnerabilities/export")
-def export_vulnerabilities_csv(release_id: str, db: Session = Depends(get_db)):
+def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
 
     product = db.query(Product).filter(Product.id == release.product_id).first()
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
@@ -440,13 +467,16 @@ def list_compliance(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/report")
-def download_report(release_id: str, db: Session = Depends(get_db)):
+def download_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
 
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -505,13 +535,15 @@ def download_report(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/compliance/iec62443")
-def download_iec62443_report(release_id: str, db: Session = Depends(get_db)):
+def download_iec62443_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -561,12 +593,15 @@ def download_iec62443_report(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/compliance/iec62443-4-2")
-def download_iec62443_42_report(release_id: str, db: Session = Depends(get_db)):
+def download_iec62443_42_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
@@ -591,12 +626,15 @@ def download_iec62443_42_report(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/compliance/iec62443-3-3")
-def download_iec62443_33_report(release_id: str, db: Session = Depends(get_db)):
+def download_iec62443_33_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
@@ -626,13 +664,15 @@ def download_iec62443_33_report(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/evidence-package")
-def download_evidence_package(release_id: str, db: Session = Depends(get_db)):
+def download_evidence_package(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -781,13 +821,15 @@ def download_evidence_package(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/csaf")
-def export_csaf(release_id: str, db: Session = Depends(get_db)):
+def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
-
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
     components_raw = db.query(Component).filter(Component.release_id == release_id).all()
     if not components_raw:
@@ -878,10 +920,11 @@ def export_csaf(release_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{release_id}/integrity")
-def verify_integrity(release_id: str, db: Session = Depends(get_db)):
+def verify_integrity(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         return {"status": "no_file", "message": "尚未上傳 SBOM 檔案"}
     if not release.sbom_hash:
@@ -920,10 +963,11 @@ def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: S
 
 
 @router.get("/{release_id}/patch-stats")
-def get_patch_stats(release_id: str, db: Session = Depends(get_db)):
+def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
 
     components = db.query(Component).filter(Component.release_id == release_id).all()
     vulns = [v for c in components for v in c.vulnerabilities]

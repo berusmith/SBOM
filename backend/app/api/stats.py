@@ -3,6 +3,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import get_org_scope
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
 from app.models.organization import Organization
@@ -14,41 +15,70 @@ from app.models.vex_history import VexHistory  # noqa: F401 — ensure model loa
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
-@router.get("")
-def get_stats(db: Session = Depends(get_db)):
-    orgs       = db.query(Organization).count()
-    products   = db.query(Product).count()
-    releases   = db.query(Release).count()
-    components = db.query(Component).count()
+def _vuln_base_query(db, org_scope):
+    """Return a base query on Vulnerability joined to org chain when scoped."""
+    if not org_scope:
+        return db.query(Vulnerability)
+    return (
+        db.query(Vulnerability)
+        .join(Component, Component.id == Vulnerability.component_id)
+        .join(Release, Release.id == Component.release_id)
+        .join(Product, Product.id == Release.product_id)
+        .filter(Product.organization_id == org_scope)
+    )
 
-    # Severity counts via SQL GROUP BY (avoids loading all rows)
+
+@router.get("")
+def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    orgs = db.query(Organization).filter(Organization.id == org_scope).count() if org_scope else db.query(Organization).count()
+
+    prod_q = db.query(Product)
+    if org_scope:
+        prod_q = prod_q.filter(Product.organization_id == org_scope)
+    products = prod_q.count()
+
+    rel_q = db.query(Release)
+    if org_scope:
+        rel_q = rel_q.join(Product, Product.id == Release.product_id).filter(Product.organization_id == org_scope)
+    releases = rel_q.count()
+
+    comp_q = db.query(Component)
+    if org_scope:
+        comp_q = comp_q.join(Release, Release.id == Component.release_id).join(Product, Product.id == Release.product_id).filter(Product.organization_id == org_scope)
+    components = comp_q.count()
+
+    # Severity counts — build full join first, then group
+    base = _vuln_base_query(db, org_scope)
     severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-    for sev, cnt in db.query(Vulnerability.severity, func.count(Vulnerability.id)).group_by(Vulnerability.severity).all():
+    for sev, cnt in base.with_entities(Vulnerability.severity, func.count(Vulnerability.id)).group_by(Vulnerability.severity).all():
         severity_counts[sev or "info"] = severity_counts.get(sev or "info", 0) + cnt
 
-    # Status counts via SQL GROUP BY
+    # Status counts
     status_counts = {"open": 0, "in_triage": 0, "not_affected": 0, "affected": 0, "fixed": 0}
-    for st, cnt in db.query(Vulnerability.status, func.count(Vulnerability.id)).group_by(Vulnerability.status).all():
+    for st, cnt in base.with_entities(Vulnerability.status, func.count(Vulnerability.id)).group_by(Vulnerability.status).all():
         status_counts[st or "open"] = status_counts.get(st or "open", 0) + cnt
 
     total_vulns = sum(severity_counts.values())
     fixed_count = status_counts.get("fixed", 0)
     patch_rate  = round(fixed_count / total_vulns * 100, 1) if total_vulns else 0.0
 
-    # Average days to fix via SQL (julianday diff)
-    avg_raw = db.query(
-        func.avg(
-            func.julianday(Vulnerability.fixed_at) - func.julianday(Vulnerability.scanned_at)
+    # Average days to fix
+    avg_raw = (
+        base.filter(
+            Vulnerability.status == "fixed",
+            Vulnerability.fixed_at.isnot(None),
+            Vulnerability.scanned_at.isnot(None),
         )
-    ).filter(
-        Vulnerability.status == "fixed",
-        Vulnerability.fixed_at.isnot(None),
-        Vulnerability.scanned_at.isnot(None),
-    ).scalar()
+        .with_entities(func.avg(func.julianday(Vulnerability.fixed_at) - func.julianday(Vulnerability.scanned_at)))
+        .scalar()
+    )
     avg_days = round(float(avg_raw), 1) if avg_raw is not None else None
 
-    active_incidents = db.query(CRAIncident).filter(CRAIncident.status != "closed").count()
-    total_incidents  = db.query(CRAIncident).count()
+    inc_q = db.query(CRAIncident)
+    if org_scope:
+        inc_q = inc_q.filter(CRAIncident.org_id == org_scope)
+    active_incidents = inc_q.filter(CRAIncident.status != "closed").count()
+    total_incidents  = inc_q.count()
 
     return {
         "organizations": orgs,
@@ -73,11 +103,12 @@ def get_stats(db: Session = Depends(get_db)):
 
 
 @router.get("/risk-overview")
-def get_risk_overview(db: Session = Depends(get_db)):
-    # 5 bulk queries instead of N×4 per-org queries
-
-    # 1. All orgs
-    orgs = {o.id: o for o in db.query(Organization).all()}
+def get_risk_overview(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    # Bulk queries for all orgs (or scoped to one org for viewers)
+    org_q = db.query(Organization)
+    if org_scope:
+        org_q = org_q.filter(Organization.id == org_scope)
+    orgs = {o.id: o for o in org_q.all()}
 
     # 2. Product count per org
     prod_counts = dict(
@@ -107,13 +138,12 @@ def get_risk_overview(db: Session = Depends(get_db)):
         .all()
     )
 
-    # 5. Total active incidents (CRAIncident has no org FK — use global count)
-    total_active_incidents = (
-        db.query(func.count(CRAIncident.id))
-        .filter(CRAIncident.status != "closed")
-        .scalar() or 0
-    )
-    inc_counts = {}  # no per-org breakdown available
+    # 5. Active incidents (scoped by org_id if available)
+    inc_q = db.query(func.count(CRAIncident.id)).filter(CRAIncident.status != "closed")
+    if org_scope:
+        inc_q = inc_q.filter(CRAIncident.org_id == org_scope)
+    total_active_incidents = inc_q.scalar() or 0
+    inc_counts = {}  # per-org breakdown not needed (shown in totals)
 
     # Aggregate vuln data per org in Python
     _blank = lambda: {"total": 0, "critical": 0, "high": 0,
@@ -159,15 +189,16 @@ def get_risk_overview(db: Session = Depends(get_db)):
 
 
 @router.get("/top-threats")
-def get_top_threats(db: Session = Depends(get_db)):
-    # Active (unresolved) KEV count
-    kev_count = db.query(func.count(Vulnerability.id)).filter(
-        Vulnerability.is_kev == True,  # noqa: E712
-        Vulnerability.status.notin_(["fixed", "not_affected"]),
-    ).scalar() or 0
+def get_top_threats(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    base = _vuln_base_query(db, org_scope)
 
-    # Top 5 by EPSS score, unresolved only
-    top_epss = (
+    kev_count = (
+        base.filter(Vulnerability.is_kev == True, Vulnerability.status.notin_(["fixed", "not_affected"]))  # noqa: E712
+        .with_entities(func.count(Vulnerability.id))
+        .scalar() or 0
+    )
+
+    top_epss_q = (
         db.query(
             Vulnerability.cve_id,
             Vulnerability.epss_score,
@@ -180,10 +211,10 @@ def get_top_threats(db: Session = Depends(get_db)):
             Vulnerability.epss_score.isnot(None),
             Vulnerability.status.notin_(["fixed", "not_affected"]),
         )
-        .order_by(Vulnerability.epss_score.desc())
-        .limit(5)
-        .all()
     )
+    if org_scope:
+        top_epss_q = top_epss_q.join(Release, Release.id == Component.release_id).join(Product, Product.id == Release.product_id).filter(Product.organization_id == org_scope)
+    top_epss = top_epss_q.order_by(Vulnerability.epss_score.desc()).limit(5).all()
 
     return {
         "active_kev_count": kev_count,

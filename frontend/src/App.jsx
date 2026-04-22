@@ -14,10 +14,17 @@ import Settings from "./pages/Settings";
 import RiskOverview from "./pages/RiskOverview";
 import Policies from "./pages/Policies";
 import Help from "./pages/Help";
+import AdminActivity from "./pages/AdminActivity";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function RequireAdmin({ children }) {
+  const role = localStorage.getItem("role");
+  if (role !== "admin") return <Navigate to="/" replace />;
   return children;
 }
 
@@ -41,10 +48,11 @@ export default function App() {
                   <Route path="/cra/:incidentId" element={<CRAIncidentDetail />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/releases/diff" element={<ReleaseDiff />} />
-                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
                   <Route path="/risk-overview" element={<RiskOverview />} />
                   <Route path="/policies" element={<Policies />} />
                   <Route path="/help" element={<Help />} />
+                  <Route path="/admin/activity" element={<RequireAdmin><AdminActivity /></RequireAdmin>} />
                 </Routes>
               </Layout>
             </RequireAuth>

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import get_org_scope
 from app.models.component import Component
 from app.models.organization import Organization
 from app.models.product import Product
@@ -14,16 +15,18 @@ SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1, "info": 0}
 
 
 @router.get("/components")
-def search_components(q: str = Query(..., min_length=1), db: Session = Depends(get_db)):
-    """Search components by name across all orgs/products/releases."""
+def search_components(q: str = Query(..., min_length=1), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    """Search components by name, scoped to the user's org if viewer."""
     pattern = f"%{q}%"
-    components = (
+    comp_q = (
         db.query(Component)
+        .join(Release, Release.id == Component.release_id)
+        .join(Product, Product.id == Release.product_id)
         .filter(Component.name.ilike(pattern))
-        .order_by(Component.name)
-        .limit(200)
-        .all()
     )
+    if org_scope:
+        comp_q = comp_q.filter(Product.organization_id == org_scope)
+    components = comp_q.order_by(Component.name).limit(200).all()
 
     results = []
     for c in components:

@@ -16,7 +16,14 @@ export default function Login() {
     try {
       const res = await api.post("/auth/login", { username, password });
       localStorage.setItem("token", res.data.access_token);
-      navigate("/", { replace: true });
+      const me = await api.get("/auth/me");
+      localStorage.setItem("role", me.data.role || "viewer");
+      localStorage.setItem("org_id", me.data.org_id || "");
+      if (me.data.role !== "admin" && me.data.org_id) {
+        navigate(`/organizations/${me.data.org_id}/products`, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (err) {
       setError(err.response?.data?.detail || "登入失敗");
     } finally {

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, ForeignKey, String
 from app.core.database import Base
 
 
@@ -9,6 +9,7 @@ class CRAIncident(Base):
     __tablename__ = "cra_incidents"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = Column(String, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
     trigger_cve_ids = Column(String, nullable=True)   # comma-separated, e.g. "CVE-2021-44228,CVE-2021-45046"

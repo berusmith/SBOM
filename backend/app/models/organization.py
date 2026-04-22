@@ -16,3 +16,4 @@ class Organization(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     products = relationship("Product", back_populates="organization", cascade="all, delete-orphan")
+    users = relationship("User", back_populates="organization")

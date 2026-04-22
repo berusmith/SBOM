@@ -18,3 +18,13 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="此操作需要管理員權限")
     return user
+
+
+def get_org_scope(user: dict = Depends(get_current_user)) -> str | None:
+    """Admin sees all (returns None). Viewer is scoped to their org_id."""
+    if user.get("role") == "admin":
+        return None
+    org_id = user.get("org_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="帳號未綁定組織，請聯絡管理員")
+    return org_id

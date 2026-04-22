@@ -16,9 +16,14 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(username: str, role: str = "admin") -> str:
+def create_access_token(username: str, role: str = "admin", org_id: str | None = None, user_id: str | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRE_HOURS)
-    return jwt.encode({"sub": username, "role": role, "exp": expire}, settings.SECRET_KEY, algorithm="HS256")
+    payload: dict = {"sub": username, "role": role, "exp": expire}
+    if org_id:
+        payload["org_id"] = org_id
+    if user_id:
+        payload["user_id"] = user_id
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 
 
 def decode_token(token: str) -> dict:
@@ -26,4 +31,9 @@ def decode_token(token: str) -> dict:
     sub = payload.get("sub")
     if not sub:
         raise JWTError("missing sub")
-    return {"username": sub, "role": payload.get("role", "admin")}
+    return {
+        "username": sub,
+        "role": payload.get("role", "admin"),
+        "org_id": payload.get("org_id"),
+        "user_id": payload.get("user_id"),
+    }
