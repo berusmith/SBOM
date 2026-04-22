@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { useToast } from "../components/Toast";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -18,6 +19,7 @@ function Countdown({ seconds, label }) {
 }
 
 export default function CRAIncidents() {
+  const toast = useToast();
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -37,7 +39,7 @@ export default function CRAIncidents() {
       await api.delete(`/cra/incidents/${inc.id}`);
       fetchIncidents();
     } catch (err) {
-      alert("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -154,7 +156,7 @@ function CreateForm({ onClose, onCreated }) {
       });
       onCreated();
     } catch (err) {
-      alert("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setSaving(false);
     }

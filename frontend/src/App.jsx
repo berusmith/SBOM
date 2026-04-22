@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
+import { ToastProvider } from "./components/Toast";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Organizations from "./pages/Organizations";
@@ -41,6 +42,7 @@ function ViewerOrgRedirect() {
 
 export default function App() {
   return (
+    <ToastProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
@@ -75,5 +77,6 @@ export default function App() {
         />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }

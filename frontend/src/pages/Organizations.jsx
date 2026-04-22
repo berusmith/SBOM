@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { useToast } from "../components/Toast";
 
 export default function Organizations() {
+  const toast = useToast();
   const [orgs, setOrgs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -36,7 +38,7 @@ export default function Organizations() {
       setCreated(res.data);
       fetchOrgs();
     } catch (err) {
-      alert("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -50,7 +52,7 @@ export default function Organizations() {
       setEditOrg(null);
       fetchOrgs();
     } catch (err) {
-      alert("更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("更新失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -60,7 +62,7 @@ export default function Organizations() {
       await api.delete(`/organizations/${org.id}`);
       fetchOrgs();
     } catch (err) {
-      alert("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 

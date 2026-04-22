@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { useToast } from "../components/Toast";
 
 const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護" };
 
@@ -19,6 +20,7 @@ function MaturityBar({ value, max = 5 }) {
 }
 
 export default function TISAXAssessments() {
+  const toast = useToast();
   const navigate = useNavigate();
   const [assessments, setAssessments] = useState([]);
   const [orgs, setOrgs] = useState([]);
@@ -47,7 +49,7 @@ export default function TISAXAssessments() {
       setShowForm(false);
       navigate(`/tisax/${res.data.id}`);
     } catch (err) {
-      alert("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export default function TISAXAssessments() {
       await api.delete(`/tisax/assessments/${id}`);
       fetchAll();
     } catch (err) {
-      alert("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 

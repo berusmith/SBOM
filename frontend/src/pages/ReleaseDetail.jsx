@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
+import { useToast } from "../components/Toast";
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
@@ -35,6 +36,7 @@ const RESPONSE_OPTIONS = [
 ];
 
 export default function ReleaseDetail() {
+  const toast = useToast();
   const { releaseId } = useParams();
   const navigate = useNavigate();
   const fileRef = useRef();
@@ -119,7 +121,7 @@ export default function ReleaseDetail() {
     try {
       await api.post(`/releases/${releaseId}/${action}`);
       setLocked(!locked);
-    } catch (e) { alert(e.response?.data?.detail || "操作失敗"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "操作失敗"); }
   };
 
   const handleCheckIntegrity = async () => {
@@ -168,7 +170,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setDownloading(false);
     }
@@ -185,7 +187,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setDownloadingIec(false);
     }
@@ -202,7 +204,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setDownloadingEvidence(false);
     }
@@ -234,7 +236,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("匯出失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("匯出失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setExportingCsv(false);
     }
@@ -259,7 +261,7 @@ export default function ReleaseDetail() {
       await api.post(`/releases/${releaseId}/enrich-epss`);
       fetchVulns();
     } catch (err) {
-      alert("EPSS 更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("EPSS 更新失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setEnriching(false);
     }
@@ -276,7 +278,7 @@ export default function ReleaseDetail() {
       setSelected(new Set());
       fetchVulns();
     } catch (err) {
-      alert("批次更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("批次更新失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setBatching(false);
     }
@@ -293,7 +295,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setDownloadingCsaf(false);
     }
@@ -438,7 +440,7 @@ export default function ReleaseDetail() {
                   const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
                   const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
                   URL.revokeObjectURL(url);
-                } catch { alert("匯出失敗"); } finally { setExportingCdx(false); }
+                } catch { toast.error("匯出失敗"); } finally { setExportingCdx(false); }
               }}
               disabled={exportingCdx}
               className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingCdx ? "bg-gray-400" : "bg-teal-500 hover:bg-teal-600"}`}
@@ -453,7 +455,7 @@ export default function ReleaseDetail() {
                   const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
                   const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
                   URL.revokeObjectURL(url);
-                } catch { alert("匯出失敗"); } finally { setExportingSpdx(false); }
+                } catch { toast.error("匯出失敗"); } finally { setExportingSpdx(false); }
               }}
               disabled={exportingSpdx}
               className={`w-full md:w-auto px-4 py-2 rounded text-sm text-white ${exportingSpdx ? "bg-gray-400" : "bg-indigo-500 hover:bg-indigo-600"}`}
@@ -475,7 +477,7 @@ export default function ReleaseDetail() {
                   const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
                   const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
                   URL.revokeObjectURL(url);
-                } catch (err) { alert("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
                 finally { setDownloadingIec42(false); }
               }}
               disabled={downloadingIec42}
@@ -491,7 +493,7 @@ export default function ReleaseDetail() {
                   const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
                   const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
                   URL.revokeObjectURL(url);
-                } catch (err) { alert("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
                 finally { setDownloadingIec33(false); }
               }}
               disabled={downloadingIec33}
@@ -1128,7 +1130,7 @@ function SuppressModal({ vuln, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch (e) {
-      alert(e.response?.data?.detail || "操作失敗");
+      toast.error(e.response?.data?.detail || "操作失敗");
     } finally {
       setSaving(false);
     }
@@ -1239,7 +1241,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch {
-      alert("更新失敗");
+      toast.error("更新失敗");
     } finally {
       setSaving(false);
     }

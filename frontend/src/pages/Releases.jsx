@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
+import { useToast } from "../components/Toast";
 
 export default function Releases() {
+  const toast = useToast();
   const { productId } = useParams();
   const navigate = useNavigate();
   const [releases, setReleases] = useState([]);
@@ -35,7 +37,7 @@ export default function Releases() {
       setShowForm(false);
       fetchData();
     } catch (err) {
-      alert("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setLoading(false);
     }
@@ -47,7 +49,7 @@ export default function Releases() {
       await api.delete(`/releases/${r.id}`);
       fetchData();
     } catch (err) {
-      alert("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 

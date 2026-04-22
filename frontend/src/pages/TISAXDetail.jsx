@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { TISAX_COMPLIANCE_STATUS, DEFAULT_BADGE } from "../constants/colors";
+import { useToast } from "../components/Toast";
 
 const STATUS_CONFIG = TISAX_COMPLIANCE_STATUS;
 
@@ -47,7 +48,7 @@ function ControlRow({ ctrl, onSave }) {
       });
       setEditing(false);
     } catch (err) {
-      alert("儲存失敗：" + (err.response?.data?.detail || err.message));
+      toast.error("儲存失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setSaving(false);
     }
@@ -160,6 +161,7 @@ function ControlRow({ ctrl, onSave }) {
 }
 
 export default function TISAXDetail() {
+  const toast = useToast();
   const { assessmentId } = useParams();
   const navigate = useNavigate();
   const [data, setData]       = useState(null);
@@ -189,7 +191,7 @@ export default function TISAXDetail() {
       const a = document.createElement("a");
       a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.csv`; a.click();
       URL.revokeObjectURL(url);
-    } catch { alert("匯出失敗"); } finally { setExporting(false); }
+    } catch { toast.error("匯出失敗"); } finally { setExporting(false); }
   };
 
   const handleExportPdf = async () => {
@@ -200,7 +202,7 @@ export default function TISAXDetail() {
       const a = document.createElement("a");
       a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.pdf`; a.click();
       URL.revokeObjectURL(url);
-    } catch { alert("PDF 匯出失敗"); } finally { setExportingPdf(false); }
+    } catch { toast.error("PDF 匯出失敗"); } finally { setExportingPdf(false); }
   };
 
   if (!data) return <div className="text-gray-400 p-6">載入中...</div>;
