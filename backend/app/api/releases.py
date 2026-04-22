@@ -1198,6 +1198,79 @@ def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_sco
     }
 
 
+@router.get("/{release_id}/gate")
+def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    from app.models.license_rule import LicenseRule
+    from app.api.licenses import _matches as _lic_matches
+
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    components = db.query(Component).filter(Component.release_id == release_id).all()
+    vulns = [v for c in components for v in c.vulnerabilities]
+
+    checks = []
+
+    # 1. SBOM uploaded
+    has_sbom = bool(release.sbom_hash)
+    checks.append({"id": "sbom_uploaded", "label": "SBOM 已上傳",
+                   "passed": has_sbom,
+                   "detail": "已上傳 SBOM 並計算 hash" if has_sbom else "尚未上傳 SBOM"})
+
+    # 2. No Critical open/affected vulns
+    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected")]
+    no_critical = len(critical_open) == 0
+    checks.append({"id": "no_critical", "label": "無未處理 Critical 漏洞",
+                   "passed": no_critical,
+                   "detail": f"發現 {len(critical_open)} 個 Critical 漏洞未處理" if not no_critical else "無未處理 Critical 漏洞"})
+
+    # 3. No block-level license violations
+    rules = db.query(LicenseRule).filter(LicenseRule.enabled == True).all()  # noqa: E712
+    block_violations = sum(
+        1 for comp in components if comp.license
+        for rule in rules if rule.action == "block" and _lic_matches(rule.license_id, comp.license)
+    )
+    no_block_lic = block_violations == 0
+    checks.append({"id": "no_block_license", "label": "無 Block 等級 License",
+                   "passed": no_block_lic,
+                   "detail": f"{block_violations} 個元件觸發 block License 規則" if not no_block_lic else "無 block 等級 License 違規"})
+
+    # 4. SBOM quality >= B (4/7 passed)
+    quality_grade = None
+    quality_passed = None
+    if release.sbom_file_path and os.path.exists(release.sbom_file_path):
+        try:
+            with open(release.sbom_file_path, "rb") as f:
+                sbom_data = json.loads(f.read())
+            is_spdx = "spdxVersion" in sbom_data
+            q_checks = _check_ntia(sbom_data, is_spdx)
+            quality_passed = sum(1 for c in q_checks if c["passed"])
+            quality_grade = "A" if quality_passed >= 6 else "B" if quality_passed >= 4 else "C" if quality_passed >= 2 else "D"
+        except Exception:
+            pass
+    good_quality = quality_grade in ("A", "B")
+    grade_str = f"等級 {quality_grade}（{quality_passed}/7）" if quality_grade else "無 SBOM 可評分"
+    checks.append({"id": "sbom_quality", "label": "SBOM 品質 ≥ B 級",
+                   "passed": good_quality, "detail": grade_str})
+
+    # 5. All vulns have been triaged (no open/in_triage)
+    untriaged = [v for v in vulns if v.status in ("open", "in_triage")]
+    all_triaged = len(untriaged) == 0
+    checks.append({"id": "all_triaged", "label": "所有漏洞已完成分類",
+                   "passed": all_triaged,
+                   "detail": f"{len(untriaged)} 個漏洞仍為 open/in_triage" if not all_triaged else f"全部 {len(vulns)} 個漏洞已分類"})
+
+    passed_count = sum(1 for c in checks if c["passed"])
+    return {
+        "overall": "pass" if passed_count == len(checks) else "fail",
+        "passed": passed_count,
+        "total": len(checks),
+        "checks": checks,
+    }
+
+
 def _highest_severity(vulns) -> str | None:
     if not vulns:
         return None

@@ -90,12 +90,16 @@ export default function ReleaseDetail() {
   const [integrity, setIntegrity] = useState(null);
   const [checkingIntegrity, setCheckingIntegrity] = useState(false);
   const [sbomQuality, setSbomQuality] = useState(null);
+  const [gate, setGate] = useState(null);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
   };
   const fetchQuality = () => {
     api.get(`/releases/${releaseId}/sbom-quality`).then((r) => setSbomQuality(r.data)).catch(() => setSbomQuality(null));
+  };
+  const fetchGate = () => {
+    api.get(`/releases/${releaseId}/gate`).then((r) => setGate(r.data)).catch(() => setGate(null));
   };
   const fetchVulns = () => {
     api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => {});
@@ -114,6 +118,7 @@ export default function ReleaseDetail() {
     fetchViolations();
     fetchRelease();
     fetchQuality();
+    fetchGate();
   }, [releaseId]);
 
   const handleLockToggle = async () => {
@@ -150,6 +155,7 @@ export default function ReleaseDetail() {
       fetchComponents();
       fetchVulns();
       fetchQuality();
+      fetchGate();
     } catch (err) {
       setUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
@@ -542,6 +548,37 @@ export default function ReleaseDetail() {
       {locked && (
         <div className="mb-3 px-4 py-2 rounded bg-gray-100 border border-gray-300 text-sm text-gray-700 flex items-center gap-2">
           🔒 <span>此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。</span>
+        </div>
+      )}
+
+      {/* Release Policy Gate */}
+      {gate && (
+        <div className={`mb-4 rounded-lg border-2 p-4 ${gate.overall === "pass" ? "border-green-400 bg-green-50" : "border-red-400 bg-red-50"}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-sm font-semibold text-gray-700">發布品質閘門</span>
+              <span className="ml-2 text-xs text-gray-400">Release Policy Gate</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">{gate.passed}/{gate.total} 通過</span>
+              <span className={`px-3 py-1 rounded-full text-sm font-bold tracking-wide ${gate.overall === "pass" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                {gate.overall === "pass" ? "✓ PASS" : "✗ FAIL"}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {gate.checks.map((c) => (
+              <div key={c.id} className={`flex items-start gap-2 px-3 py-2 rounded text-xs ${c.passed ? "bg-green-100" : "bg-red-100"}`}>
+                <span className={`mt-0.5 shrink-0 font-bold text-sm ${c.passed ? "text-green-600" : "text-red-500"}`}>
+                  {c.passed ? "✓" : "✗"}
+                </span>
+                <div>
+                  <span className={`font-medium ${c.passed ? "text-green-800" : "text-red-800"}`}>{c.label}</span>
+                  <div className="text-gray-500 mt-0.5">{c.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
