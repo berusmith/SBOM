@@ -95,13 +95,71 @@
 - `26f3857` - feat: Day 2 - GitHub Action for SBOM Policy Gate integration
 - `1650499` - feat: Day 3 - Documentation and Help page integration for CI/CD
 
+### ✅ SBOM Sigstore 簽章驗證（完成）
+- 後端：`signature_verifier.py` — ECDSA/RSA 簽章驗證服務
+- Release 模型新增 5 個簽章欄位
+- API：POST/GET/DELETE `/releases/{id}/signature` + `/signature/verify`
+- Policy Gate 新增第 6 項：「SBOM 簽章已驗證」
+- 前端：ReleaseDetail 簽章狀態卡片 + 上傳表單
+- Help 頁面新增「SBOM 簽章驗證」文章
+
+**Commits:**
+- `3422264` - feat: SBOM Sigstore/cosign signature verification
+- `6b755ad` - docs: Update docs for Sigstore signature verification
+
+### ✅ SBOM Upload 500 修復
+- 根因：`upload_sbom()` 引用未定義的 `admin` 變數 → NameError
+- 修正為 `user = Depends(get_current_user)`
+- CLI multipart 上傳格式重建，RFC 2046 合規
+
+**Commit:** `f7d61bf` - fix: SBOM upload 500 error
+
+### ✅ UI/UX 改進（P1 + P2）
+- P1：API 錯誤改 toast 提示（ReleaseDetail、Dashboard、Search）
+- P1：disabled 按鈕加 `cursor-not-allowed`（7 個頁面）
+- P2：`focus:ring-1` → `focus:ring-2` 統一（7 個檔案）
+- P2：FirmwareUpload `indigo` → `blue` 品牌色統一
+- P2：inline `fontSize` → Tailwind `text-[Xpx]`（4 個頁面）
+
+**Commit:** `2ba697f` - fix: UI/UX improvements
+
+---
+
+## 驗證結果（2026-04-23）
+
+全平台 21 個功能模組、71 項 API 測試：**69/71 通過（97.2%）**
+
+| 模組 | 結果 | 備註 |
+|------|------|------|
+| AUTH | 4/4 ✅ | |
+| STATS | 4/4 ✅ | |
+| ORG/PRODUCT/RELEASE | 4/4 ✅ | |
+| SBOM UPLOAD | 2/2 ✅ | 今天修復 |
+| COMPONENTS & VULNS | 4/4 ✅ | |
+| POLICY GATE | 3/3 ✅ | 6 項檢查（含簽章） |
+| INTEGRITY & SIGNATURE | 8/8 ✅ | 今天新增 |
+| DIFF | 2/2 ✅ | |
+| EXPORTS | 6/6 ✅ | |
+| IEC 62443 | 1/3 ⚠️ | 4-2/3-3 PDF 生成既有問題 |
+| CRA INCIDENTS | 4/5 ⚠️ | start-clock 狀態機限制 |
+| SEARCH | 1/1 ✅ | |
+| LOCK/UNLOCK | 3/3 ✅ | |
+| POLICIES | 1/1 ✅ | |
+| LICENSE RULES | 3/3 ✅ | |
+| TISAX | 7/7 ✅ | |
+| SETTINGS & MONITOR | 3/3 ✅ | |
+| USERS | 1/1 ✅ | |
+| ADMIN ACTIVITY | 1/1 ✅ | |
+| API TOKENS | 3/3 ✅ | |
+| FIRMWARE | 1/1 ✅ | |
+
 ---
 
 ## 下一步待做
 
-- **排程自動重新掃描** (~1 天) — 每日/週自動對所有 Release 重跑 CVE+EPSS+CISA KEV
-- **API 存取金鑰** (~1 天) — CI/CD pipeline 整合用
-- **授權政策引擎** (~1 天) — 根據 License 清單自動標記違規元件
+- **Reachability 分析**（~2 月）— 差異化關鍵
+- **Postgres 後端選項**（~1 週）— 進企業客戶前必過
+- **IEC 62443-4-2/3-3 PDF 修復** — Windows CJK 字型問題
 
 ---
 
