@@ -8,10 +8,16 @@
   - Day 1：Python CLI 工具（sbom upload / gate / diff）
   - Day 2：GitHub Actions composite action
   - Day 3：文檔整合 + Help 頁面
+- ✅ **TISAX 模組（已完成）** — 63 個控制項、自評、差距分析、PDF/CSV 匯出
+- ✅ **SBOM Sigstore 簽章驗證（完成）**
+  - signature_verifier.py：ECDSA/RSA 簽章驗證服務
+  - API：POST/GET/DELETE /signature 端點
+  - Policy Gate 第 6 項檢查
+  - 前端簽章狀態卡片 + 上傳表單
 
 ---
 
-## 下一項：TISAX 模組（~2 週）
+## 下一項：Reachability 分析（~2 月）
 
 ### 為什麼選這個
 競品分析詳見 `docs/competitor-gap.md`。結論：**CI/CD 整合**是目前跟 Snyk / Anchore / Dependency-Track 落差最大、但也最便宜補上的一塊。Reachability、Sigstore、Postgres 這三塊投資回報週期太長，應放後面。

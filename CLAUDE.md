@@ -78,7 +78,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
 | `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
 | `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock` `/signature`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
 | `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` |
@@ -97,7 +97,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | File | Table | Key notes |
 |------|-------|-----------|
 | `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` + `suppressed`/`suppressed_until`/`suppressed_reason` |
-| `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool |
+| `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool, `sbom_signature` / `signature_public_key` / `signature_algorithm` / `signer_identity` / `signed_at` for Sigstore/cosign verification |
 | `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
 | `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password; `organization_id` nullable FK for org-scoped viewers |
@@ -121,6 +121,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `iec62443_33_report.py` | 3-3 system: FR-1~7 |
 | `alerts.py` | Webhook POST + SMTP email on new vulnerability events |
 | `firmware_service.py` | EMBA firmware analysis: auto-detect EMBA, run background scans, parse EMBA JSON → component list, demo mode for Windows dev |
+| `signature_verifier.py` | SBOM signature verification: ECDSA (cosign/Sigstore default), RSA-PSS, RSA-PKCS1; auto-detect algorithm from public key; extract signer identity from X.509 certs |
 
 **`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
 

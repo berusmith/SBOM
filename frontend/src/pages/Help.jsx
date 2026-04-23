@@ -116,6 +116,33 @@ const SECTIONS = [
           { type: "para", text: "鎖定版本後，所有元件與漏洞資料均禁止修改，確保報告與 DB 狀態一致。" },
         ],
       },
+      {
+        id: "signature",
+        title: "SBOM 簽章驗證（Sigstore/cosign）",
+        content: [
+          { type: "para", text: "除了 SHA-256 雜湊驗證外，系統支援數位簽章驗證，證明 SBOM 的來源真實性（誰產出了這份 SBOM？有沒有在傳輸中被竄改？）。這是 CRA Article 10 對軟體來源真實性的要求。" },
+          {
+            type: "steps",
+            items: [
+              { step: "Step 1", title: "產生金鑰對", body: "使用 cosign generate-key-pair 產生 ECDSA 金鑰對（cosign.key 和 cosign.pub），或使用 openssl 產生 PEM 格式的公私鑰。" },
+              { step: "Step 2", title: "簽署 SBOM", body: "使用 cosign sign-blob --key cosign.key sbom.json --output-signature sig.b64 對 SBOM 檔案進行簽署，產出 Base64 編碼的簽章。" },
+              { step: "Step 3", title: "上傳簽章", body: "在版本詳情頁面的「SBOM 簽章」區塊點擊「上傳簽章」，貼入 Base64 簽章和 PEM 公鑰。系統會先驗證簽章有效性，通過後才儲存。" },
+              { step: "Step 4", title: "驗證結果", body: "上傳成功後，頁面會顯示綠色簽章狀態卡片，包含演算法、簽署者身份和簽署時間。Policy Gate 的第 6 項「SBOM 簽章已驗證」也會標記為通過。" },
+            ],
+          },
+          {
+            type: "table",
+            headers: ["支援演算法", "說明", "使用場景"],
+            rows: [
+              ["ECDSA-SHA256", "Sigstore / cosign 預設", "推薦：最廣泛支援"],
+              ["ECDSA-SHA384", "較長雜湊", "高安全需求"],
+              ["RSA-PSS-SHA256", "RSA 變體", "傳統 PKI 環境"],
+              ["RSA-PKCS1-SHA256", "RSA 傳統模式", "舊系統相容"],
+            ],
+          },
+          { type: "note", text: "簽章驗證是選填功能。未上傳簽章的版本不會影響 Policy Gate 通過（第 6 項自動通過）。一旦上傳簽章，系統會嚴格驗證。" },
+        ],
+      },
     ],
   },
   {
