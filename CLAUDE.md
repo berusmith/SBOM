@@ -87,6 +87,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `policies.py` | `/api/policies` | CRUD |
 | `users.py` | `/api/users` | CRUD (admin only) |
 | `admin.py` | `/api/admin` | GET `/activity?date_from=&date_to=` |
+| `firmware.py` | `/api/firmware` | POST `/upload`, GET `/scans`, GET `/scans/{id}` |
 
 User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
@@ -100,6 +101,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
 | `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password; `organization_id` nullable FK for org-scoped viewers |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
+| `firmware_scan.py` | `firmware_scans` | UUID `id`, `filename`, `status` (pending/running/completed/failed), `progress` (0-100), `components_count`, `emba_output_json`, `error_message`, timestamps |
 
 **`schemas/`** — Pydantic v2 schemas exist only for Organization, Product, Release. All other routers define inline `BaseModel` classes.
 
@@ -117,6 +119,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `iec62443_42_report.py` | 4-2 component: CR-1~4 |
 | `iec62443_33_report.py` | 3-3 system: FR-1~7 |
 | `alerts.py` | Webhook POST + SMTP email on new vulnerability events |
+| `firmware_service.py` | EMBA firmware analysis: auto-detect EMBA, run background scans, parse EMBA JSON → component list, demo mode for Windows dev |
 
 **`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
 
@@ -149,6 +152,10 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `/search` | `Search` | Global component search |
 | `/help` | `Help` | 24-article in-app help center with full-text search |
 | `/admin/activity` | `AdminActivity` | Audit log with date-range filter + CSV export |
+| `/firmware` | `FirmwareUpload` | Firmware scan upload, drag-drop, progress tracking, component extraction, auto-refresh |
+| `/admin/users` | `Users` | User management (admin only) |
+| `/tisax` / `/tisax/:id` | `TISAXAssessments` / `TISAXDetail` | TISAX self-assessment |
+| `/profile` | `Profile` | User profile |
 
 State is local React hooks only — no Redux/Zustand.
 
