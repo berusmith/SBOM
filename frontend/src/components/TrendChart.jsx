@@ -25,7 +25,7 @@ export default function TrendChart({ data }) {
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <div>
           <h3 className="text-sm font-semibold text-gray-700">各版本漏洞趨勢</h3>
-          <p className="text-xs text-gray-400">僅計算未解決漏洞（排除 fixed / not_affected）</p>
+          <p className="text-xs text-gray-600">僅計算未解決漏洞（排除 fixed / not_affected）</p>
         </div>
         <div className="flex flex-wrap gap-3 text-xs text-gray-500">
           {LINES.map(({ color, label }) => (
@@ -80,7 +80,7 @@ export default function TrendChart({ data }) {
             >
               <div className="font-semibold mb-1">{d.version}</div>
               <div className="space-y-0.5">
-                <div className="flex gap-2 justify-between"><span className="text-gray-400">未解決總計</span><span className="font-bold text-blue-300">{d.total}</span></div>
+                <div className="flex gap-2 justify-between"><span className="text-gray-600">未解決總計</span><span className="font-bold text-blue-300">{d.total}</span></div>
                 {d.critical > 0 && <div className="flex gap-2 justify-between"><span className="text-red-400">Critical</span><span>{d.critical}</span></div>}
                 {d.high > 0 && <div className="flex gap-2 justify-between"><span className="text-orange-400">High</span><span>{d.high}</span></div>}
                 {d.medium > 0 && <div className="flex gap-2 justify-between"><span className="text-yellow-300">Medium</span><span>{d.medium}</span></div>}

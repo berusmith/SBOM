@@ -75,7 +75,7 @@ export default function CRAIncidents() {
       {loading ? (
         <SkeletonTable rows={5} cols={5} />
       ) : incidents.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-10 text-center text-gray-400">
+        <div className="bg-white rounded-lg shadow p-10 text-center text-gray-600">
           <p className="text-lg mb-1">尚無 CRA 事件</p>
           <p className="text-sm">偵測到主動被利用漏洞時，在此建立事件並追蹤 24/72/14 通報時限。</p>
         </div>
@@ -120,10 +120,10 @@ export default function CRAIncidents() {
                       <Countdown seconds={inc.t14d_remaining_seconds} label="T+14d" />
                     )}
                     {!["clock_running","t24_submitted","investigating","t72_submitted","remediating"].includes(inc.status) && (
-                      <span className="text-xs text-gray-400">—</span>
+                      <span className="text-xs text-gray-600">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">
+                  <td className="px-4 py-3 text-gray-600 text-xs">
                     {formatDateTime(inc.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -185,7 +185,7 @@ function CreateForm({ onClose, onCreated }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-400 font-normal">(逗號分隔)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-600 font-normal">(逗號分隔)</span></label>
             <input
               value={cveIds}
               onChange={(e) => setCveIds(e.target.value)}
@@ -194,7 +194,7 @@ function CreateForm({ onClose, onCreated }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-400 font-normal">(選填)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-600 font-normal">(選填)</span></label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}

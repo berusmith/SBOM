@@ -37,24 +37,24 @@ export default function ReleaseDiff() {
         <button onClick={() => navigate("/organizations")} className="text-blue-600 hover:underline">客戶管理</button>
         {orgId && orgName && (
           <>
-            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">/</span>
             <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{orgName}</button>
           </>
         )}
         {productId && (
           <>
-            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">/</span>
             <button onClick={() => navigate(`/products/${productId}/releases`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{productName || productId}</button>
           </>
         )}
-        <span className="text-gray-400">/</span>
+        <span className="text-gray-600">/</span>
         <span className="text-gray-600">版本比對</span>
       </div>
 
       <h2 className="text-xl font-bold text-gray-800 mb-1">{diff.product_name} — 版本比對</h2>
       <p className="text-sm text-gray-500 mb-6">
         <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{diff.from_version}</span>
-        <span className="mx-2 text-gray-400">→</span>
+        <span className="mx-2 text-gray-600">→</span>
         <span className="font-mono bg-gray-100 px-2 py-0.5 rounded">{diff.to_version}</span>
       </p>
 
@@ -102,7 +102,7 @@ export default function ReleaseDiff() {
       )}
 
       {c.added.length === 0 && c.removed.length === 0 && v.added.length === 0 && v.removed.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">兩版本元件與漏洞完全相同</div>
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">兩版本元件與漏洞完全相同</div>
       )}
     </div>
   );

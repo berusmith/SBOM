@@ -367,13 +367,13 @@ export default function ReleaseDetail() {
             <button onClick={() => navigate("/organizations")} className="text-blue-600 hover:underline">客戶管理</button>
             {orgId && orgName && (
               <>
-                <span className="text-gray-400">/</span>
+                <span className="text-gray-600">/</span>
                 <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{orgName}</button>
               </>
             )}
-            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">/</span>
             <button onClick={() => navigate(`/products/${productId}/releases`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline">{productName || productId}</button>
-            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">/</span>
             <span className="text-gray-600">{releaseVersion || releaseId}</span>
           </div>
         ) : (
@@ -411,7 +411,7 @@ export default function ReleaseDetail() {
       <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4 flex-wrap">
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">上傳 SBOM 檔案</p>
-          <p className="text-xs text-gray-400">支援 CycloneDX JSON、SPDX JSON</p>
+          <p className="text-xs text-gray-600">支援 CycloneDX JSON、SPDX JSON</p>
         </div>
         <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
           {uploading ? "上傳中..." : "選擇檔案"}
@@ -615,7 +615,7 @@ export default function ReleaseDetail() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <span className="text-sm font-semibold text-gray-700">發布品質閘門</span>
-              <span className="ml-2 text-xs text-gray-400">Release Policy Gate</span>
+              <span className="ml-2 text-xs text-gray-600">Release Policy Gate</span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">{gate.passed}/{gate.total} 通過</span>
@@ -649,7 +649,7 @@ export default function ReleaseDetail() {
             <div className="flex items-center justify-between mb-3">
               <div>
                 <span className="text-sm font-semibold text-gray-700">SBOM 品質評分</span>
-                <span className="ml-2 text-xs text-gray-400">NTIA 最低要求（7 項）</span>
+                <span className="ml-2 text-xs text-gray-600">NTIA 最低要求（7 項）</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-500">{sbomQuality.passed}/{sbomQuality.total} 通過</span>
@@ -665,7 +665,7 @@ export default function ReleaseDetail() {
                   </span>
                   <div>
                     <span className={`font-medium ${c.passed ? "text-gray-700" : "text-gray-500"}`}>{c.label}</span>
-                    <span className="ml-1 text-gray-400">{c.detail}</span>
+                    <span className="ml-1 text-gray-600">{c.detail}</span>
                   </div>
                 </div>
               ))}
@@ -710,17 +710,18 @@ export default function ReleaseDetail() {
       {tab === "components" && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {components.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">尚未上傳 SBOM 檔案</div>
+            <div className="p-8 text-center text-gray-600">尚未上傳 SBOM 檔案</div>
           ) : (
             <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[480px]">
+            <table className="w-full text-sm min-w-[480px]" role="table">
+              <caption className="sr-only">元件清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
-                  <th className="px-4 py-3">元件名稱</th>
-                  <th className="px-4 py-3">版本</th>
-                  <th className="px-4 py-3">授權</th>
-                  <th className="px-4 py-3">漏洞數</th>
-                  <th className="px-4 py-3">最高風險</th>
+                  <th className="px-4 py-3" scope="col">元件名稱</th>
+                  <th className="px-4 py-3" scope="col">版本</th>
+                  <th className="px-4 py-3" scope="col">授權</th>
+                  <th className="px-4 py-3" scope="col">漏洞數</th>
+                  <th className="px-4 py-3" scope="col">最高風險</th>
                 </tr>
               </thead>
               <tbody>
@@ -750,7 +751,7 @@ export default function ReleaseDetail() {
       {tab === "vulnerabilities" && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {vulns.length === 0 ? (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-gray-600">
               {components.length === 0 ? "尚未上傳 SBOM 檔案" : "未發現漏洞"}
             </div>
           ) : (
@@ -794,21 +795,22 @@ export default function ReleaseDetail() {
                 {(filterSeverity || filterStatus || filterEpss || filterKev) && (
                   <button
                     onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); }}
-                    className="text-xs text-gray-400 hover:text-gray-600 underline"
+                    className="text-xs text-gray-600 hover:text-gray-600 underline"
                   >
                     清除篩選
                   </button>
                 )}
-                <span className="ml-auto text-xs text-gray-400">
+                <span className="ml-auto text-xs text-gray-600">
                   顯示 {displayedVulns.length} / {vulns.length} 筆
                 </span>
               </div>
             <div className="overflow-x-auto relative">
-              <p className="sm:hidden text-xs text-gray-400 px-3 pb-1">← 左右滑動查看全部</p>
-            <table className="w-full text-sm min-w-[700px]">
+              <p className="sm:hidden text-xs text-gray-600 px-3 pb-1">← 左右滑動查看全部</p>
+            <table className="w-full text-sm min-w-[700px]" role="table">
+              <caption className="sr-only">漏洞清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
-                  <th className="px-3 py-3 w-8">
+                  <th className="px-3 py-3 w-8" scope="col">
                     <input
                       type="checkbox"
                       checked={displayedVulns.length > 0 && displayedVulns.every((v) => selected.has(v.id))}
@@ -818,22 +820,22 @@ export default function ReleaseDetail() {
                       }}
                     />
                   </th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("cve_id"); setSortAsc(sortField === "cve_id" ? !sortAsc : true); }}>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" scope="col" onClick={() => { setSortField("cve_id"); setSortAsc(sortField === "cve_id" ? !sortAsc : true); }}>
                     CVE ID {sortField === "cve_id" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3">元件</th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden md:table-cell" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
+                  <th className="px-4 py-3" scope="col">元件</th>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden md:table-cell" scope="col" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
                     CVSS {sortField === "cvss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" scope="col" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
                     嚴重度 {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden sm:table-cell" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
+                  <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden sm:table-cell" scope="col" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
                     EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3 hidden lg:table-cell">SLA</th>
-                  <th className="px-4 py-3">VEX 狀態</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3 hidden lg:table-cell" scope="col">SLA</th>
+                  <th className="px-4 py-3" scope="col">VEX 狀態</th>
+                  <th className="px-4 py-3" scope="col">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -915,7 +917,7 @@ export default function ReleaseDetail() {
                           剩 {v.sla_days} 天
                         </span>
                       ) : v.sla_status === "ok" ? (
-                        <span className="text-xs text-gray-400">{v.sla_days} 天</span>
+                        <span className="text-xs text-gray-600">{v.sla_days} 天</span>
                       ) : (
                         <span className="text-gray-200">—</span>
                       )}
@@ -925,10 +927,10 @@ export default function ReleaseDetail() {
                         {STATUS_LABEL[v.status] || v.status}
                       </span>
                       {v.justification && (
-                        <div className="text-xs text-gray-400 mt-0.5">{v.justification}</div>
+                        <div className="text-xs text-gray-600 mt-0.5">{v.justification}</div>
                       )}
                       {v.detail && (
-                        <div className="text-xs text-gray-400 mt-0.5 italic truncate max-w-xs">{v.detail}</div>
+                        <div className="text-xs text-gray-600 mt-0.5 italic truncate max-w-xs">{v.detail}</div>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -942,7 +944,7 @@ export default function ReleaseDetail() {
                     <tr key={`${v.id}-detail`} className="bg-gray-50 border-t">
                       <td colSpan={9} className="px-6 py-3 text-sm text-gray-700 space-y-2">
                         {v.description && <p className="leading-relaxed">{v.description}</p>}
-                        {!v.description && <p className="text-gray-400 italic">NVD 描述尚未補充，請點「更新 NVD」</p>}
+                        {!v.description && <p className="text-gray-600 italic">NVD 描述尚未補充，請點「更新 NVD」</p>}
                         <div className="flex gap-6 flex-wrap text-xs text-gray-500">
                           {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
                           {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
@@ -965,14 +967,14 @@ export default function ReleaseDetail() {
                               {vulnHistory[v.id].map((h) => (
                                 <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
                                   <span className="text-gray-300 mt-0.5">▸</span>
-                                  <span className="font-mono text-gray-400 shrink-0">
+                                  <span className="font-mono text-gray-600 shrink-0">
                                     {formatDateTime(h.changed_at)}
                                   </span>
                                   <span>
                                     <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
-                                    <span className="mx-1 text-gray-400">→</span>
+                                    <span className="mx-1 text-gray-600">→</span>
                                     <span className="font-medium text-gray-700">{STATUS_LABEL[h.to_status] ?? h.to_status}</span>
-                                    {h.note && <span className="ml-2 italic text-gray-400">{h.note}</span>}
+                                    {h.note && <span className="ml-2 italic text-gray-600">{h.note}</span>}
                                   </span>
                                 </li>
                               ))}
@@ -997,7 +999,7 @@ export default function ReleaseDetail() {
           {!depGraph ? (
             <SkeletonInline rows={5} />
           ) : !depGraph.has_data ? (
-            <div className="py-8 text-center text-gray-400">
+            <div className="py-8 text-center text-gray-600">
               <p className="text-base mb-2">此 SBOM 不含依賴關係資料</p>
               <p className="text-sm text-gray-300">CycloneDX 需包含 <code>dependencies[]</code> 區塊，SPDX 需包含 <code>relationships[]</code></p>
             </div>
@@ -1032,7 +1034,7 @@ export default function ReleaseDetail() {
           </button>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-gray-400 hover:text-white text-sm"
+            className="text-gray-600 hover:text-white text-sm"
           >
             取消
           </button>
@@ -1096,7 +1098,7 @@ function SuppressModal({ vuln, onClose, onUpdate }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold text-gray-800 mb-1">漏洞抑制（風險接受）</h3>
-        <p className="text-xs text-gray-400 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+        <p className="text-xs text-gray-600 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
 
         <div className="space-y-4">
           <div className="flex gap-3">
@@ -1118,7 +1120,7 @@ function SuppressModal({ vuln, onClose, onUpdate }) {
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  抑制原因 <span className="text-gray-400 font-normal">(選填)</span>
+                  抑制原因 <span className="text-gray-600 font-normal">(選填)</span>
                 </label>
                 <textarea
                   value={reason}
@@ -1130,7 +1132,7 @@ function SuppressModal({ vuln, onClose, onUpdate }) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  有效期限 <span className="text-gray-400 font-normal">(選填，到期後自動回復)</span>
+                  有效期限 <span className="text-gray-600 font-normal">(選填，到期後自動回復)</span>
                 </label>
                 <input
                   type="date"
@@ -1207,7 +1209,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-semibold text-gray-800 mb-1">VEX 狀態更新</h3>
-        <p className="text-xs text-gray-400 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+        <p className="text-xs text-gray-600 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
 
         <div className="space-y-4">
           {/* Status */}
@@ -1228,7 +1230,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
           {status === "not_affected" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Justification <span className="text-gray-400 font-normal">(不受影響的原因)</span>
+                Justification <span className="text-gray-600 font-normal">(不受影響的原因)</span>
               </label>
               <select
                 value={justification}
@@ -1247,7 +1249,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
           {status === "affected" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Response <span className="text-gray-400 font-normal">(處置方式)</span>
+                Response <span className="text-gray-600 font-normal">(處置方式)</span>
               </label>
               <select
                 value={response}
@@ -1265,7 +1267,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
           {/* Detail — always optional */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              說明 <span className="text-gray-400 font-normal">(自由文字，選填)</span>
+              說明 <span className="text-gray-600 font-normal">(自由文字，選填)</span>
             </label>
             <textarea
               value={detail}
@@ -1279,7 +1281,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
           {/* Note — recorded in history */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              變更備註 <span className="text-gray-400 font-normal">(記入歷程，選填)</span>
+              變更備註 <span className="text-gray-600 font-normal">(記入歷程，選填)</span>
             </label>
             <input
               type="text"

@@ -99,7 +99,7 @@ export default function AdminActivity() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold text-gray-800">稽核日誌</h1>
-          <p className="text-xs text-gray-400 mt-0.5">所有重要操作的完整紀錄，供合規稽核使用</p>
+          <p className="text-xs text-gray-600 mt-0.5">所有重要操作的完整紀錄，供合規稽核使用</p>
         </div>
         <button
           onClick={() => exportCsv(events)}
@@ -139,7 +139,7 @@ export default function AdminActivity() {
                 </tr>
               ))}
               {summary.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">尚無使用紀錄</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-600">尚無使用紀錄</td></tr>
               )}
             </tbody>
           </table>
@@ -190,7 +190,7 @@ export default function AdminActivity() {
           <button onClick={handleReset} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 underline">
             清除
           </button>
-          <span className="ml-auto text-xs text-gray-400 self-end">共 {events.length} 筆</span>
+          <span className="ml-auto text-xs text-gray-600 self-end">共 {events.length} 筆</span>
         </div>
       </div>
 
@@ -219,16 +219,16 @@ export default function AdminActivity() {
                       {EVENT_LABELS[e.event_type] || e.event_type}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-gray-400 text-xs hidden md:table-cell max-w-xs truncate">
+                  <td className="px-4 py-2 text-gray-600 text-xs hidden md:table-cell max-w-xs truncate">
                     {e.resource_label || "—"}
                   </td>
-                  <td className="px-4 py-2 text-gray-400 text-xs hidden lg:table-cell font-mono">
+                  <td className="px-4 py-2 text-gray-600 text-xs hidden lg:table-cell font-mono">
                     {e.ip_address || "—"}
                   </td>
                 </tr>
               ))}
               {events.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">無符合的紀錄</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-600">無符合的紀錄</td></tr>
               )}
             </tbody>
           </table>

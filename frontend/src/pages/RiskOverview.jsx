@@ -91,7 +91,7 @@ export default function RiskOverview() {
       {loading ? (
         <SkeletonTable rows={4} cols={6} />
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">尚無客戶資料</div>
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">尚無客戶資料</div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-x-auto">
           <table className="w-full text-sm">
@@ -115,7 +115,7 @@ export default function RiskOverview() {
             <tbody className="divide-y divide-gray-100">
               {sorted.map((row, i) => (
                 <tr key={row.org_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-400 text-xs">{i + 1}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{i + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">
                     <RiskBadge score={row.risk_score} />
                     <span className="ml-2 text-gray-500 text-xs">{row.risk_score}</span>
@@ -123,12 +123,12 @@ export default function RiskOverview() {
                   <td className="px-4 py-3">
                     {row.unpatched_critical > 0
                       ? <span className="font-bold text-red-600">{row.unpatched_critical}</span>
-                      : <span className="text-gray-400">0</span>}
+                      : <span className="text-gray-600">0</span>}
                   </td>
                   <td className="px-4 py-3">
                     {row.unpatched_high > 0
                       ? <span className="font-semibold text-orange-500">{row.unpatched_high}</span>
-                      : <span className="text-gray-400">0</span>}
+                      : <span className="text-gray-600">0</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{row.total_vulns}</td>
                   <td className="px-4 py-3 font-medium text-gray-800 max-w-[140px] sm:max-w-none truncate">{row.org_name}</td>
@@ -138,7 +138,7 @@ export default function RiskOverview() {
                   <td className="px-4 py-3 hidden sm:table-cell">
                     {row.active_incidents > 0
                       ? <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-semibold">{row.active_incidents} 件</span>
-                      : <span className="text-gray-400 text-xs">—</span>}
+                      : <span className="text-gray-600 text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -152,7 +152,7 @@ export default function RiskOverview() {
               ))}
             </tbody>
           </table>
-          <div className="px-4 py-2 text-xs text-gray-400 border-t">
+          <div className="px-4 py-2 text-xs text-gray-600 border-t">
             風險分數 = 未修補 Critical × 10 + 未修補 High × 3 + 進行中事件 × 5
           </div>
         </div>

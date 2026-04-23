@@ -63,7 +63,7 @@ function ControlRow({ ctrl, onSave }) {
         className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="text-xs font-mono text-gray-400 w-16 shrink-0">{ctrl.control_number}</span>
+        <span className="text-xs font-mono text-gray-600 w-16 shrink-0">{ctrl.control_number}</span>
         <span className="flex-1 text-sm text-gray-800">{ctrl.name}</span>
         <div className="flex items-center gap-2 shrink-0">
           {gap > 0 && (
@@ -82,16 +82,16 @@ function ControlRow({ ctrl, onSave }) {
           {!editing ? (
             <div className="space-y-2">
               {ctrl.evidence_note && (
-                <div className="text-xs"><span className="text-gray-400">證據說明：</span>{ctrl.evidence_note}</div>
+                <div className="text-xs"><span className="text-gray-600">證據說明：</span>{ctrl.evidence_note}</div>
               )}
               {ctrl.owner && (
-                <div className="text-xs"><span className="text-gray-400">負責人：</span>{ctrl.owner}</div>
+                <div className="text-xs"><span className="text-gray-600">負責人：</span>{ctrl.owner}</div>
               )}
               {ctrl.due_date && (
-                <div className="text-xs"><span className="text-gray-400">預計完成：</span>{ctrl.due_date}</div>
+                <div className="text-xs"><span className="text-gray-600">預計完成：</span>{ctrl.due_date}</div>
               )}
               {ctrl.remarks && (
-                <div className="text-xs"><span className="text-gray-400">備註：</span>{ctrl.remarks}</div>
+                <div className="text-xs"><span className="text-gray-600">備註：</span>{ctrl.remarks}</div>
               )}
               <button onClick={(e) => { e.stopPropagation(); setEditing(true); }}
                 className="mt-2 text-xs text-blue-600 hover:underline">編輯評估結果</button>
@@ -230,7 +230,7 @@ export default function TISAXDetail() {
         <button onClick={() => navigate("/tisax")} className="text-blue-600 hover:underline text-sm">
           TISAX 自評管理
         </button>
-        <span className="text-gray-400">/</span>
+        <span className="text-gray-600">/</span>
         <span className="text-sm text-gray-600">
           {data.module === "infosec" ? "資訊安全" : "原型保護"} — {data.assessment_level}
         </span>
@@ -242,7 +242,7 @@ export default function TISAXDetail() {
           { label: "達標", value: compliant, cls: "text-green-600" },
           { label: "接近", value: near,      cls: "text-yellow-500" },
           { label: "缺口", value: gapCount,  cls: "text-red-500" },
-          { label: "未評", value: unassessed, cls: "text-gray-400" },
+          { label: "未評", value: unassessed, cls: "text-gray-600" },
         ].map(({ label, value, cls }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
             <div className={`text-2xl font-bold ${cls}`}>{value}</div>
@@ -265,7 +265,7 @@ export default function TISAXDetail() {
                   ? "bg-green-100 text-green-700"
                   : "bg-red-100 text-red-700"
               }`}>{gap.go_nogo}</span>
-              <span className="text-xs text-gray-400">門檻 {(gap.al_threshold * 100).toFixed(0)}%</span>
+              <span className="text-xs text-gray-600">門檻 {(gap.al_threshold * 100).toFixed(0)}%</span>
             </div>
           </div>
           <div className="bg-gray-100 rounded-full h-3">
@@ -313,13 +313,13 @@ export default function TISAXDetail() {
       {tab === "controls" && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {Object.entries(filteredByChapter).length === 0 ? (
-            <div className="p-8 text-center text-gray-400">無符合條件的控制項</div>
+            <div className="p-8 text-center text-gray-600">無符合條件的控制項</div>
           ) : (
             Object.entries(filteredByChapter).map(([chapter, controls]) => (
               <div key={chapter}>
                 <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
                   <span className="text-xs font-semibold text-gray-600">{chapter}</span>
-                  <span className="ml-2 text-xs text-gray-400">{controls.length} 項</span>
+                  <span className="ml-2 text-xs text-gray-600">{controls.length} 項</span>
                 </div>
                 {controls.map(ctrl => (
                   <ControlRow key={ctrl.id} ctrl={ctrl} onSave={handleSaveControl} />
@@ -334,7 +334,7 @@ export default function TISAXDetail() {
       {tab === "gap" && gap && (
         <div className="space-y-4">
           {gap.gaps.length === 0 && gap.near.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-600">
               尚無差距項目（可能尚未開始自評）
             </div>
           ) : (
@@ -359,7 +359,7 @@ export default function TISAXDetail() {
                     <tbody className="divide-y divide-gray-100">
                       {gap.gaps.map(c => (
                         <tr key={c.id} className="hover:bg-red-50/30">
-                          <td className="px-4 py-2 font-mono text-xs text-gray-400">{c.control_number}</td>
+                          <td className="px-4 py-2 font-mono text-xs text-gray-600">{c.control_number}</td>
                           <td className="px-4 py-2 text-gray-800">{c.name}</td>
                           <td className="px-4 py-2 text-center font-bold text-red-500">{c.current_maturity}</td>
                           <td className="px-4 py-2 text-center text-gray-500">{c.target_maturity}</td>
@@ -391,7 +391,7 @@ export default function TISAXDetail() {
                     <tbody className="divide-y divide-gray-100">
                       {gap.near.map(c => (
                         <tr key={c.id} className="hover:bg-yellow-50/30">
-                          <td className="px-4 py-2 font-mono text-xs text-gray-400">{c.control_number}</td>
+                          <td className="px-4 py-2 font-mono text-xs text-gray-600">{c.control_number}</td>
                           <td className="px-4 py-2 text-gray-800">{c.name}</td>
                           <td className="px-4 py-2 text-center font-bold text-yellow-600">{c.current_maturity}</td>
                           <td className="px-4 py-2 text-center text-gray-500">{c.target_maturity}</td>

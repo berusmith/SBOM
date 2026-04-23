@@ -51,7 +51,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm mx-4 sm:mx-0">
         <h1 className="text-xl font-bold text-gray-800 mb-1">SBOM Platform</h1>
-        <p className="text-sm text-gray-400 mb-6">請登入以繼續</p>
+        <p className="text-sm text-gray-600 mb-6">請登入以繼續</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">帳號</label>

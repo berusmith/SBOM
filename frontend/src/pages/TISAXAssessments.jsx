@@ -129,7 +129,7 @@ export default function TISAXAssessments() {
       )}
 
       {assessments.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400">
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-600">
           尚無評估，點擊「新增評估」開始 TISAX 自評
         </div>
       ) : (
@@ -150,7 +150,7 @@ export default function TISAXAssessments() {
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${TISAX_LEVEL_COLOR[a.assessment_level] || DEFAULT_BADGE}`}>
                         {a.assessment_level}
                       </span>
-                      <span className="text-xs text-gray-400">{total} 項控制項</span>
+                      <span className="text-xs text-gray-600">{total} 項控制項</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -174,7 +174,7 @@ export default function TISAXAssessments() {
                   <span className="text-green-600 flex items-center gap-1"><Check size={12} /> 達標 {compliant}</span>
                   <span className="text-yellow-500">≈ 接近 {near}</span>
                   <span className="text-red-500 flex items-center gap-1"><X size={12} /> 缺口 {gap}</span>
-                  <span className="text-gray-400">— 未評 {unassessed}</span>
+                  <span className="text-gray-600">— 未評 {unassessed}</span>
                 </div>
                 <div className="mt-3">
                   <div className="text-xs text-gray-500 mb-1">平均成熟度</div>

@@ -75,13 +75,13 @@ export default function Releases() {
         </button>
         {orgId && orgName && (
           <>
-            <span className="text-gray-400">/</span>
+            <span className="text-gray-600">/</span>
             <button onClick={() => navigate(`/organizations/${orgId}/products`, { state: { orgId, orgName } })} className="text-blue-600 hover:underline text-sm">
               {orgName}
             </button>
           </>
         )}
-        <span className="text-gray-400">/</span>
+        <span className="text-gray-600">/</span>
         <span className="text-sm text-gray-600">{productName || productId}</span>
       </div>
 
@@ -152,7 +152,7 @@ export default function Releases() {
               <option value="">— 舊版本 —</option>
               {releases.map((r) => <option key={r.id} value={r.id}>{r.version}</option>)}
             </select>
-            <span className="text-gray-400">→</span>
+            <span className="text-gray-600">→</span>
             <select value={diffTo} onChange={(e) => setDiffTo(e.target.value)}
               className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
               <option value="">— 新版本 —</option>
@@ -165,24 +165,25 @@ export default function Releases() {
             >
               開始比對
             </button>
-            <button onClick={() => setShowDiff(false)} className="text-sm text-gray-400 hover:text-gray-600">取消</button>
+            <button onClick={() => setShowDiff(false)} className="text-sm text-gray-600 hover:text-gray-600">取消</button>
           </div>
         </div>
       )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {releases.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">尚無版本，點擊「新增版本」開始</div>
+          <div className="p-8 text-center text-gray-600">尚無版本，點擊「新增版本」開始</div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[520px]">
+          <table className="w-full text-sm min-w-[520px]" role="table">
+            <caption className="sr-only">版本列表</caption>
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3">版本號</th>
-                <th className="px-4 py-3">建立時間</th>
-                <th className="px-4 py-3">SBOM</th>
-                <th className="px-4 py-3">漏洞</th>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3" scope="col">版本號</th>
+                <th className="px-4 py-3" scope="col">建立時間</th>
+                <th className="px-4 py-3" scope="col">SBOM</th>
+                <th className="px-4 py-3" scope="col">漏洞</th>
+                <th className="px-4 py-3" scope="col">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -190,7 +191,7 @@ export default function Releases() {
                 <tr key={r.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">
                     {r.version}
-                    {r.locked && <Lock size={14} className="inline ml-1.5 text-gray-400" />}
+                    {r.locked && <Lock size={14} className="inline ml-1.5 text-gray-600" />}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {formatDate(r.created_at)}
@@ -199,7 +200,7 @@ export default function Releases() {
                     {r.has_sbom ? (
                       <span className="text-green-600 text-xs">已上傳</span>
                     ) : (
-                      <span className="text-gray-400 text-xs">未上傳</span>
+                      <span className="text-gray-600 text-xs">未上傳</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -211,7 +212,7 @@ export default function Releases() {
                         {r.vuln_high > 0 && (
                           <span className="px-1.5 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-700">H:{r.vuln_high}</span>
                         )}
-                        <span className="text-xs text-gray-400">共{r.vuln_total}</span>
+                        <span className="text-xs text-gray-600">共{r.vuln_total}</span>
                       </div>
                     ) : (
                       <span className="text-xs text-gray-300">—</span>

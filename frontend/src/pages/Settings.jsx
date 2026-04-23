@@ -192,7 +192,7 @@ export default function Settings() {
       {/* ── Brand settings ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">報告品牌設定</h3>
-        <p className="text-xs text-gray-400 mb-4">設定後，PDF 報告將顯示貴公司 Logo、名稱與主色調</p>
+        <p className="text-xs text-gray-600 mb-4">設定後，PDF 報告將顯示貴公司 Logo、名稱與主色調</p>
 
         {/* Logo upload */}
         <div className="mb-4">
@@ -213,7 +213,7 @@ export default function Settings() {
                 </button>
               </>
             ) : (
-              <span className="text-xs text-gray-400">尚未上傳</span>
+              <span className="text-xs text-gray-600">尚未上傳</span>
             )}
             <button
               onClick={() => logoInputRef.current?.click()}
@@ -229,7 +229,7 @@ export default function Settings() {
               className="hidden"
               onChange={handleLogoUpload}
             />
-            <span className="text-xs text-gray-400">PNG / JPG，最大 2MB</span>
+            <span className="text-xs text-gray-600">PNG / JPG，最大 2MB</span>
           </div>
         </div>
 
@@ -246,7 +246,7 @@ export default function Settings() {
 
         {/* Tagline */}
         <div className="mb-3">
-          <label className="block text-sm font-medium text-gray-700 mb-1">副標語 <span className="text-gray-400 font-normal">(選填)</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">副標語 <span className="text-gray-600 font-normal">(選填)</span></label>
           <input
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
@@ -283,7 +283,7 @@ export default function Settings() {
 
         {/* Report footer */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">報告頁尾文字 <span className="text-gray-400 font-normal">(選填)</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">報告頁尾文字 <span className="text-gray-600 font-normal">(選填)</span></label>
           <input
             value={reportFooter}
             onChange={(e) => setReportFooter(e.target.value)}
@@ -304,7 +304,7 @@ export default function Settings() {
       {/* ── Continuous monitoring ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">持續漏洞監控</h3>
-        <p className="text-xs text-gray-400 mb-4">系統定期對所有版本重新掃描 OSV.dev，發現新 CVE 時自動發送通知</p>
+        <p className="text-xs text-gray-600 mb-4">系統定期對所有版本重新掃描 OSV.dev，發現新 CVE 時自動發送通知</p>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
           <div>
@@ -349,7 +349,7 @@ export default function Settings() {
                   )}
                 </span>
               )}
-              {!monitorStatus.last_run && <span className="text-gray-400">尚未執行過</span>}
+              {!monitorStatus.last_run && <span className="text-gray-600">尚未執行過</span>}
               {monitorStatus.next_run && (
                 <span>下次排程：{formatDateTime(monitorStatus.next_run)}</span>
               )}
@@ -361,7 +361,7 @@ export default function Settings() {
       {/* ── Webhook ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">Webhook 通知</h3>
-        <p className="text-xs text-gray-400 mb-3">重新掃描發現新漏洞時，POST JSON 到此 URL（支援 Slack / Teams / 自定義）</p>
+        <p className="text-xs text-gray-600 mb-3">重新掃描發現新漏洞時，POST JSON 到此 URL（支援 Slack / Teams / 自定義）</p>
         <div className="flex gap-2">
           <input
             value={webhook}
@@ -382,7 +382,7 @@ export default function Settings() {
       {/* ── Email ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">Email 通知</h3>
-        <p className="text-xs text-gray-400 mb-3">重新掃描發現新漏洞時寄送 Email 通知</p>
+        <p className="text-xs text-gray-600 mb-3">重新掃描發現新漏洞時寄送 Email 通知</p>
         <div className="flex gap-2 mb-3">
           <input
             value={email}
@@ -483,7 +483,7 @@ function UserManagement({ flash }) {
           + 新增使用者
         </button>
       </div>
-      <p className="text-xs text-gray-400 mb-4">管理可登入此平台的帳號，僅 admin 可見此設定</p>
+      <p className="text-xs text-gray-600 mb-4">管理可登入此平台的帳號，僅 admin 可見此設定</p>
 
       {showForm && (
         <form onSubmit={handleCreate} className="bg-gray-50 rounded p-4 mb-4 flex flex-col sm:flex-row gap-2 items-end flex-wrap">
@@ -538,12 +538,12 @@ function UserManagement({ flash }) {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800">{u.username}</p>
-                <p className="text-xs text-gray-400">{u.created_at ? formatDate(u.created_at) : ""}</p>
+                <p className="text-xs text-gray-600">{u.created_at ? formatDate(u.created_at) : ""}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               {!u.is_active && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">已停用</span>
+                <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">已停用</span>
               )}
               <button
                 onClick={() => handleToggleRole(u)}
@@ -566,7 +566,7 @@ function UserManagement({ flash }) {
           </div>
         ))}
         {users.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-3">尚無使用者</p>
+          <p className="text-sm text-gray-600 text-center py-3">尚無使用者</p>
         )}
 
       <ConfirmModal

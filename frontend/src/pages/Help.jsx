@@ -712,7 +712,7 @@ function renderBlock(block, idx, query) {
             </div>
             <div className="pb-2">
               <span className="font-semibold text-gray-800">{hl(s.label)}</span>
-              <span className="text-xs text-gray-400 ml-2 font-mono">{s.state}</span>
+              <span className="text-xs text-gray-600 ml-2 font-mono">{s.state}</span>
               <div className="text-sm text-gray-600 mt-0.5">{hl(s.desc)}</div>
             </div>
           </li>
@@ -728,7 +728,7 @@ function renderBlock(block, idx, query) {
           <details key={i} className="border border-gray-200 rounded-lg group">
             <summary className="px-4 py-3 cursor-pointer font-medium text-gray-800 hover:bg-gray-50 rounded-lg select-none flex justify-between items-center">
               <span>{hl(item.q)}</span>
-              <span className="text-gray-400 group-open:rotate-180 transition-transform ml-2 shrink-0">▾</span>
+              <span className="text-gray-600 group-open:rotate-180 transition-transform ml-2 shrink-0">▾</span>
             </summary>
             <div className="px-4 pb-3 pt-1 text-sm text-gray-700 leading-relaxed border-t border-gray-100">
               {hl(item.a)}
@@ -762,7 +762,7 @@ function SearchResults({ query, onSelect }) {
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-16 text-gray-400">
+      <div className="text-center py-16 text-gray-600">
         <div className="flex justify-center mb-3">
           <Search size={48} />
         </div>
@@ -781,7 +781,7 @@ function SearchResults({ query, onSelect }) {
             onClick={() => onSelect(section.id, article.id)}
             className="border border-gray-200 rounded-lg px-4 py-3 hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
           >
-            <div className="text-xs text-gray-400 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
+            <div className="text-xs text-gray-600 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
             <div className="font-semibold text-blue-700">{highlight(article.title, query)}</div>
             <div className="text-sm text-gray-500 mt-1 line-clamp-2">
               {highlight(flattenText(article.content).slice(0, 150), query)}…
@@ -804,7 +804,7 @@ function ArticleView({ section, article, query }) {
 
   return (
     <div ref={ref} className="h-full overflow-y-auto">
-      <div className="text-xs text-gray-400 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
+      <div className="text-xs text-gray-600 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
       <h2 className="text-xl font-bold text-gray-900 mb-5 pb-3 border-b border-gray-200">
         {highlight(article.title, query)}
       </h2>
@@ -856,9 +856,9 @@ export default function Help() {
             placeholder="搜尋說明內容..."
             className="w-full border border-gray-300 rounded-lg px-4 py-2 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
-          <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+          <Search size={16} className="absolute left-3 top-2.5 text-gray-600" />
           {query && (
-            <button onClick={() => setQuery("")} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-1">
+            <button onClick={() => setQuery("")} className="absolute right-3 top-2.5 text-gray-600 hover:text-gray-600 p-1">
               <X size={14} />
             </button>
           )}
@@ -893,7 +893,7 @@ export default function Help() {
                     }`}
                     title={section?.title}
                   >
-                    <span className="text-xs text-gray-400">{section?.title}</span>
+                    <span className="text-xs text-gray-600">{section?.title}</span>
                     <div>{article.title}</div>
                   </button>
                 );

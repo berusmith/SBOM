@@ -76,7 +76,7 @@ export default function Layout({ children }) {
                 placeholder="搜尋元件..."
                 className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
-              <button type="submit" className="text-gray-400 hover:text-white px-1 text-sm">⌕</button>
+              <button type="submit" className="text-gray-600 hover:text-white px-1 text-sm">⌕</button>
             </form>
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
@@ -84,7 +84,7 @@ export default function Layout({ children }) {
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-400 hover:text-white transition-colors"
+                className="text-sm text-gray-600 hover:text-white transition-colors"
               >
                 登出
               </button>
@@ -145,7 +145,7 @@ export default function Layout({ children }) {
               </Link>
               <button
                 onClick={handleLogout}
-                className="block w-full text-left px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                className="block w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:text-white hover:bg-gray-700 rounded"
               >
                 登出
               </button>

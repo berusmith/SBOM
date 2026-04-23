@@ -19,13 +19,13 @@ function TopVulns() {
     <div className="mt-4 bg-white rounded-lg shadow p-5">
       <h2 className="font-semibold text-gray-700 mb-3">
         需處理的高風險漏洞
-        <span className="ml-2 text-xs font-normal text-gray-400">Critical / High 未修補，前 10 筆</span>
+        <span className="ml-2 text-xs font-normal text-gray-600">Critical / High 未修補，前 10 筆</span>
       </h2>
       <div className="overflow-x-auto">
-        <p className="sm:hidden text-xs text-gray-400 pb-1">← 左右滑動查看全部</p>
+        <p className="sm:hidden text-xs text-gray-600 pb-1">← 左右滑動查看全部</p>
         <table className="w-full text-sm min-w-[560px]">
           <thead>
-            <tr className="text-left text-xs text-gray-400 border-b">
+            <tr className="text-left text-xs text-gray-600 border-b">
               <th className="pb-2 pr-4">CVE</th>
               <th className="pb-2 pr-4">嚴重度</th>
               <th className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
@@ -54,8 +54,8 @@ function TopVulns() {
                   </span>
                 </td>
                 <td className="py-3 pr-4 text-gray-600 hidden md:table-cell">{v.cvss_score ?? "—"}</td>
-                <td className="py-3 pr-4 text-gray-700">{v.component_name} <span className="text-gray-400">{v.component_version}</span></td>
-                <td className="py-3 pr-4 text-gray-700 hidden sm:table-cell">{v.product_name} <span className="text-gray-400 text-xs">{v.release_version}</span></td>
+                <td className="py-3 pr-4 text-gray-700">{v.component_name} <span className="text-gray-600">{v.component_version}</span></td>
+                <td className="py-3 pr-4 text-gray-700 hidden sm:table-cell">{v.product_name} <span className="text-gray-600 text-xs">{v.release_version}</span></td>
                 <td className="py-3 pr-4 text-gray-500 hidden lg:table-cell">{v.org_name}</td>
                 <td className="py-3">
                   <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600">{v.status}</span>
@@ -156,7 +156,7 @@ function ViewerOnboarding({ orgId }) {
                       <button onClick={s.action} className="text-xs text-blue-600 hover:underline">{s.actionLabel} →</button>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{s.desc}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{s.desc}</p>
                 </div>
               </div>
             ))}
@@ -251,7 +251,7 @@ export default function Dashboard() {
         role === "viewer" && orgId ? (
           <ViewerOnboarding orgId={orgId} />
         ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
             尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。
           </div>
         )
@@ -261,7 +261,7 @@ export default function Dashboard() {
           {/* Severity breakdown */}
           <div className="bg-white rounded-lg shadow p-5">
             <h2 className="font-semibold text-gray-700 mb-4">漏洞嚴重度分布
-              <span className="ml-2 text-sm font-normal text-gray-400">共 {totalVulns} 筆</span>
+              <span className="ml-2 text-sm font-normal text-gray-600">共 {totalVulns} 筆</span>
             </h2>
             <div className="space-y-3">
               {SEVERITY.map(({ key, label, color, text, bg }) => {
@@ -382,12 +382,12 @@ export default function Dashboard() {
             )}
           </div>
           {topThreats.top_epss.length === 0 ? (
-            <p className="text-sm text-gray-400">無高 EPSS 漏洞</p>
+            <p className="text-sm text-gray-600">無高 EPSS 漏洞</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-gray-400 border-b">
+                  <tr className="text-left text-xs text-gray-600 border-b">
                     <th className="pb-2 pr-4">CVE</th>
                     <th className="pb-2 pr-4">EPSS</th>
                     <th className="pb-2 pr-4">嚴重度</th>
@@ -428,12 +428,12 @@ export default function Dashboard() {
         <div className="mt-4 bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-700">高風險元件</h2>
-            <span className="text-xs text-gray-400">跨版本 Critical/High 未處理漏洞最多</span>
+            <span className="text-xs text-gray-600">跨版本 Critical/High 未處理漏洞最多</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-400 border-b">
+                <tr className="text-left text-xs text-gray-600 border-b">
                   <th className="pb-2 pr-4">元件</th>
                   <th className="pb-2 pr-4 text-center">版本數</th>
                   <th className="pb-2 pr-4 text-center">未處理 C/H</th>
@@ -449,7 +449,7 @@ export default function Dashboard() {
                   >
                     <td className="py-3 pr-4">
                       <span className="font-medium text-gray-800">{c.name}</span>
-                      {c.version && <span className="ml-1.5 text-xs text-gray-400">{c.version}</span>}
+                      {c.version && <span className="ml-1.5 text-xs text-gray-600">{c.version}</span>}
                     </td>
                     <td className="py-2.5 pr-4 text-center">
                       <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
@@ -477,7 +477,7 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-gray-400">點擊元件名稱可在全域搜尋中查看所有受影響版本</p>
+          <p className="mt-3 text-xs text-gray-600">點擊元件名稱可在全域搜尋中查看所有受影響版本</p>
         </div>
       )}
 
@@ -488,7 +488,7 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-400 border-b">
+                <tr className="text-left text-xs text-gray-600 border-b">
                   <th className="pb-2 pr-4">客戶</th>
                   <th className="pb-2 pr-4 text-center">產品</th>
                   <th className="pb-2 pr-4 text-center">總漏洞</th>

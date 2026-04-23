@@ -210,7 +210,7 @@ export default function Organizations() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {orgs.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">尚無客戶，點擊「新增客戶」開始</div>
+          <div className="p-8 text-center text-gray-600">尚無客戶，點擊「新增客戶」開始</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[400px]">

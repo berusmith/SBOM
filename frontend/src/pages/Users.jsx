@@ -227,18 +227,19 @@ export default function Users() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {users.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">尚無帳號</div>
+          <div className="p-8 text-center text-gray-600">尚無帳號</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[520px]">
+            <table className="w-full text-sm min-w-[520px]" role="table">
+              <caption className="sr-only">使用者清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
-                  <th className="px-4 py-3">帳號</th>
-                  <th className="px-4 py-3">角色</th>
-                  <th className="px-4 py-3">綁定組織</th>
-                  <th className="px-4 py-3">狀態</th>
-                  <th className="px-4 py-3">建立時間</th>
-                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3" scope="col">帳號</th>
+                  <th className="px-4 py-3" scope="col">角色</th>
+                  <th className="px-4 py-3" scope="col">綁定組織</th>
+                  <th className="px-4 py-3" scope="col">狀態</th>
+                  <th className="px-4 py-3" scope="col">建立時間</th>
+                  <th className="px-4 py-3" scope="col">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,7 +257,7 @@ export default function Users() {
                         {u.is_active ? "啟用" : "停用"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">
+                    <td className="px-4 py-3 text-gray-600 text-xs">
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right flex justify-end gap-2">

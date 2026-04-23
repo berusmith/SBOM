@@ -187,7 +187,7 @@ export default function Policies() {
       {loading ? (
         <SkeletonTable rows={4} cols={5} />
       ) : rules.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">尚無規則</div>
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">尚無規則</div>
       ) : (
         <div className="space-y-3">
           {rules.map((rule) => {
@@ -233,7 +233,7 @@ export default function Policies() {
                   ) : (
                     <CheckCircle2 size={24} className="text-green-600" />
                   )}
-                  <p className="text-xs text-gray-400 mt-0.5">違規</p>
+                  <p className="text-xs text-gray-600 mt-0.5">違規</p>
                 </div>
 
                 {/* Actions */}
@@ -252,7 +252,7 @@ export default function Policies() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-bold text-gray-800">License 合規政策</h2>
-            <p className="text-xs text-gray-400 mt-0.5">標記含有特定開源授權的元件，防止 Copyleft / 非商用授權進入產品</p>
+            <p className="text-xs text-gray-600 mt-0.5">標記含有特定開源授權的元件，防止 Copyleft / 非商用授權進入產品</p>
           </div>
           <button onClick={openCreateLicense}
             className="px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
@@ -275,7 +275,7 @@ export default function Policies() {
         )}
 
         {licenseRules.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-400">尚無 License 規則</div>
+          <div className="bg-white rounded-lg shadow p-6 text-center text-gray-600">尚無 License 規則</div>
         ) : (
           <div className="space-y-2">
             {licenseRules.map((rule) => {
@@ -299,7 +299,7 @@ export default function Policies() {
                     {vc > 0
                       ? <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold text-sm">{vc}</span>
                       : <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-100 text-green-600 text-lg">✓</span>}
-                    <p className="text-xs text-gray-400 mt-0.5">元件</p>
+                    <p className="text-xs text-gray-600 mt-0.5">元件</p>
                   </div>
                   <div className="shrink-0 flex gap-2">
                     <button onClick={() => openEditLicense(rule)} className="text-xs text-blue-600 hover:underline">編輯</button>
@@ -324,7 +324,7 @@ export default function Policies() {
                   onChange={(e) => setLicenseForm({ ...licenseForm, license_id: e.target.value })}
                   placeholder="例：GPL-3.0、AGPL-3.0、LGPL-2.1"
                   className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-purple-400" />
-                <p className="text-xs text-gray-400 mt-0.5">使用 SPDX 識別碼，系統會對元件授權做子字串比對</p>
+                <p className="text-xs text-gray-600 mt-0.5">使用 SPDX 識別碼，系統會對元件授權做子字串比對</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">顯示名稱</label>
@@ -417,7 +417,7 @@ export default function Policies() {
                   placeholder="open,in_triage,affected"
                   className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
                 />
-                <p className="text-xs text-gray-400 mt-0.5">可用值：open / in_triage / affected / not_affected / fixed</p>
+                <p className="text-xs text-gray-600 mt-0.5">可用值：open / in_triage / affected / not_affected / fixed</p>
               </div>
 
               <div className="flex gap-6">

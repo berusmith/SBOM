@@ -18,8 +18,9 @@ export function PasswordInput({ value, onChange, placeholder, className = "", er
       <button
         type="button"
         onClick={() => setShow(!show)}
-        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-0.5"
+        className="absolute right-3 top-2.5 text-gray-600 hover:text-gray-600 p-0.5"
         tabIndex={-1}
+        aria-label={show ? "隱藏密碼" : "顯示密碼"}
       >
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>

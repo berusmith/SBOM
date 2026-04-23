@@ -62,7 +62,7 @@ export default function Search() {
           </p>
 
           {results.total === 0 ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-400">
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
               未找到符合的元件
             </div>
           ) : (

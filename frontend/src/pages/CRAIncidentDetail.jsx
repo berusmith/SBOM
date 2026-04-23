@@ -61,7 +61,7 @@ function DeadlineBar({ label, seconds, submitted }) {
         <div className="flex-1">
           <div className="h-2 rounded-full bg-gray-100" />
         </div>
-        <div className="w-32 text-xs text-gray-400 text-right">尚未開始</div>
+        <div className="w-32 text-xs text-gray-600 text-right">尚未開始</div>
       </div>
     );
   }
@@ -203,7 +203,7 @@ export default function CRAIncidentDetail() {
       <div className="bg-white rounded-lg shadow p-5 mt-4">
         <h2 className="font-semibold text-gray-700 mb-3">稽核記錄</h2>
         {inc.audit_log.length === 0 ? (
-          <p className="text-sm text-gray-400">尚無記錄</p>
+          <p className="text-sm text-gray-600">尚無記錄</p>
         ) : (
           <div className="space-y-1">
             {inc.audit_log.map((entry, i) => (
@@ -278,7 +278,7 @@ function ActionPanel({ inc, onUpdate }) {
       <h2 className="font-semibold text-gray-700 mb-4">操作</h2>
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">備註 <span className="text-gray-400 font-normal">(選填，會記入稽核記錄)</span></label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">備註 <span className="text-gray-600 font-normal">(選填，會記入稽核記錄)</span></label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -289,7 +289,7 @@ function ActionPanel({ inc, onUpdate }) {
 
         {needsEnisaRef && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ENISA Reference ID <span className="text-gray-400 font-normal">(提交後填入)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">ENISA Reference ID <span className="text-gray-600 font-normal">(提交後填入)</span></label>
             <input
               value={enisaRef}
               onChange={(e) => setEnisaRef(e.target.value)}
@@ -301,7 +301,7 @@ function ActionPanel({ inc, onUpdate }) {
 
         {needsRemDate && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">修補發布時間 <span className="text-gray-400 font-normal">(T+14d 從此時算起)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">修補發布時間 <span className="text-gray-600 font-normal">(T+14d 從此時算起)</span></label>
             <input
               type="datetime-local"
               value={remDate}
