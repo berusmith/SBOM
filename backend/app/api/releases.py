@@ -110,6 +110,7 @@ def _enrich_epss(vulns: list, db) -> None:
 def upload_sbom(
     release_id: str,
     file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
@@ -212,7 +213,7 @@ def upload_sbom(
     product = db.query(Product).filter(Product.id == release.product_id).first()
     org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
     label = f"{org.name if org else ''} / {product.name if product else ''} / {release.version}"
-    audit.record(db, "sbom_upload", admin, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
+    audit.record(db, "sbom_upload", user, resource_id=release_id, resource_label=label, org_name=org.name if org else None)
     db.commit()
 
     # Compute diff vs previous release
@@ -1268,7 +1269,7 @@ def upload_signature(release_id: str, body: dict, _admin: dict = Depends(require
     release.signed_at = datetime.now(timezone.utc)
     db.commit()
 
-    audit.log(db, "signature_uploaded", f"release={release_id} alg={algorithm} signer={release.signer_identity}")
+    audit.record(db, "signature_uploaded", _admin, resource_id=release_id, resource_label=f"alg={algorithm} signer={release.signer_identity}")
 
     return {
         "status": "ok",

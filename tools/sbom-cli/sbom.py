@@ -18,12 +18,9 @@ import json
 import argparse
 import urllib.request
 import urllib.error
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-from io import BytesIO
 
 
 class SBOMClient:
@@ -72,39 +69,35 @@ class SBOMClient:
             raise RuntimeError(f"Connection Error: {e.reason}")
 
     def upload_sbom(self, release_id: str, sbom_file: str) -> Dict[str, Any]:
-        """Upload SBOM file to a release."""
-        # Read file as bytes for multipart upload
+        """Upload SBOM file to a release via multipart/form-data."""
         with open(sbom_file, 'rb') as f:
             file_content = f.read()
 
-        # Get filename
         filename = os.path.basename(sbom_file)
+        boundary = f'----SBOMCLIBoundary{uuid.uuid4().hex}'
 
-        # Create multipart form data manually
-        boundary = '----SBOMCLIBOUNDARY'
-        body = []
+        # RFC 2046 compliant multipart body
+        parts = []
+        parts.append(f'--{boundary}\r\n'.encode())
+        parts.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode())
+        parts.append(b'Content-Type: application/json\r\n')
+        parts.append(b'\r\n')
+        parts.append(file_content)
+        parts.append(f'\r\n--{boundary}--\r\n'.encode())
 
-        # Add file field with proper formatting
-        body.append(f'--{boundary}')
-        body.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"')
-        body.append('Content-Type: application/json')
-        body.append('')
-
-        # Convert body parts to bytes
-        body_str = '\r\n'.join(body).encode('utf-8') + b'\r\n' + file_content + b'\r\n'
-        body_str += f'--{boundary}--\r\n'.encode('utf-8')
+        body = b''.join(parts)
 
         url = f"{self.api_url}/api/releases/{release_id}/sbom"
-        headers = {
-            "Authorization": f"Bearer {self.api_token}",
-            "Content-Type": f"multipart/form-data; boundary={boundary}",
-        }
 
         try:
             req = urllib.request.Request(
                 url,
-                data=body_str,
-                headers=headers,
+                data=body,
+                headers={
+                    "Authorization": f"Bearer {self.api_token}",
+                    "Content-Type": f"multipart/form-data; boundary={boundary}",
+                    "Content-Length": str(len(body)),
+                },
                 method="POST"
             )
             with urllib.request.urlopen(req) as response:
