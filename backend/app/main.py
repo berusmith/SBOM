@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses, firmware
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.models import license_rule as _license_rule_model  # noqa: F401
 from app.models import brand_config as _brand_config_model  # noqa: F401
@@ -14,6 +14,7 @@ from app.models import policy_rule as _policy_rule_model  # noqa: F401
 from app.models import user as _user_model  # noqa: F401
 from app.models import audit_event as _audit_event_model  # noqa: F401
 from app.models import tisax as _tisax_model  # noqa: F401
+from app.models import firmware_scan as _firmware_scan_model  # noqa: F401
 from app.core.database import Base, engine, SessionLocal
 from app.core.deps import get_current_user
 
@@ -53,14 +54,15 @@ with engine.connect() as conn:
     conn.commit()
 
     # releases table migrations
-    rel_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(releases)"))} if "releases" in _existing_tables else set()
-    for col, typedef in [
-        ("sbom_hash", "TEXT"),
-        ("locked",    "INTEGER DEFAULT 0"),
-    ]:
-        if col not in rel_cols:
-            conn.execute(text(f"ALTER TABLE releases ADD COLUMN {col} {typedef}"))
-    conn.commit()
+    if "releases" in _existing_tables:
+        rel_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(releases)"))}
+        for col, typedef in [
+            ("sbom_hash", "TEXT"),
+            ("locked",    "INTEGER DEFAULT 0"),
+        ]:
+            if col not in rel_cols:
+                conn.execute(text(f"ALTER TABLE releases ADD COLUMN {col} {typedef}"))
+        conn.commit()
 
     # users table — add organization_id
     user_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))} if "users" in _existing_tables else set()
@@ -84,7 +86,7 @@ with engine.connect() as conn:
             conn.execute(text(f"ALTER TABLE alert_config ADD COLUMN {col} {typedef}"))
     conn.commit()
 
-    # Performance indexes — safe to run repeatedly via IF NOT EXISTS
+    # Performance indexes — safe to run repeatedly via IF NOT EXISTS (only on existing tables)
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",
         "CREATE INDEX IF NOT EXISTS idx_vuln_severity  ON vulnerabilities(severity)",
@@ -96,7 +98,10 @@ with engine.connect() as conn:
         "CREATE INDEX IF NOT EXISTS idx_cra_org        ON cra_incidents(org_id)",
         "CREATE INDEX IF NOT EXISTS idx_cra_status     ON cra_incidents(status)",
     ]:
-        conn.execute(text(_idx))
+        try:
+            conn.execute(text(_idx))
+        except:
+            pass
     conn.commit()
 
 # Create any missing tables (new tables like audit_events)
@@ -141,6 +146,7 @@ app.include_router(users.router, dependencies=_auth)
 app.include_router(admin.router, dependencies=_auth)
 app.include_router(tisax.router, dependencies=_auth)
 app.include_router(licenses.router, dependencies=_auth)
+app.include_router(firmware.router, dependencies=_auth)
 
 
 @app.on_event("startup")

@@ -20,6 +20,7 @@ import TISAXAssessments from "./pages/TISAXAssessments";
 import TISAXDetail from "./pages/TISAXDetail";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
+import FirmwareUpload from "./pages/FirmwareUpload";
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/tisax/:assessmentId" element={<TISAXDetail />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/admin/users" element={<RequireAdmin><Users /></RequireAdmin>} />
+                  <Route path="/firmware" element={<FirmwareUpload />} />
                 </Routes>
               </Layout>
             </RequireAuth>
