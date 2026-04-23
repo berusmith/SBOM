@@ -98,20 +98,27 @@ export default function CRAIncidentDetail() {
   const navigate = useNavigate();
   const [inc, setInc] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const [closing, setClosing] = useState(false);
 
   const fetch = () => {
+    setFetchError(null);
     api.get(`/cra/incidents/${incidentId}`)
       .then((r) => setInc(r.data))
-      .catch(() => {})
+      .catch((err) => setFetchError(err.response?.status === 404 ? "事件不存在" : "載入失敗，請檢查網路連線"))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetch(); }, [incidentId]);
 
   if (loading) return <div className="p-6"><SkeletonDetail sections={3} /></div>;
-  if (!inc) return <div className="text-red-400 text-center mt-8">事件不存在</div>;
+  if (fetchError) return (
+    <div className="text-center mt-8">
+      <p className="text-red-400 mb-3">{fetchError}</p>
+      {fetchError !== "事件不存在" && <button onClick={() => { setLoading(true); fetch(); }} className="text-sm text-blue-600 hover:underline">重試</button>}
+    </div>
+  );
 
   const currentIdx = STATES.indexOf(inc.status);
 

@@ -109,4 +109,6 @@ def delete_organization(org_id: str, _admin: dict = Depends(require_admin), db: 
 def list_products(org_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     if org_scope and org_scope != org_id:
         raise HTTPException(status_code=403, detail="無權存取此組織")
+    if not db.query(Organization).filter(Organization.id == org_id).first():
+        raise HTTPException(status_code=404, detail="組織不存在")
     return db.query(Product).filter(Product.organization_id == org_id).all()

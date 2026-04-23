@@ -32,9 +32,11 @@ export default function Search() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    setSearchParams({ q: input.trim() });
-    doSearch(input.trim());
+    const q = input.trim();
+    if (!q) return;
+    if (q.length < 2) { setSearchError("請輸入至少 2 個字元"); setResults(null); return; }
+    setSearchParams({ q });
+    doSearch(q);
   };
 
   return (

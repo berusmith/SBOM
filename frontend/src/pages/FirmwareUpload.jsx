@@ -187,7 +187,14 @@ export default function FirmwareUpload() {
               type="file"
               accept=".bin,.img,.zip"
               className="hidden"
-              onChange={(e) => e.target.files[0] && setSelectedFile(e.target.files[0])}
+              onChange={(e) => {
+                const f = e.target.files[0];
+                if (f && (f.name.endsWith(".bin") || f.name.endsWith(".img") || f.name.endsWith(".zip"))) {
+                  setSelectedFile(f);
+                } else if (f) {
+                  toast.error("請上傳 .bin, .img 或 .zip 檔案");
+                }
+              }}
             />
           </label>
           <button
