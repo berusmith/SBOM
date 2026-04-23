@@ -26,7 +26,18 @@ frontend/dist/
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Local scratch / test artifacts
+backend_err*.txt
+backend_out*.txt
+test_firmware.bin
+test_tisax.pdf
+test_sbom.json
+test_invalid.json
+a.png
+inspect_osv.py
