@@ -1,0 +1,93 @@
+name: SBOM Policy Gate Check
+description: Upload SBOM file and check Policy Gate status
+
+inputs:
+  sbom-file:
+    description: 'Path to SBOM file (JSON)'
+    required: true
+  release-id:
+    description: 'Release ID in SBOM system'
+    required: true
+  api-token:
+    description: 'SBOM API token (can use ${{ secrets.SBOM_API_TOKEN }})'
+    required: true
+  api-url:
+    description: 'SBOM API server URL'
+    required: false
+    default: 'http://localhost:9100'
+  fail-on-gate:
+    description: 'Fail workflow if Policy Gate check fails'
+    required: false
+    default: 'true'
+  product-id:
+    description: 'Product ID (optional, for diff command)'
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install SBOM CLI
+      run: pip install -e "${{ github.action_path }}/../sbom-cli"
+      shell: bash
+
+    - name: Upload SBOM
+      env:
+        SBOM_API_TOKEN: ${{ inputs.api-token }}
+        SBOM_API_URL: ${{ inputs.api-url }}
+      run: python "${{ github.action_path }}/../sbom-cli/sbom.py" upload "${{ inputs.sbom-file }}" --release "${{ inputs.release-id }}"
+      shell: bash
+      continue-on-error: true
+
+    - name: Check Policy Gate
+      id: gate
+      env:
+        SBOM_API_TOKEN: ${{ inputs.api-token }}
+        SBOM_API_URL: ${{ inputs.api-url }}
+      run: |
+        python "${{ github.action_path }}/../sbom-cli/sbom.py" gate --release "${{ inputs.release-id }}" > /tmp/gate_output.txt 2>&1
+        GATE_STATUS=$?
+        echo "gate_output<<EOF" >> $GITHUB_OUTPUT
+        cat /tmp/gate_output.txt >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        echo "gate_status=$GATE_STATUS" >> $GITHUB_OUTPUT
+        exit $GATE_STATUS
+      shell: bash
+      continue-on-error: ${{ inputs.fail-on-gate == 'false' }}
+
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const gateOutput = `${{ steps.gate.outputs.gate_output }}`;
+          const gateStatus = '${{ steps.gate.outputs.gate_status }}' === '0' ? 'PASSED' : 'FAILED';
+
+          const comment = `## SBOM Policy Gate Check
+
+**Status**: ${gateStatus}
+
+\`\`\`
+${gateOutput}
+\`\`\`
+
+Release ID: ${{ inputs.release-id }}
+`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+    - name: Fail on gate failure
+      if: inputs.fail-on-gate == 'true' && steps.gate.outputs.gate_status != '0'
+      run: |
+        echo "Policy Gate check failed!"
+        exit 1
+      shell: bash

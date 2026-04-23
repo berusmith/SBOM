@@ -1,0 +1,31 @@
+name: SBOM Check Example
+
+on:
+  pull_request:
+    paths:
+      - 'sbom.json'
+      - '.github/workflows/sbom-check.yml'
+
+jobs:
+  sbom-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: SBOM Policy Gate Check
+        uses: ./tools/sbom-action
+        with:
+          sbom-file: sbom.json
+          release-id: ${{ secrets.SBOM_RELEASE_ID }}
+          api-token: ${{ secrets.SBOM_API_TOKEN }}
+          api-url: ${{ vars.SBOM_API_URL || 'http://localhost:9100' }}
+          fail-on-gate: 'true'
+        continue-on-error: false
+
+      - name: Comment result on PR
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const result = '${{ job.status }}';
+            console.log(`SBOM check result: ${result}`);
