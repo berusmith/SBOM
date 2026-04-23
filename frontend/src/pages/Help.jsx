@@ -821,6 +821,15 @@ export default function Help() {
   const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id);
   const [activeArticleId, setActiveArticleId] = useState(SECTIONS[0].articles[0].id);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [articlePage, setArticlePage] = useState(0);
+
+  const ARTICLES_PER_PAGE = 5;
+
+  const allArticles = SECTIONS.flatMap(s => s.articles.map(a => ({ ...a, sectionId: s.id })));
+  const totalArticles = allArticles.length;
+  const totalPages = Math.ceil(totalArticles / ARTICLES_PER_PAGE);
+  const startIdx = articlePage * ARTICLES_PER_PAGE;
+  const paginatedArticles = allArticles.slice(startIdx, startIdx + ARTICLES_PER_PAGE);
 
   const activeSection = SECTIONS.find((s) => s.id === activeSectionId);
   const activeArticle = activeSection?.articles.find((a) => a.id === activeArticleId);
@@ -869,27 +878,46 @@ export default function Help() {
           ${sidebarOpen ? "block fixed left-4 right-4 top-32 bottom-4 md:static z-40 bg-white shadow-lg rounded-lg p-3 w-auto overflow-y-auto" : "hidden"}
           md:block md:relative md:z-auto md:bg-transparent md:shadow-none md:rounded-none md:p-0 md:w-52 lg:w-60 shrink-0 md:bottom-auto
         `}>
-          <nav className="space-y-1">
-            {SECTIONS.map((section) => (
-              <div key={section.id}>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-3 pb-1">
-                  {getIconComponent(section.icon, 14)} {section.title}
-                </div>
-                {section.articles.map((article) => (
+          <nav className="space-y-1 flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto">
+              {paginatedArticles.map((article) => {
+                const section = SECTIONS.find(s => s.id === article.sectionId);
+                return (
                   <button
                     key={article.id}
-                    onClick={() => handleSelect(section.id, article.id)}
-                    className={`w-full text-left px-3 py-1.5 rounded text-sm transition-colors ${
-                      !isSearching && activeSectionId === section.id && activeArticleId === article.id
+                    onClick={() => handleSelect(article.sectionId, article.id)}
+                    className={`w-full text-left px-3 py-1.5 rounded text-sm transition-colors block mb-1 ${
+                      !isSearching && activeSectionId === article.sectionId && activeArticleId === article.id
                         ? "bg-blue-600 text-white"
                         : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     }`}
+                    title={section?.title}
                   >
-                    {article.title}
+                    <span className="text-xs text-gray-400">{section?.title}</span>
+                    <div>{article.title}</div>
                   </button>
-                ))}
+                );
+              })}
+            </div>
+            {totalPages > 1 && (
+              <div className="border-t mt-3 pt-3 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => setArticlePage(Math.max(0, articlePage - 1))}
+                  disabled={articlePage === 0}
+                  className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  上一頁
+                </button>
+                <span className="text-xs text-gray-500">{articlePage + 1} / {totalPages}</span>
+                <button
+                  onClick={() => setArticlePage(Math.min(totalPages - 1, articlePage + 1))}
+                  disabled={articlePage === totalPages - 1}
+                  className="px-2 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  下一頁
+                </button>
               </div>
-            ))}
+            )}
           </nav>
         </aside>
 
