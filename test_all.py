@@ -153,6 +153,26 @@ if uid is None:  # uid was deleted above; re-check RBAC via a fresh viewer token
 s_v, _ = req("POST", "/api/releases/" + rel_id + "/enrich-nvd", tok=None)
 chk("NVD: blocked without auth (403)", s_v in [401, 403], "status=" + str(s_v))
 
+# --- API Tokens ---
+s, d = req("POST", "/api/tokens", {"name": "qa-token-" + TS}, tok=token)
+chk("Token: create (201)", s == 201 and d.get("token", "").startswith("sbom_"), "status=" + str(s))
+api_tok = d.get("token")
+tok_id  = d.get("id")
+s, d = req("GET", "/api/tokens", tok=token)
+chk("Token: list contains new token", s == 200 and any(t.get("id") == tok_id for t in d))
+s, d = req("POST", "/api/tokens", {"name": "  "}, tok=token)
+chk("Token: reject empty name (400)", s == 400, "status=" + str(s))
+if api_tok:
+    s, d = req("GET", "/api/stats", tok=api_tok)
+    chk("Token: use API token to call protected endpoint (200)", s == 200, "status=" + str(s))
+    s, d = req("DELETE", "/api/tokens/" + tok_id, tok=token)
+    chk("Token: revoke (204)", s == 204, "status=" + str(s))
+    s, d = req("GET", "/api/stats", tok=api_tok)
+    chk("Token: revoked token rejected (401)", s == 401, "status=" + str(s))
+# Bogus sbom_ token
+s, d = req("GET", "/api/stats", tok="sbom_notarealtoken12345")
+chk("Token: bogus sbom_ token rejected (401)", s == 401, "status=" + str(s))
+
 # --- Cleanup ---
 req("DELETE", "/api/releases/" + rel_id, tok=token)
 req("DELETE", "/api/products/" + prod_id, tok=token)
