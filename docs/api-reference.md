@@ -4,6 +4,10 @@ Base URL: `http://localhost:9100`
 互動式文件: `http://localhost:9100/docs`  
 所有端點（`/api/auth/login` 除外）需要 `Authorization: Bearer <token>` 標頭。
 
+Token 支援兩種格式：
+- **JWT**（由 `/api/auth/login` 取得，24 小時有效）— 給 UI 使用者
+- **API Token**（以 `sbom_` 開頭的長效金鑰）— 給 CI/CD pipeline 使用，需由 admin 於 Settings 頁建立
+
 ---
 
 ## 認證
@@ -314,6 +318,26 @@ final_submitted → closed
 
 ---
 
+## API 金鑰 API Tokens
+
+長效金鑰供 CI/CD pipeline 整合使用。僅 admin 可建立/列表/撤銷。建立時明文只回傳一次，資料庫僅存 SHA-256 hash。
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/tokens` | 列出所有 API tokens（不含明文） |
+| POST | `/api/tokens` | 建立新 token，body：`{"name": "GitLab CI"}`，回傳 `token` 欄位即明文 |
+| DELETE | `/api/tokens/{id}` | 撤銷 token（立即失效，不可復原） |
+
+**使用範例**
+```bash
+curl -H "Authorization: Bearer sbom_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+     http://localhost:9100/api/organizations
+```
+
+API Token 認證身份固定為 admin role，每次呼叫會更新 `last_used_at`。
+
+---
+
 ## 管理 Admin
 
 | 方法 | 路徑 | 說明 |
@@ -331,7 +355,7 @@ final_submitted → closed
 | HTTP | 情境 |
 |------|------|
 | 400 | 請求格式錯誤或業務規則違反 |
-| 401 | 未提供或過期的 JWT Token |
+| 401 | 未提供或過期的 JWT / 已撤銷的 API Token |
 | 404 | 資源不存在 |
 | 409 | 衝突（如：組織名稱重複；或版本已鎖定） |
 | 422 | Pydantic 驗證失敗 |

@@ -88,6 +88,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `users.py` | `/api/users` | CRUD (admin only) |
 | `admin.py` | `/api/admin` | GET `/activity?date_from=&date_to=` |
 | `firmware.py` | `/api/firmware` | POST `/upload`, GET `/scans`, GET `/scans/{id}` |
+| `tokens.py` | `/api/tokens` | GET/POST/DELETE — admin-only long-lived API keys for CI/CD (prefix `sbom_`) |
 
 User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 

@@ -1,15 +1,40 @@
+from datetime import datetime, timezone
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
+from sqlalchemy.orm import Session
 
+from app.core.database import get_db
 from app.core.security import decode_token
 
 _bearer = HTTPBearer()
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> dict:
+    token = credentials.credentials
+    if token.startswith("sbom_"):
+        from app.models.api_token import ApiToken, hash_token
+        rec = db.query(ApiToken).filter(
+            ApiToken.token_hash == hash_token(token),
+            ApiToken.revoked == False,  # noqa: E712
+        ).first()
+        if not rec:
+            raise HTTPException(status_code=401, detail="無效或已撤銷的 API token")
+        rec.last_used_at = datetime.now(timezone.utc)
+        db.commit()
+        return {
+            "username": f"apitoken:{rec.name}",
+            "role": "admin",
+            "org_id": None,
+            "user_id": None,
+            "api_token_id": rec.id,
+        }
     try:
-        return decode_token(credentials.credentials)
+        return decode_token(token)
     except JWTError:
         raise HTTPException(status_code=401, detail="無效或過期的 token，請重新登入")
 

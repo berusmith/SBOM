@@ -189,6 +189,9 @@ export default function Settings() {
       {/* ── User management (admin only) ── */}
       {currentRole === "admin" && <UserManagement flash={flash} />}
 
+      {/* ── API tokens (admin only) ── */}
+      {currentRole === "admin" && <ApiTokens flash={flash} />}
+
       {/* ── Brand settings ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">報告品牌設定</h3>
@@ -416,6 +419,162 @@ export default function Settings() {
       >
         {saving ? "儲存中..." : "儲存通知設定"}
       </button>
+    </div>
+  );
+}
+
+function ApiTokens({ flash }) {
+  const [tokens, setTokens] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [newToken, setNewToken] = useState(null);
+  const [confirmRevoke, setConfirmRevoke] = useState(null);
+  const [copied, setCopied] = useState(false);
+
+  const fetchTokens = () => api.get("/tokens").then((r) => setTokens(r.data)).catch(() => {});
+  useEffect(() => { fetchTokens(); }, []);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      const r = await api.post("/tokens", { name: name.trim() });
+      setNewToken(r.data);
+      setName("");
+      setShowForm(false);
+      fetchTokens();
+    } catch (err) {
+      flash("err", err.response?.data?.detail || "建立失敗");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRevoke = async () => {
+    try {
+      await api.delete(`/tokens/${confirmRevoke.id}`);
+      flash("ok", "Token 已撤銷");
+      setConfirmRevoke(null);
+      fetchTokens();
+    } catch (err) {
+      flash("err", err.response?.data?.detail || "撤銷失敗");
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(newToken.token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-5 mb-4">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold text-gray-700">API 金鑰</h3>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          + 新增 Token
+        </button>
+      </div>
+      <p className="text-xs text-gray-600 mb-4">
+        供 CI/CD pipeline 長期存取使用。Header：<code className="bg-gray-100 px-1 rounded">Authorization: Bearer sbom_xxx</code>
+      </p>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-gray-50 rounded p-4 mb-4 flex gap-2 items-end flex-wrap">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Token 名稱（供辨識用途）</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例：GitLab CI / Jenkins build"
+              maxLength={100}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving}
+              className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+              {saving ? "建立中..." : "建立"}
+            </button>
+            <button type="button" onClick={() => { setShowForm(false); setName(""); }}
+              className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">
+              取消
+            </button>
+          </div>
+        </form>
+      )}
+
+      {newToken && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded p-4 mb-4">
+          <p className="text-sm font-semibold text-yellow-800 mb-2">Token 建立成功，僅顯示此一次，請立即複製保存</p>
+          <div className="flex gap-2 items-center mb-2">
+            <code className="flex-1 bg-white border rounded px-3 py-2 text-xs font-mono break-all">{newToken.token}</code>
+            <button
+              onClick={handleCopy}
+              className="px-3 py-2 text-sm border rounded bg-white hover:bg-gray-50 whitespace-nowrap"
+            >
+              {copied ? "已複製" : "複製"}
+            </button>
+          </div>
+          <button
+            onClick={() => { setNewToken(null); setCopied(false); }}
+            className="text-xs text-gray-600 hover:underline"
+          >
+            我已保存，關閉
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {tokens.map((t) => (
+          <div key={t.id} className="flex items-center justify-between py-2 border-b last:border-0">
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium ${t.revoked ? "text-gray-600 line-through" : "text-gray-800"}`}>
+                {t.name}
+              </p>
+              <p className="text-xs text-gray-600 font-mono">{t.prefix}...</p>
+              <p className="text-xs text-gray-500">
+                建立：{t.created_at ? formatDateTime(t.created_at) : "—"}
+                {" · "}
+                上次使用：{t.last_used_at ? formatDateTime(t.last_used_at) : "尚未使用"}
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              {t.revoked ? (
+                <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">已撤銷</span>
+              ) : (
+                <button
+                  onClick={() => setConfirmRevoke(t)}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  撤銷
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {tokens.length === 0 && (
+          <p className="text-sm text-gray-600 text-center py-3">尚未建立 API Token</p>
+        )}
+      </div>
+
+      <ConfirmModal
+        isOpen={!!confirmRevoke}
+        title="確認撤銷 API Token"
+        message={`撤銷後「${confirmRevoke?.name}」將立即失效，且無法復原。`}
+        confirmText="撤銷"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleRevoke}
+        onCancel={() => setConfirmRevoke(null)}
+      />
     </div>
   );
 }
