@@ -1,15 +1,23 @@
 import { useState, useEffect } from "react";
-import { Upload, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Clock, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 
 export default function FirmwareUpload() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [scans, setScans] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [expandedScan, setExpandedScan] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importingScan, setImportingScan] = useState(null);
+  const [importData, setImportData] = useState({ org: "", product: "", version: "" });
+  const [organizations, setOrganizations] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   const fetchScans = async () => {
     try {
@@ -62,9 +70,79 @@ export default function FirmwareUpload() {
     }
   };
 
-  const handleImportAsRelease = (scan) => {
-    // TODO: Implement import as release functionality
-    toast.info("功能開發中：將掃描結果匯入為版本");
+  const handleImportAsRelease = async (scan) => {
+    setImportingScan(scan);
+    setImportData({
+      org: "",
+      product: "",
+      version: scan.filename.replace(/\.[^/.]+$/, "") || "v1.0.0"
+    });
+
+    // Fetch organizations
+    try {
+      const orgs = await api.get("/organizations");
+      setOrganizations(orgs.data || []);
+    } catch (err) {
+      toast.error("無法載入組織清單");
+    }
+
+    setImportModalOpen(true);
+  };
+
+  const handleOrgChange = async (orgId) => {
+    setImportData({ ...importData, org: orgId, product: "" });
+
+    if (!orgId) {
+      setProducts([]);
+      return;
+    }
+
+    try {
+      const prods = await api.get(`/organizations/${orgId}/products`);
+      setProducts(prods.data || []);
+    } catch (err) {
+      toast.error("無法載入產品清單");
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importingScan || !importData.org || !importData.product || !importData.version) {
+      toast.error("請填寫所有欄位");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const result = await api.post(
+        `/firmware/scans/${importingScan.id}/import-as-release`,
+        {
+          product_id: importData.product,
+          version: importData.version,
+          org_id: importData.org
+        }
+      );
+
+      toast.success(`版本建立成功: ${result.data.version} (${result.data.component_count} 個元件)`);
+      setImportModalOpen(false);
+
+      // Navigate to new release
+      const org = organizations.find(o => o.id === importData.org);
+      const product = products.find(p => p.id === importData.product);
+
+      navigate(`/releases/${result.data.release_id}`, {
+        state: {
+          orgId: importData.org,
+          orgName: org?.name,
+          productId: importData.product,
+          productName: product?.name,
+          version: importData.version
+        }
+      });
+    } catch (err) {
+      toast.error("匯入失敗: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -226,6 +304,102 @@ export default function FirmwareUpload() {
           </div>
         )}
       </div>
+
+      {/* Import Modal */}
+      {importModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">匯入為版本</h3>
+              <button
+                onClick={() => setImportModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+                disabled={importLoading}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Organization Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">組織</label>
+                <select
+                  value={importData.org}
+                  onChange={(e) => handleOrgChange(e.target.value)}
+                  disabled={importLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">選擇組織...</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Product Select */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">產品</label>
+                <select
+                  value={importData.product}
+                  onChange={(e) => setImportData({ ...importData, product: e.target.value })}
+                  disabled={importLoading || !importData.org}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  <option value="">選擇產品...</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Version Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">版本號</label>
+                <input
+                  type="text"
+                  value={importData.version}
+                  onChange={(e) => setImportData({ ...importData, version: e.target.value })}
+                  disabled={importLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="e.g., v1.0.0"
+                />
+              </div>
+
+              {/* Component Count Info */}
+              {importingScan?.components_count > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                  <p className="text-sm text-blue-800">
+                    將匯入 <strong>{importingScan.components_count}</strong> 個檢測到的元件
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setImportModalOpen(false)}
+                disabled={importLoading}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleImportConfirm}
+                disabled={importLoading || !importData.org || !importData.product || !importData.version}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {importLoading ? "匯入中..." : "確認匯入"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
