@@ -99,6 +99,7 @@ export default function ReleaseDetail() {
   const advancedMenuRef = useRef();
   const [confirmLock, setConfirmLock] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const vulnsLoadedRef = useRef(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
@@ -124,9 +125,8 @@ export default function ReleaseDetail() {
   };
 
   useEffect(() => {
+    vulnsLoadedRef.current = false;
     fetchComponents();
-    fetchVulns();
-    fetchViolations();
     fetchRelease();
   }, [releaseId]);
 
@@ -138,6 +138,16 @@ export default function ReleaseDetail() {
     }, 100);
     return () => clearTimeout(timer);
   }, [releaseId]);
+
+  // Lazy-load vulns + violations when switching to vulnerabilities tab
+  useEffect(() => {
+    if (tab === "vulnerabilities" && !vulnsLoadedRef.current) {
+      vulnsLoadedRef.current = true;
+      fetchVulns();
+      fetchViolations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, releaseId]);
 
   // Fetch dependency graph only when the 依賴關係圖 tab is viewed
   useEffect(() => {
@@ -226,8 +236,10 @@ export default function ReleaseDetail() {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUploadResult({ ok: true, ...res.data });
+      vulnsLoadedRef.current = true;
       fetchComponents();
       fetchVulns();
+      fetchViolations();
       fetchQuality();
       fetchGate();
       fetchDepGraph();
@@ -296,7 +308,9 @@ export default function ReleaseDetail() {
     try {
       const res = await api.post(`/releases/${releaseId}/rescan`);
       setRescanResult({ ok: true, ...res.data });
+      vulnsLoadedRef.current = true;
       fetchVulns();
+      fetchViolations();
       fetchComponents();
     } catch (err) {
       setRescanResult({ ok: false, msg: err.response?.data?.detail || err.message });
@@ -807,7 +821,7 @@ export default function ReleaseDetail() {
       })()}
 
       {/* Severity summary */}
-      {vulns.length > 0 && (
+      {vulnsLoadedRef.current && vulns.length > 0 && (
         <div className="flex gap-2 mb-4">
           {["critical","high","medium","low","info"].map((s) =>
             severityCounts[s] ? (
@@ -823,7 +837,7 @@ export default function ReleaseDetail() {
       <div className="flex gap-1 mb-3">
         {[
           { key: "components",    label: `元件 (${components.length})` },
-          { key: "vulnerabilities", label: `漏洞 (${vulns.length})` },
+          { key: "vulnerabilities", label: vulnsLoadedRef.current ? `漏洞 (${vulns.length})` : "漏洞" },
           { key: "dependency",    label: "依賴關係圖" },
         ].map(({ key, label }) => (
           <button
@@ -896,7 +910,12 @@ export default function ReleaseDetail() {
       )}
 
       {/* Vulnerabilities table */}
-      {tab === "vulnerabilities" && (
+      {tab === "vulnerabilities" && !vulnsLoadedRef.current && (
+        <div className="bg-white rounded-lg shadow p-4">
+          <SkeletonInline rows={8} />
+        </div>
+      )}
+      {tab === "vulnerabilities" && vulnsLoadedRef.current && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {vulns.length === 0 ? (
             <div className="p-8 text-center text-gray-600">
