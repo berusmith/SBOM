@@ -1,26 +1,28 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
 import { ToastProvider } from "./components/Toast";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Organizations from "./pages/Organizations";
-import Products from "./pages/Products";
-import Releases from "./pages/Releases";
-import ReleaseDetail from "./pages/ReleaseDetail";
-import CRAIncidents from "./pages/CRAIncidents";
-import CRAIncidentDetail from "./pages/CRAIncidentDetail";
-import Search from "./pages/Search";
-import ReleaseDiff from "./pages/ReleaseDiff";
-import Settings from "./pages/Settings";
-import RiskOverview from "./pages/RiskOverview";
-import Policies from "./pages/Policies";
-import Help from "./pages/Help";
-import AdminActivity from "./pages/AdminActivity";
-import TISAXAssessments from "./pages/TISAXAssessments";
-import TISAXDetail from "./pages/TISAXDetail";
-import Profile from "./pages/Profile";
-import Users from "./pages/Users";
-import FirmwareUpload from "./pages/FirmwareUpload";
+
+const Dashboard         = lazy(() => import("./pages/Dashboard"));
+const Organizations     = lazy(() => import("./pages/Organizations"));
+const Products          = lazy(() => import("./pages/Products"));
+const Releases          = lazy(() => import("./pages/Releases"));
+const ReleaseDetail     = lazy(() => import("./pages/ReleaseDetail"));
+const CRAIncidents      = lazy(() => import("./pages/CRAIncidents"));
+const CRAIncidentDetail = lazy(() => import("./pages/CRAIncidentDetail"));
+const Search            = lazy(() => import("./pages/Search"));
+const ReleaseDiff       = lazy(() => import("./pages/ReleaseDiff"));
+const Settings          = lazy(() => import("./pages/Settings"));
+const RiskOverview      = lazy(() => import("./pages/RiskOverview"));
+const Policies          = lazy(() => import("./pages/Policies"));
+const Help              = lazy(() => import("./pages/Help"));
+const AdminActivity     = lazy(() => import("./pages/AdminActivity"));
+const TISAXAssessments  = lazy(() => import("./pages/TISAXAssessments"));
+const TISAXDetail       = lazy(() => import("./pages/TISAXDetail"));
+const Profile           = lazy(() => import("./pages/Profile"));
+const Users             = lazy(() => import("./pages/Users"));
+const FirmwareUpload    = lazy(() => import("./pages/FirmwareUpload"));
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -41,6 +43,14 @@ function ViewerOrgRedirect() {
   return <Organizations />;
 }
 
+function PageLoading() {
+  return (
+    <div className="flex items-center justify-center p-10 text-gray-600 text-sm">
+      載入中...
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ToastProvider>
@@ -52,6 +62,7 @@ export default function App() {
           element={
             <RequireAuth>
               <Layout>
+                <Suspense fallback={<PageLoading />}>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/organizations" element={<ViewerOrgRedirect />} />
@@ -73,6 +84,7 @@ export default function App() {
                   <Route path="/admin/users" element={<RequireAdmin><Users /></RequireAdmin>} />
                   <Route path="/firmware" element={<FirmwareUpload />} />
                 </Routes>
+                </Suspense>
               </Layout>
             </RequireAuth>
           }

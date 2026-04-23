@@ -130,10 +130,17 @@ export default function ReleaseDetail() {
     const timer = setTimeout(() => {
       fetchQuality();
       fetchGate();
-      fetchDepGraph();
     }, 100);
     return () => clearTimeout(timer);
   }, [releaseId]);
+
+  // Fetch dependency graph only when the 依賴關係圖 tab is viewed
+  useEffect(() => {
+    if (tab === "dependency" && depGraph === null) {
+      fetchDepGraph();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, releaseId]);
 
   const handleLockToggle = async () => {
     setToggling(true);
