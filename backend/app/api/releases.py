@@ -34,6 +34,7 @@ from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 from app.services.license_classifier import classify_license
+from app.services.signature_verifier import verify_signature as _verify_sig, detect_algorithm, SUPPORTED_ALGORITHMS
 
 # Use env-configured path in production; auto-detect from source tree in dev
 UPLOAD_DIR = (
@@ -1197,12 +1198,137 @@ def verify_integrity(release_id: str, org_scope: str | None = Depends(get_org_sc
     with open(release.sbom_file_path, "rb") as f:
         current_hash = hashlib.sha256(f.read()).hexdigest()
     ok = current_hash == release.sbom_hash
+
+    # Include signature verification if available
+    sig_info = None
+    if release.sbom_signature and release.signature_public_key:
+        with open(release.sbom_file_path, "rb") as f2:
+            sig_result = _verify_sig(f2.read(), release.sbom_signature, release.signature_public_key, release.signature_algorithm)
+        sig_info = {
+            "status": "valid" if sig_result.valid else "invalid",
+            "algorithm": sig_result.algorithm,
+            "signer_identity": sig_result.signer_identity or release.signer_identity,
+            "signed_at": release.signed_at.isoformat() if release.signed_at else None,
+            "message": sig_result.message,
+        }
+
     return {
         "status": "ok" if ok else "tampered",
         "stored_hash": release.sbom_hash,
         "current_hash": current_hash,
         "message": "檔案完整，未被竄改" if ok else "⚠ 警告：SBOM 檔案與上傳時的 hash 不符，可能已被竄改",
+        "signature": sig_info,
     }
+
+
+@router.post("/{release_id}/signature")
+def upload_signature(release_id: str, body: dict, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Upload a cryptographic signature for the SBOM file."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if not release.sbom_hash:
+        raise HTTPException(status_code=400, detail="請先上傳 SBOM 再上傳簽章")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳簽章")
+
+    signature_b64 = body.get("signature")
+    public_key_pem = body.get("public_key")
+    algorithm = body.get("algorithm")
+    signer = body.get("signer_identity")
+
+    if not signature_b64 or not public_key_pem:
+        raise HTTPException(status_code=400, detail="必須提供 signature 與 public_key 欄位")
+
+    # Auto-detect algorithm if not provided
+    if not algorithm:
+        algorithm = detect_algorithm(public_key_pem) or "ecdsa-sha256"
+
+    if algorithm not in SUPPORTED_ALGORITHMS:
+        raise HTTPException(status_code=400,
+                            detail=f"不支援的演算法：{algorithm}，支援：{', '.join(SUPPORTED_ALGORITHMS)}")
+
+    # Verify the signature before storing
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        raise HTTPException(status_code=400, detail="SBOM 檔案不存在，無法驗證簽章")
+
+    with open(release.sbom_file_path, "rb") as f:
+        sbom_content = f.read()
+
+    result = _verify_sig(sbom_content, signature_b64, public_key_pem, algorithm)
+    if not result.valid:
+        raise HTTPException(status_code=400,
+                            detail=f"簽章驗證失敗：{result.message}。{result.detail}")
+
+    # Store signature
+    release.sbom_signature = signature_b64
+    release.signature_public_key = public_key_pem
+    release.signature_algorithm = algorithm
+    release.signer_identity = signer or result.signer_identity
+    release.signed_at = datetime.now(timezone.utc)
+    db.commit()
+
+    audit.log(db, "signature_uploaded", f"release={release_id} alg={algorithm} signer={release.signer_identity}")
+
+    return {
+        "status": "ok",
+        "algorithm": algorithm,
+        "signer_identity": release.signer_identity,
+        "signed_at": release.signed_at.isoformat(),
+        "message": result.message,
+    }
+
+
+@router.get("/{release_id}/signature/verify")
+def verify_release_signature(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    """Verify the stored signature against the current SBOM file."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    if not release.sbom_signature or not release.signature_public_key:
+        return {
+            "status": "unsigned",
+            "message": "此版本尚未上傳簽章",
+        }
+
+    if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
+        return {
+            "status": "no_file",
+            "message": "SBOM 檔案不存在，無法驗證簽章",
+        }
+
+    with open(release.sbom_file_path, "rb") as f:
+        sbom_content = f.read()
+
+    result = _verify_sig(sbom_content, release.sbom_signature, release.signature_public_key, release.signature_algorithm)
+
+    return {
+        "status": "valid" if result.valid else "invalid",
+        "algorithm": result.algorithm,
+        "signer_identity": result.signer_identity or release.signer_identity,
+        "signed_at": release.signed_at.isoformat() if release.signed_at else None,
+        "message": result.message,
+        "detail": result.detail,
+    }
+
+
+@router.delete("/{release_id}/signature")
+def delete_signature(release_id: str, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Remove the signature from a release."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法刪除簽章")
+    release.sbom_signature = None
+    release.signature_public_key = None
+    release.signature_algorithm = None
+    release.signer_identity = None
+    release.signed_at = None
+    db.commit()
+    return {"status": "ok", "message": "簽章已移除"}
 
 
 @router.post("/{release_id}/lock")
@@ -1329,6 +1455,19 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
     checks.append({"id": "all_triaged", "label": "所有漏洞已完成分類",
                    "passed": all_triaged,
                    "detail": f"{len(untriaged)} 個漏洞仍為 open/in_triage" if not all_triaged else f"全部 {len(vulns)} 個漏洞已分類"})
+
+    # 6. SBOM signature verified (optional — does not block gate if unsigned)
+    has_sig = bool(release.sbom_signature and release.signature_public_key)
+    sig_valid = False
+    sig_detail = "尚未上傳簽章"
+    if has_sig and release.sbom_file_path and os.path.exists(release.sbom_file_path):
+        with open(release.sbom_file_path, "rb") as f:
+            result = _verify_sig(f.read(), release.sbom_signature, release.signature_public_key, release.signature_algorithm)
+        sig_valid = result.valid
+        sig_detail = result.message
+    checks.append({"id": "signature_verified", "label": "SBOM 簽章已驗證",
+                   "passed": sig_valid or not has_sig,   # pass if unsigned (optional) or valid
+                   "detail": sig_detail})
 
     passed_count = sum(1 for c in checks if c["passed"])
     return {

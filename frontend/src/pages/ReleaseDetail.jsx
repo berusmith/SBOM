@@ -86,6 +86,10 @@ export default function ReleaseDetail() {
   const [locked, setLocked] = useState(false);
   const [integrity, setIntegrity] = useState(null);
   const [checkingIntegrity, setCheckingIntegrity] = useState(false);
+  const [sigStatus, setSigStatus] = useState(null);
+  const [sigUploading, setSigUploading] = useState(false);
+  const [showSigUpload, setShowSigUpload] = useState(false);
+  const [sigForm, setSigForm] = useState({ signature: "", public_key: "", algorithm: "", signer_identity: "" });
   const [sbomQuality, setSbomQuality] = useState(null);
   const [gate, setGate] = useState(null);
   const [depGraph, setDepGraph] = useState(null);
@@ -130,6 +134,7 @@ export default function ReleaseDetail() {
     const timer = setTimeout(() => {
       fetchQuality();
       fetchGate();
+      fetchSigStatus();
     }, 100);
     return () => clearTimeout(timer);
   }, [releaseId]);
@@ -161,6 +166,42 @@ export default function ReleaseDetail() {
       setIntegrity(r.data);
     } catch { setIntegrity({ status: "error", message: "驗證失敗" }); }
     finally { setCheckingIntegrity(false); }
+  };
+
+  const fetchSigStatus = async () => {
+    try {
+      const r = await api.get(`/releases/${releaseId}/signature/verify`);
+      setSigStatus(r.data);
+    } catch { /* no signature */ }
+  };
+
+  const handleUploadSignature = async () => {
+    if (!sigForm.signature || !sigForm.public_key) {
+      toast.error("請提供簽章與公鑰");
+      return;
+    }
+    setSigUploading(true);
+    try {
+      await api.post(`/releases/${releaseId}/signature`, sigForm);
+      toast.success("簽章上傳成功");
+      setShowSigUpload(false);
+      setSigForm({ signature: "", public_key: "", algorithm: "", signer_identity: "" });
+      fetchSigStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "簽章上傳失敗");
+    } finally {
+      setSigUploading(false);
+    }
+  };
+
+  const handleDeleteSignature = async () => {
+    try {
+      await api.delete(`/releases/${releaseId}/signature`);
+      toast.success("簽章已移除");
+      setSigStatus(null);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "刪除簽章失敗");
+    }
   };
 
   // 點擊 dropdown 外部時關閉
@@ -608,6 +649,90 @@ export default function ReleaseDetail() {
           )}
         </div>
       )}
+
+      {/* Signature status card */}
+      <div className={`mb-3 rounded-lg border p-3 ${
+        sigStatus?.status === "valid" ? "border-green-300 bg-green-50" :
+        sigStatus?.status === "invalid" ? "border-red-300 bg-red-50" :
+        "border-gray-200 bg-gray-50"
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <Lock size={14} className={
+              sigStatus?.status === "valid" ? "text-green-600" :
+              sigStatus?.status === "invalid" ? "text-red-600" : "text-gray-400"
+            } />
+            <span className="font-medium text-gray-700">SBOM 簽章</span>
+            {sigStatus?.status === "valid" && (
+              <span className="text-green-700 text-xs">
+                {sigStatus.algorithm} | {sigStatus.signer_identity || "未知簽署者"}
+                {sigStatus.signed_at && ` | ${formatDateTime(sigStatus.signed_at)}`}
+              </span>
+            )}
+            {sigStatus?.status === "invalid" && (
+              <span className="text-red-700 text-xs">{sigStatus.message}</span>
+            )}
+            {(!sigStatus || sigStatus.status === "unsigned") && (
+              <span className="text-gray-500 text-xs">尚未上傳簽章</span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {sigStatus?.status === "valid" && !locked && (
+              <button onClick={handleDeleteSignature} className="text-xs text-red-500 hover:underline">移除</button>
+            )}
+            {(!sigStatus || sigStatus.status === "unsigned") && !locked && (
+              <button onClick={() => setShowSigUpload(!showSigUpload)}
+                className="text-xs text-blue-600 hover:underline">
+                {showSigUpload ? "取消" : "上傳簽章"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Signature upload form */}
+        {showSigUpload && (
+          <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">簽章（Base64）</label>
+              <textarea rows={3} className="w-full border rounded px-2 py-1 text-xs font-mono"
+                placeholder="cosign sign --key cosign.key sbom.json 產生的簽章"
+                value={sigForm.signature}
+                onChange={(e) => setSigForm(f => ({...f, signature: e.target.value}))} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">公鑰或憑證（PEM 格式）</label>
+              <textarea rows={3} className="w-full border rounded px-2 py-1 text-xs font-mono"
+                placeholder="-----BEGIN PUBLIC KEY-----&#10;...&#10;-----END PUBLIC KEY-----"
+                value={sigForm.public_key}
+                onChange={(e) => setSigForm(f => ({...f, public_key: e.target.value}))} />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">演算法（留空自動偵測）</label>
+                <select className="w-full border rounded px-2 py-1 text-xs"
+                  value={sigForm.algorithm}
+                  onChange={(e) => setSigForm(f => ({...f, algorithm: e.target.value}))}>
+                  <option value="">自動偵測</option>
+                  <option value="ecdsa-sha256">ECDSA-SHA256 (Sigstore/cosign)</option>
+                  <option value="rsa-pss-sha256">RSA-PSS-SHA256</option>
+                  <option value="rsa-pkcs1-sha256">RSA-PKCS1-SHA256</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">簽署者身份（選填）</label>
+                <input type="text" className="w-full border rounded px-2 py-1 text-xs"
+                  placeholder="user@example.com"
+                  value={sigForm.signer_identity}
+                  onChange={(e) => setSigForm(f => ({...f, signer_identity: e.target.value}))} />
+              </div>
+            </div>
+            <button onClick={handleUploadSignature} disabled={sigUploading}
+              className="px-4 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50">
+              {sigUploading ? "上傳中..." : "驗證並儲存簽章"}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Lock banner */}
       {locked && (

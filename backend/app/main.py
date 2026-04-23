@@ -60,6 +60,11 @@ with engine.connect() as conn:
         for col, typedef in [
             ("sbom_hash", "TEXT"),
             ("locked",    "INTEGER DEFAULT 0"),
+            ("sbom_signature", "TEXT"),
+            ("signature_public_key", "TEXT"),
+            ("signature_algorithm", "TEXT"),
+            ("signer_identity", "TEXT"),
+            ("signed_at", "TEXT"),
         ]:
             if col not in rel_cols:
                 conn.execute(text(f"ALTER TABLE releases ADD COLUMN {col} {typedef}"))

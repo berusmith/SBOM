@@ -19,6 +19,13 @@ class Release(Base):
     sbom_hash = Column(String, nullable=True)    # SHA-256 of uploaded SBOM file
     locked = Column(Boolean, nullable=False, default=False)
 
+    # Sigstore / cosign signature fields
+    sbom_signature = Column(String, nullable=True)       # base64-encoded signature
+    signature_public_key = Column(String, nullable=True)  # PEM-encoded public key or certificate
+    signature_algorithm = Column(String, nullable=True)   # e.g. "ecdsa-sha256", "rsa-pss-sha256"
+    signer_identity = Column(String, nullable=True)       # email or URI of signer
+    signed_at = Column(DateTime, nullable=True)           # when the SBOM was signed
+
     product = relationship("Product", back_populates="releases")
     components = relationship("Component", back_populates="release", cascade="all, delete-orphan")
     compliance_maps = relationship("ComplianceMap", back_populates="release", cascade="all, delete-orphan")
