@@ -87,6 +87,12 @@ with engine.connect() as conn:
             conn.execute(text(f"ALTER TABLE alert_config ADD COLUMN {col} {typedef}"))
     conn.commit()
 
+    # api_tokens — add scope column (default admin for backward compat)
+    tok_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(api_tokens)"))} if "api_tokens" in _existing_tables else set()
+    if "scope" not in tok_cols and "api_tokens" in _existing_tables:
+        conn.execute(text("ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT 'admin'"))
+    conn.commit()
+
     # Performance indexes — safe to run repeatedly via IF NOT EXISTS (only on existing tables)
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",

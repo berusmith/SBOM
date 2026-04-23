@@ -320,13 +320,21 @@ final_submitted → closed
 
 ## API 金鑰 API Tokens
 
-長效金鑰供 CI/CD pipeline 整合使用。僅 admin 可建立/列表/撤銷。建立時明文只回傳一次，資料庫僅存 SHA-256 hash。
+長效金鑰供 CI/CD pipeline 整合使用。僅 admin scope 可建立/列表/撤銷。建立時明文只回傳一次，資料庫僅存 SHA-256 hash。
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | GET | `/api/tokens` | 列出所有 API tokens（不含明文） |
-| POST | `/api/tokens` | 建立新 token，body：`{"name": "GitLab CI"}`，回傳 `token` 欄位即明文 |
+| POST | `/api/tokens` | 建立新 token，body：`{"name": "GitLab CI", "scope": "write"}`；回傳 `token` 欄位即明文 |
 | DELETE | `/api/tokens/{id}` | 撤銷 token（立即失效，不可復原） |
+
+**權限範圍 (scope)**
+
+| Scope | 允許的 HTTP 動詞 | 備註 |
+|-------|------------------|------|
+| `read`  | GET | 僅能讀取資料，CI/CD 僅需查詢時最佳 |
+| `write` | GET / POST / PATCH / PUT | 可上傳 SBOM、更新 VEX、rescan；不可 DELETE，不可管理 Token/User |
+| `admin` | 全部 | 完整權限（預設） |
 
 **使用範例**
 ```bash
@@ -334,7 +342,7 @@ curl -H "Authorization: Bearer sbom_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
      http://localhost:9100/api/organizations
 ```
 
-API Token 認證身份固定為 admin role，每次呼叫會更新 `last_used_at`。
+每次呼叫會更新 `last_used_at`。
 
 ---
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ _bearer = HTTPBearer()
 
 
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -24,6 +25,14 @@ def get_current_user(
         ).first()
         if not rec:
             raise HTTPException(status_code=401, detail="無效或已撤銷的 API token")
+
+        scope = rec.scope or "admin"
+        method = request.method.upper()
+        if scope == "read" and method != "GET":
+            raise HTTPException(status_code=403, detail="此 API Token 為唯讀，不可執行寫入操作")
+        if scope == "write" and method == "DELETE":
+            raise HTTPException(status_code=403, detail="此 API Token 無刪除權限")
+
         rec.last_used_at = datetime.now(timezone.utc)
         db.commit()
         return {
@@ -32,6 +41,7 @@ def get_current_user(
             "org_id": None,
             "user_id": None,
             "api_token_id": rec.id,
+            "api_token_scope": scope,
         }
     try:
         return decode_token(token)
@@ -42,6 +52,18 @@ def get_current_user(
 def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="此操作需要管理員權限")
+    # Read-only API tokens never pass admin gates. Write tokens pass (DELETE
+    # already blocked at get_current_user). Admin scope or JWT-based admin: full access.
+    if user.get("api_token_scope") == "read":
+        raise HTTPException(status_code=403, detail="此 API Token 為唯讀，不可執行寫入操作")
+    return user
+
+
+def require_admin_scope(user: dict = Depends(require_admin)) -> dict:
+    """Strict admin — blocks write-scope API tokens. For token/user management endpoints."""
+    scope = user.get("api_token_scope")
+    if scope is not None and scope != "admin":
+        raise HTTPException(status_code=403, detail="此操作僅限管理員 Token")
     return user
 
 

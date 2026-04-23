@@ -173,6 +173,40 @@ if api_tok:
 s, d = req("GET", "/api/stats", tok="sbom_notarealtoken12345")
 chk("Token: bogus sbom_ token rejected (401)", s == 401, "status=" + str(s))
 
+# Scope: read-only token
+s, d = req("POST", "/api/tokens", {"name": "qa-ro-" + TS, "scope": "read"}, tok=token)
+chk("Token scope: create read-only (201)", s == 201 and d.get("scope") == "read", "status=" + str(s))
+ro_tok = d.get("token")
+ro_id  = d.get("id")
+if ro_tok:
+    s, d = req("GET", "/api/stats", tok=ro_tok)
+    chk("Token scope: read token can GET (200)", s == 200, "status=" + str(s))
+    s, d = req("POST", "/api/organizations", {"name": "ShouldFail"}, tok=ro_tok)
+    chk("Token scope: read token blocked from POST (403)", s == 403, "status=" + str(s))
+    req("DELETE", "/api/tokens/" + ro_id, tok=token)
+
+# Scope: write token
+s, d = req("POST", "/api/tokens", {"name": "qa-rw-" + TS, "scope": "write"}, tok=token)
+chk("Token scope: create write (201)", s == 201 and d.get("scope") == "write", "status=" + str(s))
+rw_tok = d.get("token")
+rw_id  = d.get("id")
+if rw_tok:
+    s, d = req("POST", "/api/organizations", {"name": "TokenScopeTest-" + TS}, tok=rw_tok)
+    chk("Token scope: write token can POST (200)", s == 200, "status=" + str(s))
+    tmp_org = d.get("id")
+    if tmp_org:
+        s, _ = req("DELETE", "/api/organizations/" + tmp_org, tok=rw_tok)
+        chk("Token scope: write token blocked from DELETE (403)", s == 403, "status=" + str(s))
+        req("DELETE", "/api/organizations/" + tmp_org, tok=token)  # cleanup via admin
+    # write scope cannot hit admin endpoints
+    s, _ = req("GET", "/api/tokens", tok=rw_tok)
+    chk("Token scope: write token blocked from /tokens admin (403)", s == 403, "status=" + str(s))
+    req("DELETE", "/api/tokens/" + rw_id, tok=token)
+
+# Invalid scope
+s, d = req("POST", "/api/tokens", {"name": "bad", "scope": "superuser"}, tok=token)
+chk("Token scope: reject invalid scope (400)", s == 400, "status=" + str(s))
+
 # --- Cleanup ---
 req("DELETE", "/api/releases/" + rel_id, tok=token)
 req("DELETE", "/api/products/" + prod_id, tok=token)

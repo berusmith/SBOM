@@ -21,6 +21,10 @@ class ApiToken(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_used_at = Column(DateTime, nullable=True)
     revoked = Column(Boolean, default=False, nullable=False)
+    scope = Column(String, nullable=False, default="admin")  # read | write | admin
+
+
+VALID_SCOPES = ("read", "write", "admin")
 
 
 def generate_token() -> tuple[str, str, str]:

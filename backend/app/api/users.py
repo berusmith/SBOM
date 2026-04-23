@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin_scope as require_admin
 from app.core.security import hash_password
 from app.models.user import User
 

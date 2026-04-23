@@ -427,6 +427,7 @@ function ApiTokens({ flash }) {
   const [tokens, setTokens] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
+  const [scope, setScope] = useState("admin");
   const [saving, setSaving] = useState(false);
   const [newToken, setNewToken] = useState(null);
   const [confirmRevoke, setConfirmRevoke] = useState(null);
@@ -440,9 +441,10 @@ function ApiTokens({ flash }) {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      const r = await api.post("/tokens", { name: name.trim() });
+      const r = await api.post("/tokens", { name: name.trim(), scope });
       setNewToken(r.data);
       setName("");
+      setScope("admin");
       setShowForm(false);
       fetchTokens();
     } catch (err) {
@@ -498,12 +500,24 @@ function ApiTokens({ flash }) {
               className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
             />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">權限範圍</label>
+            <select
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="read">唯讀（僅 GET）</option>
+              <option value="write">讀寫（不可刪除）</option>
+              <option value="admin">管理員（完整權限）</option>
+            </select>
+          </div>
           <div className="flex gap-2">
             <button type="submit" disabled={saving}
               className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
               {saving ? "建立中..." : "建立"}
             </button>
-            <button type="button" onClick={() => { setShowForm(false); setName(""); }}
+            <button type="button" onClick={() => { setShowForm(false); setName(""); setScope("admin"); }}
               className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">
               取消
             </button>
@@ -538,6 +552,13 @@ function ApiTokens({ flash }) {
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-medium ${t.revoked ? "text-gray-600 line-through" : "text-gray-800"}`}>
                 {t.name}
+                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded font-normal ${
+                  t.scope === "admin" ? "bg-red-100 text-red-700" :
+                  t.scope === "write" ? "bg-blue-100 text-blue-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>
+                  {t.scope === "admin" ? "Admin" : t.scope === "write" ? "Write" : "Read"}
+                </span>
               </p>
               <p className="text-xs text-gray-600 font-mono">{t.prefix}...</p>
               <p className="text-xs text-gray-500">
