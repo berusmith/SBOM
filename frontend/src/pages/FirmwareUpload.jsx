@@ -21,7 +21,7 @@ export default function FirmwareUpload() {
 
   const fetchScans = async () => {
     try {
-      const res = await api.get("/api/firmware/scans");
+      const res = await api.get("/firmware/scans");
       setScans(res.data);
     } catch (err) {
       console.error("Failed to fetch scans:", err);
@@ -56,7 +56,7 @@ export default function FirmwareUpload() {
     try {
       const form = new FormData();
       form.append("file", selectedFile);
-      const res = await api.post("/api/firmware/upload", form, {
+      const res = await api.post("/firmware/upload", form, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       toast.success(`韌體上傳成功: ${res.data.scan_id.slice(0, 8)}`);

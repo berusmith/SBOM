@@ -505,7 +505,7 @@ export default function Dashboard() {
                     <tr
                       key={org.org_id}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => navigate("/organizations")}
+                      onClick={() => navigate(`/organizations/${org.org_id}/products`)}
                     >
                       <td className="py-2.5 pr-4 font-medium text-gray-800">{org.org_name}</td>
                       <td className="py-2.5 pr-4 text-center text-gray-500">{org.products}</td>

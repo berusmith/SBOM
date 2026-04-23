@@ -5,6 +5,7 @@ import api from "../api/client";
 import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { SkeletonTable } from "../components/Skeleton";
 
 const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護" };
 
@@ -29,14 +30,16 @@ export default function TISAXAssessments() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ organization_id: "", module: "infosec", assessment_level: "AL2" });
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const isAdmin = localStorage.getItem("role") === "admin";
   const orgId   = localStorage.getItem("org_id");
 
   const fetchAll = () => {
-    api.get("/tisax/assessments").then(r => setAssessments(r.data));
-    if (isAdmin) api.get("/organizations").then(r => setOrgs(r.data));
+    const calls = [api.get("/tisax/assessments").then(r => setAssessments(r.data))];
+    if (isAdmin) calls.push(api.get("/organizations").then(r => setOrgs(r.data)));
+    Promise.all(calls).catch(() => {}).finally(() => setPageLoading(false));
   };
 
   useEffect(() => { fetchAll(); }, []);
@@ -128,7 +131,9 @@ export default function TISAXAssessments() {
         </form>
       )}
 
-      {assessments.length === 0 ? (
+      {pageLoading ? (
+        <SkeletonTable rows={3} cols={4} />
+      ) : assessments.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-600">
           尚無評估，點擊「新增評估」開始 TISAX 自評
         </div>

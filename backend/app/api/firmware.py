@@ -10,7 +10,11 @@ from app.models.product import Product
 from app.services.firmware_service import FirmwareService
 import uuid
 import json
+from pathlib import Path
 from datetime import datetime
+
+FIRMWARE_UPLOAD_DIR = Path("backend/firmware_uploads")
+FIRMWARE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter(prefix="/api/firmware", tags=["firmware"])
 firmware_service = FirmwareService()
@@ -28,7 +32,7 @@ async def upload_firmware(file: UploadFile = File(...), background_tasks: Backgr
         scan_id = str(uuid.uuid4())
 
         # Save file
-        file_path = f"backend/firmware_uploads/{scan_id}_{file.filename}"
+        file_path = str(FIRMWARE_UPLOAD_DIR / f"{scan_id}_{file.filename}")
         contents = await file.read()
         with open(file_path, "wb") as f:
             f.write(contents)

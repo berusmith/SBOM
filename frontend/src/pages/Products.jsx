@@ -4,6 +4,7 @@ import { Package } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { SkeletonTable } from "../components/Skeleton";
 import { formatDate } from "../utils/date";
 
 export default function Products() {
@@ -15,18 +16,21 @@ export default function Products() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = () => {
-    api.get("/organizations").then((res) => {
-      const org = res.data.find((o) => o.id === orgId);
-      if (org) setOrgName(org.name);
-    });
-    api.get(`/organizations/${orgId}/products`).then((res) => setProducts(res.data)).catch(() => {});
+    Promise.all([
+      api.get("/organizations").then((res) => {
+        const org = res.data.find((o) => o.id === orgId);
+        if (org) setOrgName(org.name);
+      }),
+      api.get(`/organizations/${orgId}/products`).then((res) => setProducts(res.data)).catch(() => {}),
+    ]).finally(() => setPageLoading(false));
   };
 
-  useEffect(() => { fetchData(); }, [orgId]);
+  useEffect(() => { setPageLoading(true); fetchData(); }, [orgId]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -104,6 +108,9 @@ export default function Products() {
         </form>
       )}
 
+      {pageLoading ? (
+        <SkeletonTable rows={4} cols={3} />
+      ) : (
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {products.length === 0 ? (
           <div className="p-8 text-center">
@@ -153,6 +160,7 @@ export default function Products() {
           </div>
         )}
       </div>
+      )}
 
       <ConfirmModal
         isOpen={!!confirmDelete}

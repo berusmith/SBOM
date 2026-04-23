@@ -141,11 +141,23 @@ export default function CRAIncidents() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="確認刪除事件"
+        message={`確定要刪除事件「${confirmDelete?.title}」？此操作無法還原。`}
+        confirmText="刪除"
+        cancelText="取消"
+        isDangerous
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }
 
 function CreateForm({ onClose, onCreated }) {
+  const toast = useToast();
   const [title, setTitle] = useState("");
   const [cveIds, setCveIds] = useState("");
   const [description, setDescription] = useState("");
@@ -214,17 +226,6 @@ function CreateForm({ onClose, onCreated }) {
           </div>
         </form>
       </div>
-
-      <ConfirmModal
-        isOpen={!!confirmDelete}
-        title="確認刪除事件"
-        message={`確定要刪除事件「${confirmDelete?.title}」？此操作無法還原。`}
-        confirmText="刪除"
-        cancelText="取消"
-        isDangerous
-        onConfirm={handleDelete}
-        onCancel={() => setConfirmDelete(null)}
-      />
     </div>
   );
 }

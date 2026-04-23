@@ -24,6 +24,7 @@ function StatusBadge({ status }) {
 }
 
 function ControlRow({ ctrl, onSave }) {
+  const toast = useToast();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing]   = useState(false);
   const [form, setForm] = useState({
