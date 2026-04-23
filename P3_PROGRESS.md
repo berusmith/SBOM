@@ -1,7 +1,7 @@
 # Phase 3+ 功能開發進度
 
 **最後更新**: 2026-04-23  
-**狀態**: ✅ P3-1~P3-5 + Phase 2.4a + License 分類 完成
+**狀態**: ✅ P3-1~P3-5 + Phase 2.4a + License 分類 + CI/CD 整合 完成
 
 ---
 
@@ -62,6 +62,38 @@
 - Webhook 測試：`POST /api/settings/alerts/test-webhook`
 - Email 測試：`POST /api/settings/alerts/test-email`
 - UI：Settings 頁面 Webhook / Email 欄位旁的「測試」按鈕
+
+### ✅ GitHub Action + CLI 工具（完成）
+
+#### Day 1 - Python CLI 工具
+- 實現 `tools/sbom-cli/` 目錄：
+  - `sbom.py` — 三個子命令：upload / gate / diff
+  - `setup.py` — pip install -e 支援
+  - `README.md` — 使用說明
+- 功能已驗證：gate 與 diff 命令正常運作
+- 編碼修復：Windows cp950 → UTF-8 支援繁體中文
+- 純 stdlib 實現（urllib + json，無額外依賴）
+
+#### Day 2 - GitHub Actions
+- 實現 `tools/sbom-action/` 目錄：
+  - `action.yml` — Composite action 定義（輸入：sbom-file、release-id、api-token、api-url、fail-on-gate）
+  - `example.yml` — 使用範例 workflow
+  - `README.md` — 詳細說明
+- 功能：自動上傳 SBOM、檢查 Policy Gate、在 PR 上留評論
+
+#### Day 3 - 文檔與 Help 整合
+- 新增 `docs/ci-integration.md` — 完整 CI/CD 集成指南：
+  - API Token 建立步驟
+  - CLI 安裝與各命令使用
+  - GitHub Actions / Jenkins / GitLab CI / CircleCI 整合範例
+  - 最佳實踐與故障排除
+- Help.jsx 新增「CI/CD 整合」部分（5 篇文章）
+- CLAUDE.md 新增 tools/ 目錄文檔說明
+
+**Commits:**
+- `2cb42b1` - feat: Day 1 - Python CLI tool for SBOM CI/CD integration
+- `26f3857` - feat: Day 2 - GitHub Action for SBOM Policy Gate integration
+- `1650499` - feat: Day 3 - Documentation and Help page integration for CI/CD
 
 ---
 

@@ -4,10 +4,14 @@
 - API Token 最小權限（read / write / admin scope）
 - 首屏性能優化（路由 lazy + 依賴圖延後 fetch）
 - License 風險分類 + 通知測試按鈕
+- ✅ **GitHub Action + CLI 工具（完成）**
+  - Day 1：Python CLI 工具（sbom upload / gate / diff）
+  - Day 2：GitHub Actions composite action
+  - Day 3：文檔整合 + Help 頁面
 
 ---
 
-## 下一項：GitHub Action + CLI 工具（3 天）
+## 下一項：TISAX 模組（~2 週）
 
 ### 為什麼選這個
 競品分析詳見 `docs/competitor-gap.md`。結論：**CI/CD 整合**是目前跟 Snyk / Anchore / Dependency-Track 落差最大、但也最便宜補上的一塊。Reachability、Sigstore、Postgres 這三塊投資回報週期太長，應放後面。
