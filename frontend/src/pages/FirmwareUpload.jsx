@@ -193,7 +193,7 @@ export default function FirmwareUpload() {
           <button
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
-            className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:cursor-not-allowed"
           >
             {uploading ? "上傳中..." : "開始上傳"}
           </button>
@@ -328,7 +328,7 @@ export default function FirmwareUpload() {
                   value={importData.org}
                   onChange={(e) => handleOrgChange(e.target.value)}
                   disabled={importLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   <option value="">選擇組織...</option>
                   {organizations.map((org) => (
@@ -346,7 +346,7 @@ export default function FirmwareUpload() {
                   value={importData.product}
                   onChange={(e) => setImportData({ ...importData, product: e.target.value })}
                   disabled={importLoading || !importData.org}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
                 >
                   <option value="">選擇產品...</option>
                   {products.map((product) => (
@@ -365,7 +365,7 @@ export default function FirmwareUpload() {
                   value={importData.version}
                   onChange={(e) => setImportData({ ...importData, version: e.target.value })}
                   disabled={importLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                   placeholder="e.g., v1.0.0"
                 />
               </div>
@@ -385,14 +385,14 @@ export default function FirmwareUpload() {
               <button
                 onClick={() => setImportModalOpen(false)}
                 disabled={importLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 取消
               </button>
               <button
                 onClick={handleImportConfirm}
                 disabled={importLoading || !importData.org || !importData.product || !importData.version}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:cursor-not-allowed"
               >
                 {importLoading ? "匯入中..." : "確認匯入"}
               </button>

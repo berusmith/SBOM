@@ -374,7 +374,7 @@ export default function Policies() {
                 <input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
 
@@ -383,7 +383,7 @@ export default function Policies() {
                 <input
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
               </div>
 
@@ -393,7 +393,7 @@ export default function Policies() {
                   <select
                     value={form.severity}
                     onChange={(e) => setForm({ ...form, severity: e.target.value })}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   >
                     {SEVERITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -404,7 +404,7 @@ export default function Policies() {
                     type="number" min={0}
                     value={form.min_days_open}
                     onChange={(e) => setForm({ ...form, min_days_open: parseInt(e.target.value) || 0 })}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                   />
                 </div>
               </div>
@@ -415,7 +415,7 @@ export default function Policies() {
                   value={form.statuses}
                   onChange={(e) => setForm({ ...form, statuses: e.target.value })}
                   placeholder="open,in_triage,affected"
-                  className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <p className="text-xs text-gray-600 mt-0.5">可用值：open / in_triage / affected / not_affected / fixed</p>
               </div>

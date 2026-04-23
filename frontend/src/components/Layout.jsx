@@ -75,7 +75,7 @@ export default function Layout({ children }) {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder="搜尋元件..."
-                className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button type="submit" className="text-gray-600 hover:text-white px-1 text-sm">⌕</button>
             </form>
@@ -133,7 +133,7 @@ export default function Layout({ children }) {
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
                   placeholder="搜尋元件..."
-                  className="bg-gray-700 text-white text-sm rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="bg-gray-700 text-white text-sm rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">搜尋</button>
               </form>

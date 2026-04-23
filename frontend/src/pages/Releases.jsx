@@ -115,7 +115,7 @@ export default function Releases() {
           />
           <div className="flex gap-2">
             <button type="submit" disabled={loading}
-              className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+              className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "建立中..." : "確認"}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
@@ -148,13 +148,13 @@ export default function Releases() {
           <p className="text-sm font-medium text-gray-700 mb-3">選擇要比對的兩個版本</p>
           <div className="flex gap-3 items-center flex-wrap">
             <select value={diffFrom} onChange={(e) => setDiffFrom(e.target.value)}
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
               <option value="">— 舊版本 —</option>
               {releases.map((r) => <option key={r.id} value={r.id}>{r.version}</option>)}
             </select>
             <span className="text-gray-600">→</span>
             <select value={diffTo} onChange={(e) => setDiffTo(e.target.value)}
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400">
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
               <option value="">— 新版本 —</option>
               {releases.map((r) => <option key={r.id} value={r.id}>{r.version}</option>)}
             </select>

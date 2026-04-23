@@ -181,7 +181,7 @@ function CreateForm({ onClose, onCreated }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="例：Log4Shell 影響評估"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
@@ -190,7 +190,7 @@ function CreateForm({ onClose, onCreated }) {
               value={cveIds}
               onChange={(e) => setCveIds(e.target.value)}
               placeholder="CVE-2021-44228,CVE-2021-45046"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
@@ -199,7 +199,7 @@ function CreateForm({ onClose, onCreated }) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
             />
           </div>
           <div className="flex justify-end gap-2">

@@ -8,15 +8,18 @@ export default function Search() {
   const [input, setInput] = useState(searchParams.get("q") || "");
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
 
   const doSearch = async (q) => {
     if (!q.trim()) return;
     setLoading(true);
+    setSearchError(null);
     try {
       const res = await api.get("/search/components", { params: { q } });
       setResults(res.data);
     } catch {
-      setResults({ query: q, total: 0, results: [] });
+      setResults(null);
+      setSearchError("搜尋失敗，請確認後端服務是否正常運作");
     } finally {
       setLoading(false);
     }
@@ -43,7 +46,7 @@ export default function Search() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="輸入元件名稱，例如：log4j、openssl、spring"
-          className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           autoFocus
         />
         <button
@@ -54,6 +57,13 @@ export default function Search() {
           {loading ? "搜尋中..." : "搜尋"}
         </button>
       </form>
+
+      {searchError && (
+        <div className="text-center py-8">
+          <div className="text-red-500 font-medium">{searchError}</div>
+          <button onClick={() => doSearch(input)} className="mt-2 text-sm text-blue-600 hover:underline">重試</button>
+        </div>
+      )}
 
       {results && (
         <>
@@ -106,7 +116,7 @@ export default function Search() {
                       </td>
                       <td className="px-4 py-2">
                         {r.kev_count > 0 && (
-                          <span className="px-1.5 py-0.5 rounded text-white bg-red-600 font-bold" style={{fontSize:"10px"}}>
+                          <span className="px-1.5 py-0.5 rounded text-white bg-red-600 font-bold text-[10px]">
                             {r.kev_count} KEV
                           </span>
                         )}

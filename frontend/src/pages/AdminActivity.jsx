@@ -154,7 +154,7 @@ export default function AdminActivity() {
             <select
               value={filterOrg}
               onChange={e => setFilterOrg(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="">所有客戶</option>
               {orgs.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
@@ -165,7 +165,7 @@ export default function AdminActivity() {
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="">所有事件</option>
               {allEventTypes.map(k => (
@@ -176,12 +176,12 @@ export default function AdminActivity() {
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500">開始日期</label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500">結束日期</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+              className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <button onClick={handleFilter} disabled={fetching}
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded disabled:opacity-40">

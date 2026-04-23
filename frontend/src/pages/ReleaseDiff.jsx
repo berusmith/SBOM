@@ -158,7 +158,7 @@ function VulnTable({ items }) {
           <tr key={i} className="border-t">
             <td className="px-4 py-2 font-mono text-xs text-blue-700">
               {v.cve_id}
-              {v.is_kev && <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold" style={{fontSize:"10px"}}>KEV</span>}
+              {v.is_kev && <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold text-[10px]">KEV</span>}
             </td>
             <td className="px-4 py-2 text-gray-600 text-xs">{v.component}</td>
             <td className="px-4 py-2 text-gray-600">{v.cvss_score ?? "—"}</td>

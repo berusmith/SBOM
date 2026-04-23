@@ -121,7 +121,7 @@ export default function TISAXAssessments() {
             <button type="button" onClick={() => setShowForm(false)}
               className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">取消</button>
             <button type="submit" disabled={loading}
-              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "建立中..." : "確認建立"}
             </button>
           </div>

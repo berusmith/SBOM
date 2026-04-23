@@ -283,7 +283,7 @@ function ActionPanel({ inc, onUpdate }) {
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
           />
         </div>
 
@@ -294,7 +294,7 @@ function ActionPanel({ inc, onUpdate }) {
               value={enisaRef}
               onChange={(e) => setEnisaRef(e.target.value)}
               placeholder="ENISA-2026-XXXX"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
         )}
@@ -306,7 +306,7 @@ function ActionPanel({ inc, onUpdate }) {
               type="datetime-local"
               value={remDate}
               onChange={(e) => setRemDate(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
         )}

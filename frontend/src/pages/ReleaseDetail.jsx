@@ -101,7 +101,7 @@ export default function ReleaseDetail() {
   const [toggling, setToggling] = useState(false);
 
   const fetchComponents = () => {
-    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => {});
+    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
   };
   const fetchQuality = () => {
     api.get(`/releases/${releaseId}/sbom-quality`).then((r) => setSbomQuality(r.data)).catch(() => setSbomQuality(null));
@@ -113,14 +113,14 @@ export default function ReleaseDetail() {
     api.get(`/releases/${releaseId}/dependency-graph`).then((r) => setDepGraph(r.data)).catch(() => setDepGraph(null));
   };
   const fetchVulns = () => {
-    api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => {});
+    api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => toast.error("漏洞清單載入失敗"));
   };
   const fetchViolations = () => {
     api.get(`/policies/releases/${releaseId}/violations`).then((r) => setViolations(r.data)).catch(() => {});
     api.get(`/licenses/releases/${releaseId}/violations`).then((r) => setLicenseViolations(r.data)).catch(() => {});
   };
   const fetchRelease = () => {
-    api.get(`/releases/${releaseId}`).then((r) => setLocked(r.data.locked ?? false)).catch(() => {});
+    api.get(`/releases/${releaseId}`).then((r) => setLocked(r.data.locked ?? false)).catch(() => toast.error("版本資料載入失敗"));
   };
 
   useEffect(() => {
@@ -503,14 +503,14 @@ export default function ReleaseDetail() {
             <button
               onClick={handleRescan}
               disabled={rescanning}
-              className={`px-4 py-2 rounded text-sm text-white font-medium ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50`}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {rescanning ? "掃描中..." : "重新掃描 CVE"}
             </button>
             <button
               onClick={handleDownloadReport}
               disabled={downloading}
-              className={`px-4 py-2 rounded text-sm text-white font-medium ${downloading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50`}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${downloading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {downloading ? "產生中..." : "下載 PDF 報告"}
             </button>
@@ -535,7 +535,7 @@ export default function ReleaseDetail() {
                     { label: exportingCsv ? "匯出中..." : "匯出 CSV", disabled: exportingCsv, onClick: () => { handleExportCsv(); setExportMenuOpen(false); } },
                   ].map((item, i) => (
                     <button key={i} onClick={item.onClick} disabled={item.disabled}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                       {item.label}
                     </button>
                   ))}
@@ -547,7 +547,7 @@ export default function ReleaseDetail() {
                       const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
                       URL.revokeObjectURL(url);
                     } catch { toast.error("匯出失敗"); } finally { setExportingCdx(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {exportingCdx ? "匯出中..." : "CycloneDX XML"}
                   </button>
                   <button disabled={exportingSpdx} onClick={async () => {
@@ -558,12 +558,12 @@ export default function ReleaseDetail() {
                       const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
                       URL.revokeObjectURL(url);
                     } catch { toast.error("匯出失敗"); } finally { setExportingSpdx(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {exportingSpdx ? "匯出中..." : "SPDX JSON"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={downloadingIec} onClick={() => { setExportMenuOpen(false); handleDownloadIec(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingIec ? "產生中..." : "IEC 62443-4-1 報告"}
                   </button>
                   <button disabled={downloadingIec42} onClick={async () => {
@@ -575,7 +575,7 @@ export default function ReleaseDetail() {
                       URL.revokeObjectURL(url);
                     } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
                     finally { setDownloadingIec42(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingIec42 ? "產生中..." : "IEC 62443-4-2 報告"}
                   </button>
                   <button disabled={downloadingIec33} onClick={async () => {
@@ -587,16 +587,16 @@ export default function ReleaseDetail() {
                       URL.revokeObjectURL(url);
                     } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
                     finally { setDownloadingIec33(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={downloadingEvidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingEvidence ? "打包中..." : "證據包 ZIP"}
                   </button>
                   <button disabled={downloadingCsaf} onClick={() => { setExportMenuOpen(false); handleDownloadCsaf(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingCsaf ? "產生中..." : "CSAF VEX"}
                   </button>
                 </div>
@@ -614,16 +614,16 @@ export default function ReleaseDetail() {
               {advancedMenuOpen && (
                 <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
                   <button disabled={enrichingNvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {enrichingNvd ? "啟動中..." : "更新 NVD 資料"}
                   </button>
                   <button disabled={enriching} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {enriching ? "更新中..." : "更新 EPSS 分數"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={checkingIntegrity} onClick={() => { setAdvancedMenuOpen(false); handleCheckIntegrity(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {checkingIntegrity ? "驗證中..." : "完整性驗證"}
                   </button>
                 </div>
@@ -727,7 +727,7 @@ export default function ReleaseDetail() {
               </div>
             </div>
             <button onClick={handleUploadSignature} disabled={sigUploading}
-              className="px-4 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50">
+              className="px-4 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {sigUploading ? "上傳中..." : "驗證並儲存簽章"}
             </button>
           </div>
@@ -909,7 +909,7 @@ export default function ReleaseDetail() {
                 <select
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   <option value="">全部嚴重度</option>
                   {["critical","high","medium","low","info"].map((s) => (
@@ -919,7 +919,7 @@ export default function ReleaseDetail() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
                   <option value="">全部狀態</option>
                   {STATUS_OPTIONS.map((s) => (
@@ -1018,7 +1018,7 @@ export default function ReleaseDetail() {
                         {v.cve_id}
                       </button>
                       {v.is_kev && (
-                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide" style={{fontSize:"10px"}}>KEV</span>
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide text-[10px]">KEV</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{v.component_name} {v.component_version}</td>
@@ -1026,12 +1026,12 @@ export default function ReleaseDetail() {
                       {v.cvss_v4_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v4_score}</span>
-                          <span className="px-1 rounded font-bold bg-purple-100 text-purple-700" style={{fontSize:"9px"}}>v4</span>
+                          <span className="px-1 rounded font-bold bg-purple-100 text-purple-700 text-[9px]">v4</span>
                         </span>
                       ) : v.cvss_v3_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v3_score}</span>
-                          <span className="px-1 rounded font-bold bg-blue-100 text-blue-700" style={{fontSize:"9px"}}>v3</span>
+                          <span className="px-1 rounded font-bold bg-blue-100 text-blue-700 text-[9px]">v3</span>
                         </span>
                       ) : (
                         <span className="text-gray-600">{v.cvss_score ?? "—"}</span>
@@ -1366,7 +1366,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>{STATUS_LABEL[s]}</option>
@@ -1383,7 +1383,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
               <select
                 value={justification}
                 onChange={(e) => setJustification(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <option value="">— 選擇原因 —</option>
                 {JUSTIFICATION_OPTIONS.map((o) => (
@@ -1402,7 +1402,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
               <select
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <option value="">— 選擇處置 —</option>
                 {RESPONSE_OPTIONS.map((o) => (
@@ -1422,7 +1422,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
               onChange={(e) => setDetail(e.target.value)}
               rows={3}
               placeholder="補充說明此漏洞的評估結果或處置方式..."
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
             />
           </div>
 
@@ -1436,7 +1436,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="例：已與開發確認此版本不影響"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
         </div>

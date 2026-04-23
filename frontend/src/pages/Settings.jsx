@@ -243,7 +243,7 @@ export default function Settings() {
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="例：台灣資安顧問股份有限公司"
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
 
@@ -254,7 +254,7 @@ export default function Settings() {
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
             placeholder="例：Securing the Supply Chain"
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
 
@@ -272,7 +272,7 @@ export default function Settings() {
               value={primaryColor}
               onChange={(e) => setPrimaryColor(e.target.value)}
               placeholder="#1e3a8a"
-              className="w-28 border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-28 border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
             {/* Preview swatch */}
             <div
@@ -291,7 +291,7 @@ export default function Settings() {
             value={reportFooter}
             onChange={(e) => setReportFooter(e.target.value)}
             placeholder="例：機密文件，僅供客戶參閱。Copyright © 2025"
-            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
 
@@ -315,7 +315,7 @@ export default function Settings() {
             <select
               value={intervalHours}
               onChange={(e) => setIntervalHours(Number(e.target.value))}
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value={0}>停用</option>
               <option value={6}>每 6 小時</option>
@@ -370,7 +370,7 @@ export default function Settings() {
             value={webhook}
             onChange={(e) => setWebhook(e.target.value)}
             placeholder="https://hooks.slack.com/services/..."
-            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
             onClick={handleTestWebhook}
@@ -392,7 +392,7 @@ export default function Settings() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             type="email"
-            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
             onClick={handleTestEmail}
@@ -497,7 +497,7 @@ function ApiTokens({ flash }) {
               onChange={(e) => setName(e.target.value)}
               placeholder="例：GitLab CI / Jenkins build"
               maxLength={100}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
@@ -505,7 +505,7 @@ function ApiTokens({ flash }) {
             <select
               value={scope}
               onChange={(e) => setScope(e.target.value)}
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="read">唯讀（僅 GET）</option>
               <option value="write">讀寫（不可刪除）</option>
@@ -673,7 +673,7 @@ function UserManagement({ flash }) {
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               placeholder="username"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div className="flex-1 min-w-[140px]">
@@ -682,7 +682,7 @@ function UserManagement({ flash }) {
               type="password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>
           <div>
@@ -690,7 +690,7 @@ function UserManagement({ flash }) {
             <select
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <option value="viewer">Viewer（唯讀）</option>
               <option value="admin">Admin（管理員）</option>
