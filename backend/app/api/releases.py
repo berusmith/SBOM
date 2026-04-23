@@ -18,7 +18,7 @@ from app.core import audit
 from app.core.config import settings as _cfg
 from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin
+from app.core.deps import get_org_scope, require_admin, get_current_user
 
 logger = logging.getLogger(__name__)
 from app.models.component import Component
@@ -33,6 +33,7 @@ from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
+from app.services.license_classifier import classify_license
 
 # Use env-configured path in production; auto-detect from source tree in dev
 UPLOAD_DIR = (
@@ -430,6 +431,7 @@ def list_components(release_id: str, org_scope: str | None = Depends(get_org_sco
             "version": c.version,
             "purl": c.purl,
             "license": c.license,
+            "license_risk": classify_license(c.license) if c.license else None,
             "vuln_count": len(vulns),
             "highest_severity": _highest_severity(vulns),
         })

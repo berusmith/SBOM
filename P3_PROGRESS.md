@@ -1,7 +1,7 @@
-# P3 UI/UX 改進 進度報告
+# Phase 3+ 功能開發進度
 
-**日期**: 2026-04-22  
-**狀態**: ✅ P3-1, P3-2, P3-3 完成
+**最後更新**: 2026-04-23  
+**狀態**: ✅ P3-1~P3-5 + Phase 2.4a + License 分類 完成
 
 ---
 
@@ -51,10 +51,25 @@
 
 ---
 
+## 最新完成項目（2026-04-23）
+
+### ✅ License 風險分類
+- 後端：`license_classifier.py` — Permissive / Copyleft / Commercial 三分類
+- API：`releases.py` `list_components` 端點新增 `license_risk` 欄位
+- 前端：`ReleaseDetail.jsx` 元件表格新增「授權風險」欄位（彩色標籤）
+
+### ✅ 通知測試按鈕（已存在）
+- Webhook 測試：`POST /api/settings/alerts/test-webhook`
+- Email 測試：`POST /api/settings/alerts/test-email`
+- UI：Settings 頁面 Webhook / Email 欄位旁的「測試」按鈕
+
+---
+
 ## 下一步待做
 
-- **P3-4**: 首屏性能優化 (ReleaseDetail 7 API 呼叫、Help 分頁)
-- **P3-5**: 無障礙改進 (aria-labels、table scope、鍵盤導航)
+- **排程自動重新掃描** (~1 天) — 每日/週自動對所有 Release 重跑 CVE+EPSS+CISA KEV
+- **API 存取金鑰** (~1 天) — CI/CD pipeline 整合用
+- **授權政策引擎** (~1 天) — 根據 License 清單自動標記違規元件
 
 ---
 

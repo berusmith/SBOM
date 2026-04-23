@@ -720,6 +720,7 @@ export default function ReleaseDetail() {
                   <th className="px-4 py-3" scope="col">元件名稱</th>
                   <th className="px-4 py-3" scope="col">版本</th>
                   <th className="px-4 py-3" scope="col">授權</th>
+                  <th className="px-4 py-3" scope="col">授權風險</th>
                   <th className="px-4 py-3" scope="col">漏洞數</th>
                   <th className="px-4 py-3" scope="col">最高風險</th>
                 </tr>
@@ -730,6 +731,21 @@ export default function ReleaseDetail() {
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
                     <td className="px-4 py-3 text-gray-500">{c.version || "—"}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{c.license || "—"}</td>
+                    <td className="px-4 py-3">
+                      {c.license_risk && c.license_risk !== "unknown" ? (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          c.license_risk === "permissive" ? "bg-green-100 text-green-800" :
+                          c.license_risk === "copyleft" ? "bg-yellow-100 text-yellow-800" :
+                          c.license_risk === "commercial" ? "bg-red-100 text-red-800" :
+                          "bg-gray-100 text-gray-800"
+                        }`}>
+                          {c.license_risk === "permissive" ? "寬鬆" :
+                           c.license_risk === "copyleft" ? "互惠" :
+                           c.license_risk === "commercial" ? "商業" :
+                           "未知"}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="px-4 py-3">{c.vuln_count || "—"}</td>
                     <td className="px-4 py-3">
                       {c.highest_severity ? (
