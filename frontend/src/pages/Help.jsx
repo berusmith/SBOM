@@ -595,6 +595,115 @@ const SECTIONS = [
       },
     ],
   },
+  {
+    id: "ci-integration",
+    title: "CI/CD 整合",
+    icon: "factory",
+    articles: [
+      {
+        id: "ci-overview",
+        title: "CI/CD 整合概述",
+        content: [
+          {
+            type: "para",
+            text: "SBOM 可直接整合到開發流程中，在每次構建或發佈時自動檢查 Policy Gate 狀態。系統提供 Python CLI 工具與 GitHub Actions 支援，也可透過 REST API 與任何 CI/CD 平台整合。",
+          },
+          {
+            type: "list",
+            items: [
+              "Python CLI 工具（sbom-cli）：輕量級命令列工具，支援上傳 SBOM、檢查 Policy Gate、比較版本差異",
+              "GitHub Actions：開箱即用的 GitHub Actions，自動在 PR 上留下檢查結果評論",
+              "REST API：直接調用後端 API，適合任何 CI/CD 系統（Jenkins、GitLab CI、CircleCI 等）",
+              "環境變數認證：使用長期 API Token，透過 SBOM_API_TOKEN 與 SBOM_API_URL 設定",
+            ],
+          },
+        ],
+      },
+      {
+        id: "ci-cli",
+        title: "Python CLI 工具安裝與使用",
+        content: [
+          {
+            type: "steps",
+            items: [
+              { step: "Step 1", title: "建立 API Token", body: "進入本系統 Settings → API Tokens → 新增 Token。選擇 scope（read / write / admin），複製 Token（以 sbom_ 開頭）。" },
+              { step: "Step 2", title: "安裝 CLI", body: "pip install sbom-cli 或 python /path/to/sbom-cli/sbom.py" },
+              { step: "Step 3", title: "設定環境變數", body: "export SBOM_API_TOKEN=sbom_xxx 與 export SBOM_API_URL=http://sbom.example.com" },
+              { step: "Step 4", title: "執行命令", body: "sbom upload sbom.json --release v1.0.0 / sbom gate --release v1.0.0 / sbom diff --v1 v1.0.0 --v2 v2.0.0 --product my-app" },
+            ],
+          },
+          {
+            type: "list",
+            items: [
+              "upload：上傳 SBOM 檔案到指定版本，返回 0 表示成功",
+              "gate：檢查 Policy Gate 狀態，返回 0 表示檢查通過，返回 1 表示失敗",
+              "diff：比較兩個版本的元件與漏洞差異",
+            ],
+          },
+        ],
+      },
+      {
+        id: "ci-github",
+        title: "GitHub Actions 集成",
+        content: [
+          {
+            type: "para",
+            text: "最簡便的整合方式，在 PR 上自動執行 Policy Gate 檢查，並將結果以評論形式顯示在 PR 頁面上。",
+          },
+          {
+            type: "list",
+            items: [
+              "在 GitHub Secrets 設定 SBOM_API_TOKEN（Settings → Secrets and variables → Actions）",
+              "在 .github/workflows/sbom-check.yml 添加 GitHub Action 步驟",
+              "每次 PR 時自動運行檢查，檢查失敗時可選擇阻止 PR 合併",
+            ],
+          },
+          {
+            type: "para",
+            text: "Workflow 範例：使用 ./tools/sbom-action 並傳入 sbom-file、release-id、api-token 與 fail-on-gate 參數。Action 會自動安裝 Python、安裝 CLI、上傳 SBOM、執行 Policy Gate 檢查，並在 PR 上留下評論。",
+          },
+        ],
+      },
+      {
+        id: "ci-other",
+        title: "其他 CI/CD 平台（Jenkins、GitLab CI 等）",
+        content: [
+          {
+            type: "para",
+            text: "所有平台都可使用 Python CLI 工具，透過標準的 shell 命令集成。重點是正確設定 API Token 與 API URL。",
+          },
+          {
+            type: "para",
+            text: "GitLab CI：在 .gitlab-ci.yml 中添加 sbom_check 階段，設定 SBOM_API_TOKEN 與 SBOM_API_URL 環境變數，執行 pip install sbom-cli、sbom upload 與 sbom gate 命令。",
+          },
+          {
+            type: "para",
+            text: "Jenkins：在 Jenkinsfile 的 SBOM Check 階段，使用 credentials 外掛取得 SBOM_API_TOKEN，在 sh step 中執行 pip install sbom-cli 與相應的 sbom 命令。",
+          },
+          {
+            type: "para",
+            text: "CircleCI、Azure Pipelines 等：同樣使用 Python 環境，設定 API Token 與 URL，執行相同的 sbom 命令。詳細說明請參考文檔 docs/ci-integration.md。",
+          },
+        ],
+      },
+      {
+        id: "ci-best-practices",
+        title: "最佳實踐",
+        content: [
+          {
+            type: "list",
+            items: [
+              "定期輪換 API Token：至少每 6 個月輪換一次，發現洩露時立即輪換",
+              "使用最小權限原則：讀取操作用 read scope，上傳用 write scope，管理用 admin scope",
+              "自動化 Gate 檢查：在發佈前自動檢查 Policy Gate，防止包含未處理漏洞的版本上線",
+              "記錄檢查結果：保留 CI/CD 日誌與政策門檢查結果，用於合規稽核與根因分析",
+              "漸進式改善：第一次整合可先設置 fail-on-gate=false，觀察檢查結果後再啟用 fail 模式",
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 // ──────────────────────────────────────────────

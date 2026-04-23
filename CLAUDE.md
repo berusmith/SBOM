@@ -200,6 +200,23 @@ Separate from VEX status. `suppressed=true` removes a vuln from SLA tracking, se
 - SQLite runs in **WAL mode** (`PRAGMA journal_mode=WAL` in `core/database.py`) — `sbom.db-shm` and `sbom.db-wal` are normal side-files, gitignored
 - No new npm packages — all charts/graphs use pure SVG rendered in React
 
+### CI/CD Tools (`tools/` directory)
+
+**`tools/sbom-cli/`** — Python command-line tool for SBOM operations in CI/CD pipelines
+- `sbom.py` — Main CLI with three subcommands:
+  - `sbom upload <file> --release <id>` — Upload SBOM file (multipart form-data to `/api/releases/{id}/sbom`)
+  - `sbom gate --release <id>` — Check Policy Gate status (GET `/api/releases/{id}/gate`); exit 0 if passed, 1 if failed
+  - `sbom diff --v1 <id1> --v2 <id2> [--product <pid>]` — Compare two releases (GET `/api/products/{pid}/diff?from={id1}&to={id2}`)
+- `setup.py` — Installable via `pip install -e tools/sbom-cli`; registers `sbom` console script
+- Environment variables: `SBOM_API_TOKEN` (required), `SBOM_API_URL` (default: `http://localhost:9100`)
+- Pure stdlib (urllib + json), no external dependencies except setuptools
+
+**`tools/sbom-action/`** — GitHub Actions composite action
+- `action.yml` — Composite action with inputs: `sbom-file`, `release-id`, `api-token`, `api-url`, `fail-on-gate`, `product-id`
+- Steps: Setup Python → Install CLI → Upload SBOM → Check gate → Comment on PR
+- Automatically comments on PR with Policy Gate results
+- Usage: `uses: ./tools/sbom-action` with secrets for API token
+
 ### Production Server
 - **IP**: `161.33.130.101` — Oracle Linux 9.7, 1GB RAM, user `opc`
 - **SSH key**: `D:\projects\SBOM\ssh-key-2026-04-21.key` (gitignored, one level above `sbom-platform/`)
