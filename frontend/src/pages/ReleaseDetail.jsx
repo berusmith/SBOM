@@ -829,7 +829,10 @@ export default function ReleaseDetail() {
           {sourceUploadResult.ok ? (
             <div className="flex items-center gap-4 flex-wrap">
               <span className="font-medium text-emerald-800">{sourceUploadResult.message}</span>
-              <span className="text-emerald-700 text-xs">掃描套件數：{sourceUploadResult.scanned_packages ?? sourceUploadResult.imported_packages}</span>
+              <span className="text-emerald-700 text-xs">掃描套件：{sourceUploadResult.scanned_packages ?? sourceUploadResult.imported_packages}</span>
+              {sourceUploadResult.ast_confirmed > 0 && (
+                <span className="text-emerald-700 text-xs font-medium">AST 確認：{sourceUploadResult.ast_confirmed} 個</span>
+              )}
               {sourceUploadResult.test_only > 0 && (
                 <span className="text-orange-600 text-xs">僅測試：{sourceUploadResult.test_only}</span>
               )}
@@ -1284,7 +1287,9 @@ export default function ReleaseDetail() {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell">
-                      {v.reachability === "reachable" || v.reachability === "imported" ? (
+                      {v.reachability === "function_reachable" ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-700 text-white" title="AST 確認：進入點呼叫鏈可達">函式確認</span>
+                      ) : v.reachability === "reachable" || v.reachability === "imported" ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">已使用</span>
                       ) : v.reachability === "test_only" ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">僅測試</span>

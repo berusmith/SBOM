@@ -1668,7 +1668,7 @@ async def upload_source(
 
     content = await file.read()
     try:
-        presence = _scan_zip(content)
+        scan = _scan_zip(content)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -1678,26 +1678,34 @@ async def upload_source(
     comp_map = {c.id: c for c in all_comps}
 
     if not all_vulns:
-        return {"scanned_packages": len(presence), "vulns_updated": 0, "message": "此版本尚無漏洞資料"}
+        return {"scanned_packages": len(scan.presence), "vulns_updated": 0, "message": "此版本尚無漏洞資料"}
 
-    classifications = _classify_vulns(all_vulns, presence, comp_map)
+    classifications = _classify_vulns(all_vulns, scan, comp_map)
 
     for v in all_vulns:
         v.reachability = classifications.get(v.id, "unknown")
     db.commit()
 
-    reachable_count  = sum(1 for r in classifications.values() if r == "reachable")
-    test_only_count  = sum(1 for r in classifications.values() if r == "test_only")
-    not_found_count  = sum(1 for r in classifications.values() if r == "not_found")
+    fn_reach_count  = sum(1 for r in classifications.values() if r == "function_reachable")
+    reachable_count = sum(1 for r in classifications.values() if r == "reachable")
+    test_only_count = sum(1 for r in classifications.values() if r == "test_only")
+    not_found_count = sum(1 for r in classifications.values() if r == "not_found")
 
     audit.record(db, "source_upload", user, resource_id=release_id, resource_label=file.filename)
     return {
-        "scanned_packages": len(presence),
+        "scanned_packages": len(scan.presence),
+        "ast_confirmed": len(scan.ast_reachable),
         "vulns_updated": len(classifications),
+        "function_reachable": fn_reach_count,
         "reachable": reachable_count,
         "test_only": test_only_count,
         "not_found": not_found_count,
-        "message": f"分析完成：{reachable_count} 個生產可達、{test_only_count} 個僅測試使用、{not_found_count} 個未在原始碼中發現",
+        "message": (
+            f"分析完成：{fn_reach_count} 個函式確認可達、"
+            f"{reachable_count} 個 import 可達、"
+            f"{test_only_count} 個僅測試使用、"
+            f"{not_found_count} 個未在原始碼中發現"
+        ),
     }
 
 
