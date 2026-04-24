@@ -15,6 +15,11 @@
 
 ## [2.0.0] — 2026-04
 
+### 修正（TISAX 功能補強）
+- **個資保護模組（Data Protection）**：新增 4 項 GDPR 相關控制項（DP-9.1 個資保護政策、DP-9.2 個資識別與分類、DP-9.3 資料主體權利管理、DP-9.4 個資洩漏事件 72h 通報）；建立評估時可選「個資保護（4 項，GDPR）」；VDA ISA 6.0 控制項從 65 → 69 項
+- **Plan 檢查補齊**：`GET /assessments/{id}`、`PATCH /controls/{id}`、`DELETE /assessments/{id}` 補加 `require_plan("tisax")`，所有端點一致要求 Professional plan
+- **TISAX 稽核紀錄整合**：建立 / 控制項更新 / 刪除評估寫入 `audit_events`（`tisax_create / tisax_control_update / tisax_delete`）；AdminActivity 頁加入對應事件標籤
+
 ### 改善（通知與搜尋）
 - **漏洞文字搜尋**：ReleaseDetail 漏洞篩選列新增文字輸入框，支援 CVE ID 和元件名稱模糊搜尋（不分大小寫），納入「清除篩選」重置
 - **通知規則（Alert Rules）**：`AlertConfig` 新增 `alert_min_severity / alert_kev_always / alert_epss_threshold` 三欄；`_passes_alert_rule()` 過濾函式；Settings 頁新增「通知規則」卡片（嚴重度下拉 / EPSS 滑桿 / KEV 一律通知 checkbox）；規則全不通過時靜默跳過

@@ -46,6 +46,9 @@
 | Webhook 失敗重試（指數退避 3 次，1s / 2s 間隔） | `d6c9c63` |
 | SBOM 上傳進度條（Axios onUploadProgress，百分比顯示） | `d6c9c63` |
 | 組織刪除二次確認（ConfirmModal requireTypeName，必須輸入名稱才能確認） | `8650bcd` |
+| TISAX 個資保護模組（DP-9.1~9.4，GDPR，make_controls 支援 dataprotection）| `0185dc1` |
+| TISAX Plan 檢查補齊（GET/PATCH/DELETE 全部加 require_plan）| `0185dc1` |
+| TISAX 稽核紀錄整合（tisax_create / tisax_control_update / tisax_delete）| `0185dc1` |
 | 漏洞文字搜尋（CVE ID / 元件名稱模糊搜尋，ReleaseDetail 篩選列）| `14e3d1f` |
 | 通知規則（min_severity / epss_threshold / kev_always，Settings UI）| `14e3d1f` |
 | 多收件人 Email（逗號分隔，send_email 支援 recipients 清單）| `14e3d1f` |
