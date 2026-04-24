@@ -52,7 +52,7 @@
 |------|------|------|
 | DB | ✅ SQLite / Postgres 可選 | Postgres + k8s |
 | RBAC | admin / viewer + 單層 org scope | 細粒度 RBAC + SSO/SAML/SCIM |
-| SSO / LDAP | ❌ 僅帳密 JWT | DT：OIDC + LDAP + AD；Anchore：SAML |
+| SSO / LDAP | ✅ OIDC（Azure AD / Google / Keycloak）| DT 另有 LDAP + AD；Anchore 有 SAML |
 | 持續監控 | ✅ 背景排程（6/12/24/48/72h 可選）+ 手動觸發 | DT：同樣是 polling 模式 |
 | 稽核不可竄改 | AuditEvent append-only（同 DB） | hash chain / WORM storage |
 
@@ -92,7 +92,7 @@
 - 漏洞來源：NVD + GHSA + OSS Index + Snyk + OSV + **VulnDB（商業）**
 - **DT 有但你沒有**：
   1. ~~持續監控~~ — ✅ 你也有（`monitor.py`，Settings 可設頻率 + 手動觸發）
-  2. SSO：OIDC + LDAP + Active Directory
+  2. ~~SSO~~ — ✅ OIDC 已實作（Azure AD / Google / Keycloak；DT 另有 LDAP/AD）
   3. Slack / Teams / WebEx 原生通知
   4. CPE 誤配問題（你的優勢：PURL-first 更精確）
 - **你有但 DT 沒有**：CRA 時程鐘、IEC 62443、TISAX、Reachability、格式互轉、品質評分、中文化、離線低成本
@@ -141,6 +141,6 @@
 | 6 | ~~**Reachability（Python AST 三階段）**~~ | ✅ 完成 | |
 | 7 | ~~**Postgres 後端選項**~~ | ✅ 完成 | |
 | 8 | ~~**持續監控**~~ | ✅ 完成 | `monitor.py` 早已實作，Settings 可調頻率 |
-| 9 | **SSO / LDAP 整合** | 1–2 週 | DT 有 OIDC+LDAP+AD；企業 IT 必問 |
+| 9 | ~~**SSO / OIDC**~~ | ✅ 完成 | OIDC 已實作；LDAP/AD 留文件說明 |
 | 10 | **FDA Pre-market Cybersecurity 報告** | 2 週 | 有醫材客戶詢問時再做 |
 | 11 | **Binary SBOM 生成（無原始碼）** | 待評估 | Keysight 的核心賣點；對舊 OT 設備客戶有吸引力 |

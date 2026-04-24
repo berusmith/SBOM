@@ -19,6 +19,9 @@
 | SBOM 格式互轉（`POST /api/convert`，CycloneDX ↔ SPDX ↔ XML） | `bbc786c` |
 | SBOM 品質評分 Dashboard 卡片（`/stats/sbom-quality-summary`） | `bbc786c` |
 | CVE 影響查詢（`/stats/cve-impact`，Dashboard 查詢框） | `bbc786c` |
+| Postgres 後端選項（`_is_sqlite` + `_add_column_safe` helper） | `d3a1cbd` |
+| SSO / OIDC 整合（`/oidc/login` `/oidc/callback`，Azure AD/Google/Keycloak） | `45cd27f` |
+| Plan 分層系統（Starter/Standard/Professional，後端 guard + 前端 UI gating） | `bcbd8cf` |
 
 ---
 
@@ -28,7 +31,7 @@
 |---|------|------|------|
 | 1 | ~~**Postgres 後端選項**~~ | ✅ 完成 | |
 | 2 | ~~**持續監控**~~（新 CVE 自動重評全組合） | ✅ 完成 | monitor.py + scheduler + Settings UI 均已存在 |
-| 3 | **SSO / LDAP 整合** | 1–2 週 | DT 有 OIDC + LDAP + AD；企業 IT 必問 |
+| 3 | ~~**SSO / LDAP 整合**~~ | ✅ 完成 | OIDC（Azure AD/Google/Keycloak），`oidc_sub` 欄位，Login SSO 按鈕 |
 | 4 | **SBOM 脫敏與供應鏈分享** | ~2 週 | 對外分享 SBOM 需細粒度過濾 |
 | 5 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
 
@@ -37,9 +40,11 @@
 - 目標：新 CVE 進 NVD/GHSA 後，背景自動重評所有受影響元件，有新漏洞時發通知
 - 實作方向：排程任務（APScheduler）每日跑 OSV batch query，比對現有元件 PURL
 
-### SSO / LDAP 說明
-- 企業客戶常要求「用公司帳號登入」（AD / Azure AD / Okta）
-- 實作方向：加 OIDC provider 設定（`OIDC_ISSUER` / `OIDC_CLIENT_ID`）+ passlib 驗證流程旁路
+### Plan 分層說明
+- Starter：1 org / 3 products / 10 releases，基礎漏洞掃描，無 CRA/IEC/TISAX
+- Standard：無限量，加 CRA / IEC 62443-4-1 / EPSS / GHSA / 持續監控 / SSO
+- Professional：全功能，加 IEC 62443-4-2/3-3 / TISAX / Reachability / Trivy / 簽章
+- 切換：Organizations 頁 admin 直接下拉，後端 `PATCH /organizations/{id}/plan`，`402` 守衛
 
 ---
 

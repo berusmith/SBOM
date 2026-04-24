@@ -75,13 +75,14 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 
 | Router | Prefix | Key endpoints |
 |--------|--------|---------------|
-| `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
-| `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
+| `auth.py` | `/api/auth` | POST `/login`, GET `/me`（回傳 `plan`）, GET `/oidc/config` `/oidc/login` `/oidc/callback`, POST `/change-password` |
+| `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` + PATCH `/{id}/plan`（admin only）|
 | `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
 | `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/enrich-ghsa` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac` `/upload-source`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
-| `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` |
+| `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` `/sbom-quality-summary` `/cve-impact` |
+| `convert.py` | `/api/convert` | POST `?target=cyclonedx-json\|cyclonedx-xml\|spdx-json` — 格式互轉，回傳下載檔 |
 | `search.py` | `/api/search` | GET `/components?q=` |
 | `settings.py` | `/api/settings` | GET/POST `/brand` `/alerts`, POST `/brand/logo` |
 | `policies.py` | `/api/policies` | CRUD |
@@ -100,7 +101,8 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool, `sbom_signature` / `signature_public_key` / `signature_algorithm` / `signer_identity` / `signed_at` for Sigstore/cosign verification |
 | `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
-| `user.py` | `users` | `role`: `admin` (full access) or `viewer` (read-only); bcrypt hashed password; `organization_id` nullable FK for org-scoped viewers |
+| `user.py` | `users` | `role`: `admin` / `viewer`; `hashed_password` nullable (SSO-only users); `organization_id` nullable FK; `oidc_sub` — OIDC subject identifier for SSO login |
+| `organization.py` | `organizations` | `plan`: `starter` / `standard` / `professional` (default `starter`); controls feature access via `core/plan.py` |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 | `firmware_scan.py` | `firmware_scans` | UUID `id`, `filename`, `status` (pending/running/completed/failed), `progress` (0-100), `components_count`, `emba_output_json`, `error_message`, timestamps |
 
@@ -125,8 +127,12 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `trivy_scanner.py` | Trivy wrapper: `scan_image(image_ref)` → CycloneDX, `scan_iac(zip_bytes)` → CycloneDX + misconfigs, `extract_misconfigs()` pulls AVD-/DS- findings; 503 if Trivy not installed (no demo mode needed — Trivy is free) |
 | `ghsa.py` | GitHub Advisory Database REST API: `fetch_ghsa_for_components(components)` → per-purl advisory list; supports npm/pypi/maven/nuget/cargo/gem/go; optional `GITHUB_TOKEN` (60 req/h without, 5000/h with) |
 | `reachability.py` | Three-phase source reachability: `scan_zip(zip_bytes)` → `ScanResult(presence, ast_reachable)`; Phase 1 regex import scan, Phase 2 test-path filtering, Phase 3 Python AST call graph (`_FileAnalyser` — alias tracking, route decorator detection, 1-hop call graph); `classify_vulns()` → `function_reachable`/`reachable`/`test_only`/`not_found` |
+| `converter.py` | SBOM format conversion: `convert(content, filename, target)` → `(bytes, filename)`; supports CycloneDX JSON ↔ SPDX JSON, CycloneDX JSON ↔ XML; preserves PURL/License/metadata |
+| `monitor.py` | Continuous vulnerability monitoring: `start()`/`stop()` lifecycle hooks, `trigger()` for manual run, `get_status()` for UI; polls OSV.dev on schedule, inserts new vulns, fires alerts |
 
-**`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
+**`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them. OIDC settings: `OIDC_ISSUER` / `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` / `OIDC_REDIRECT_URI` (leave empty to disable SSO).
+
+**`core/plan.py`** — Plan feature gating. `FEATURE_PLAN` maps feature keys to minimum plan. `require_plan(feature)` FastAPI dependency raises 402 if org plan insufficient. `check_starter_limit(db, org_id, resource)` enforces Starter data limits (3 products / 10 releases). Admin users always bypass plan checks. Plans: `starter` < `standard` < `professional`.
 
 **Python 3.9 compatibility** — The server runs Python 3.9. Use `from __future__ import annotations` at the top of any file that uses `X | Y` union syntax or `list[X]` / `dict[K,V]` in type hints outside of string literals.
 

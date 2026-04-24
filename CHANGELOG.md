@@ -14,6 +14,13 @@
 ## [2.0.0] — 2026-04
 
 ### 新增
+- **Plan 分層系統**：Starter / Standard / Professional 三層；後端 `require_plan()` FastAPI dependency（非 admin 回 402）；前端 `utils/plan.js` + Layout badge + 按鈕/頁面自動隱藏；Organizations 頁 admin 可即時切換 plan
+- **SSO / OIDC 整合**：`OIDC_ISSUER` / `CLIENT_ID` / `CLIENT_SECRET` 設定後自動啟用；`/oidc/login` redirect + `/oidc/callback` JWT 回傳；支援 Azure AD / Google / Keycloak；`oidc_sub` 欄位；Login 頁 SSO 按鈕
+- **Postgres 後端選項**：`_is_sqlite` 分支 + `_add_column_safe()` migration helper；切換只需改 `DATABASE_URL`
+- **持續監控**：`monitor.py` 背景排程（6/12/24/48/72h 可選）+ 手動觸發；Settings UI 顯示上次執行時間和下次排程
+- **SBOM 格式互轉**（`POST /api/convert`）：CycloneDX JSON ↔ SPDX JSON、CycloneDX ↔ XML
+- **SBOM 品質評分 Dashboard**：`/stats/sbom-quality-summary` A/B/C/D 分布卡片
+- **CVE 影響查詢**：`/stats/cve-impact?cve=CVE-xxx` + Dashboard 即時查詢框
 - **Reachability 分析（三階段）**：上傳原始碼 zip → Phase 1 import 掃描、Phase 2 測試目錄過濾、Phase 3 Python AST call graph（alias 追蹤、route decorator 進入點、1-hop call graph）；`function_reachable` / `reachable` / `test_only` / `not_found`
 - **GHSA 漏洞情資補強**：GitHub Security Advisories REST API，支援 npm/pypi/maven/nuget/cargo/gem/go；ghsa_id 欄位；上傳自動觸發 + 手動補充端點
 - **Container / IaC 掃描（Trivy）**：`POST /scan-image`（Container Image）、`POST /scan-iac`（Terraform/K8s zip，回傳 misconfiguration 列表）
