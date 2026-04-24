@@ -1,21 +1,50 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
 import { validate, validators } from "../utils/validate";
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [oidcEnabled, setOidcEnabled] = useState(false);
+
+  // Check OIDC availability on mount
+  useEffect(() => {
+    api.get("/auth/oidc/config").then(r => setOidcEnabled(r.data.enabled)).catch(() => {});
+  }, []);
+
+  // Handle SSO callback: ?sso_token=xxx lands here via redirect from backend
+  useEffect(() => {
+    const ssoToken = searchParams.get("sso_token");
+    if (!ssoToken) return;
+    localStorage.setItem("token", ssoToken);
+    api.get("/auth/me")
+      .then(me => {
+        localStorage.setItem("role", me.data.role || "viewer");
+        localStorage.setItem("org_id", me.data.org_id || "");
+        localStorage.setItem("username", me.data.username || "");
+        if (me.data.role !== "admin" && me.data.org_id) {
+          navigate(`/organizations/${me.data.org_id}/products`, { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        setError("SSO 登入失敗，請重試");
+      });
+  }, [searchParams, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Client-side validation
     const validationErrors = validate(
       { username: validators.required, password: validators.required },
       { username, password }
@@ -24,7 +53,6 @@ export default function Login() {
       setErrors(validationErrors);
       return;
     }
-
     setError("");
     setErrors({});
     setLoading(true);
@@ -41,20 +69,26 @@ export default function Login() {
         navigate("/", { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "登入失敗");
+      setError(err.response?.data?.detail || t("login.error"));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSsoLogin = () => {
+    // Redirect directly to backend OIDC initiation endpoint
+    window.location.href = "/api/auth/oidc/login";
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm mx-4 sm:mx-0">
         <h1 className="text-xl font-bold text-gray-800 mb-1">SBOM Platform</h1>
-        <p className="text-sm text-gray-600 mb-6">請登入以繼續</p>
+        <p className="text-sm text-gray-600 mb-6">{t("login.subtitle")}</p>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">帳號</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("login.username")}</label>
             <input
               type="text"
               value={username}
@@ -70,7 +104,7 @@ export default function Login() {
             {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("login.password")}</label>
             <PasswordInput
               value={password}
               onChange={(e) => {
@@ -86,9 +120,32 @@ export default function Login() {
             disabled={loading}
             className={`w-full py-2.5 rounded text-sm text-white font-medium ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
           >
-            {loading ? "登入中..." : "登入"}
+            {loading ? t("login.loggingIn") : t("login.submit")}
           </button>
         </form>
+
+        {oidcEnabled && (
+          <>
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs text-gray-400">
+                <span className="bg-white px-2">{t("login.orDivider")}</span>
+              </div>
+            </div>
+            <button
+              onClick={handleSsoLogin}
+              className="w-full py-2.5 rounded text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              {t("login.ssoButton")}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

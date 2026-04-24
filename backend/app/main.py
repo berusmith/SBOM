@@ -107,6 +107,7 @@ with engine.connect() as conn:
 
     if _table_exists(conn, "users"):
         _add_column(conn, "users", "organization_id", "TEXT REFERENCES organizations(id)")
+        _add_column(conn, "users", "oidc_sub", "TEXT")
     conn.commit()
 
     if _table_exists(conn, "cra_incidents"):

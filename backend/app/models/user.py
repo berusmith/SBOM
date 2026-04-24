@@ -12,10 +12,11 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, unique=True, nullable=False, index=True)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)   # nullable for SSO-only users
     role = Column(String, default="viewer", nullable=False)  # admin | viewer
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=True, index=True)
+    oidc_sub = Column(String, nullable=True, index=True)  # OIDC subject identifier
 
     organization = relationship("Organization", back_populates="users")

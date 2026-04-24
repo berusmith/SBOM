@@ -105,12 +105,15 @@ const en = {
 
   // ── Login ─────────────────────────────────────────────────────────────────
   login: {
-    title:     "SBOM Management Platform",
-    username:  "Username",
-    password:  "Password",
-    submit:    "Login",
-    loggingIn: "Logging in...",
-    error:     "Invalid username or password",
+    title:      "SBOM Management Platform",
+    subtitle:   "Please log in to continue",
+    username:   "Username",
+    password:   "Password",
+    submit:     "Login",
+    loggingIn:  "Logging in...",
+    error:      "Invalid username or password",
+    orDivider:  "or",
+    ssoButton:  "Sign in with Company Account (SSO)",
   },
 
   // ── Dashboard ─────────────────────────────────────────────────────────────

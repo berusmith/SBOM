@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     ALLOWED_ORIGIN: str = "http://localhost:3000"
     UPLOAD_DIR: str = ""  # absolute path; auto-detected from __file__ if empty
 
+    # OIDC / SSO (optional — leave empty to disable)
+    # Example (Azure AD): https://login.microsoftonline.com/{tenant}/v2.0
+    # Example (Google):   https://accounts.google.com
+    # Example (Keycloak): https://auth.example.com/realms/{realm}
+    OIDC_ISSUER:        str = ""
+    OIDC_CLIENT_ID:     str = ""
+    OIDC_CLIENT_SECRET: str = ""
+    # Where the browser should land after OIDC login (defaults to frontend root)
+    OIDC_REDIRECT_URI:  str = ""  # e.g. https://sbom.example.com/api/auth/oidc/callback
+
     class Config:
         env_file = ".env"
 
