@@ -1668,34 +1668,36 @@ async def upload_source(
 
     content = await file.read()
     try:
-        imported_packages = _scan_zip(content)
+        presence = _scan_zip(content)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     all_comps = db.query(Component).filter(Component.release_id == release_id).all()
     all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
 
-    if not all_vulns:
-        return {"imported_packages": len(imported_packages), "vulns_updated": 0, "message": "此版本尚無漏洞資料"}
-
-    # Build component_id → component map
     comp_map = {c.id: c for c in all_comps}
-    classifications = _classify_vulns(all_vulns, imported_packages, comp_map)
+
+    if not all_vulns:
+        return {"scanned_packages": len(presence), "vulns_updated": 0, "message": "此版本尚無漏洞資料"}
+
+    classifications = _classify_vulns(all_vulns, presence, comp_map)
 
     for v in all_vulns:
         v.reachability = classifications.get(v.id, "unknown")
     db.commit()
 
-    imported_count  = sum(1 for r in classifications.values() if r == "imported")
-    not_found_count = sum(1 for r in classifications.values() if r == "not_found")
+    reachable_count  = sum(1 for r in classifications.values() if r == "reachable")
+    test_only_count  = sum(1 for r in classifications.values() if r == "test_only")
+    not_found_count  = sum(1 for r in classifications.values() if r == "not_found")
 
     audit.record(db, "source_upload", user, resource_id=release_id, resource_label=file.filename)
     return {
-        "imported_packages": len(imported_packages),
+        "scanned_packages": len(presence),
         "vulns_updated": len(classifications),
-        "reachable": imported_count,
+        "reachable": reachable_count,
+        "test_only": test_only_count,
         "not_found": not_found_count,
-        "message": f"分析完成：{imported_count} 個漏洞套件確認被使用，{not_found_count} 個未在原始碼中發現",
+        "message": f"分析完成：{reachable_count} 個生產可達、{test_only_count} 個僅測試使用、{not_found_count} 個未在原始碼中發現",
     }
 
 

@@ -829,7 +829,10 @@ export default function ReleaseDetail() {
           {sourceUploadResult.ok ? (
             <div className="flex items-center gap-4 flex-wrap">
               <span className="font-medium text-emerald-800">{sourceUploadResult.message}</span>
-              <span className="text-emerald-700 text-xs">掃描套件數：{sourceUploadResult.imported_packages}</span>
+              <span className="text-emerald-700 text-xs">掃描套件數：{sourceUploadResult.scanned_packages ?? sourceUploadResult.imported_packages}</span>
+              {sourceUploadResult.test_only > 0 && (
+                <span className="text-orange-600 text-xs">僅測試：{sourceUploadResult.test_only}</span>
+              )}
             </div>
           ) : (
             <p className="text-red-700">可達性分析失敗：{sourceUploadResult.msg}</p>
@@ -1281,8 +1284,10 @@ export default function ReleaseDetail() {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell">
-                      {v.reachability === "imported" ? (
+                      {v.reachability === "reachable" || v.reachability === "imported" ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">已使用</span>
+                      ) : v.reachability === "test_only" ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">僅測試</span>
                       ) : v.reachability === "not_found" ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">未發現</span>
                       ) : (

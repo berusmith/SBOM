@@ -1,51 +1,98 @@
 """
-Reachability Phase 1 — import-level analysis.
+Reachability Phase 2 — module-level analysis.
 
-Unzips uploaded source archive and scans all .py / .js / .ts files for
-import statements. Returns a set of normalised package names that are
-actually imported by the project.
+Phase 1: did the project import this package at all?
+Phase 2: was it only imported in test / script directories?
 
-Normalisation: lowercase, replace - with _ (pip convention).
+scan_zip() returns a PackagePresence dict:
+  {normalised_pkg: {"main": bool, "test": bool}}
+
+classify_vulns() maps each vuln to:
+  "reachable"  — imported in main source
+  "test_only"  — imported only in test/script paths
+  "not_found"  — not imported anywhere
+  "unknown"    — component not found in comp map
 """
 from __future__ import annotations
 
 import io
 import re
 import zipfile
-from pathlib import Path
 
 # ── limits ────────────────────────────────────────────────────────────────────
-MAX_ZIP_BYTES   = 50 * 1024 * 1024   # 50 MB total zip
-MAX_FILE_BYTES  = 1 * 1024 * 1024    # skip single files > 1 MB
-MAX_FILES       = 5_000              # guard against zip bombs
+MAX_ZIP_BYTES  = 50 * 1024 * 1024
+MAX_FILE_BYTES = 1 * 1024 * 1024
+MAX_FILES      = 5_000
+
+# Path segments that indicate a test / non-production file
+_TEST_SEGMENTS = frozenset({
+    "test", "tests", "spec", "specs",
+    "__test__", "__tests__",
+    "scripts", "script",
+    "fixtures", "fixture",
+    "e2e", "integration",
+    "conftest",        # pytest conftest files
+})
 
 # ── regex patterns ─────────────────────────────────────────────────────────────
-# Python:  import X  /  import X.y  /  from X import  /  from X.y import
 _PY_IMPORT = re.compile(
     r"""^\s*(?:import|from)\s+([\w][\w.]*)""",
     re.MULTILINE,
 )
-
-# JS/TS:  require('X')  require("X")  from 'X'  from "X"
-# captures the first path segment (the package name, not ./local paths)
 _JS_REQUIRE = re.compile(
     r"""(?:require|from)\s*[\(\s]['"]((?:@[\w-]+/)?[\w][\w.-]*)['"]""",
 )
 
 
 def _normalise(name: str) -> str:
-    """Lowercase + replace hyphens with underscores (pip/npm convention)."""
     return name.lower().split(".")[0].replace("-", "_")
+
+
+def _is_test_path(path: str) -> bool:
+    """Return True if any segment of the path looks like a test directory."""
+    lower = path.lower().replace("\\", "/")
+    parts = lower.split("/")
+    # Check directory segments (not the filename itself)
+    for part in parts[:-1]:
+        if part in _TEST_SEGMENTS:
+            return True
+    # Also catch filenames like test_foo.py or foo.test.js / foo.spec.ts
+    filename = parts[-1]
+    if filename.startswith("test_") or filename.startswith("spec_"):
+        return True
+    stem = filename.rsplit(".", 1)[0]
+    if stem.endswith((".test", ".spec")):
+        return True
+    return False
 
 
 def _is_text_file(name: str) -> bool:
     return name.endswith((".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"))
 
 
-def scan_zip(zip_bytes: bytes) -> set[str]:
+def _extract_packages(content: str, filename: str) -> set[str]:
+    pkgs: set[str] = set()
+    if filename.endswith(".py"):
+        for m in _PY_IMPORT.finditer(content):
+            pkg = _normalise(m.group(1))
+            if pkg:
+                pkgs.add(pkg)
+    else:
+        for m in _JS_REQUIRE.finditer(content):
+            pkg = m.group(1)
+            if pkg.startswith("."):
+                continue
+            pkgs.add(_normalise(pkg))
+    return pkgs
+
+
+# Type alias for clarity
+PackagePresence = dict[str, dict[str, bool]]  # {pkg: {"main": bool, "test": bool}}
+
+
+def scan_zip(zip_bytes: bytes) -> PackagePresence:
     """
-    Scan a zip archive for import statements.
-    Returns a set of normalised package names found in the source code.
+    Scan a zip archive and return per-package presence info.
     Raises ValueError for oversized or invalid zips.
     """
     if len(zip_bytes) > MAX_ZIP_BYTES:
@@ -56,11 +103,10 @@ def scan_zip(zip_bytes: bytes) -> set[str]:
     except zipfile.BadZipFile:
         raise ValueError("無效的 zip 檔案")
 
-    imported: set[str] = set()
+    presence: PackagePresence = {}
     file_count = 0
 
     for info in zf.infolist():
-        # Safety: skip directories and dangerous paths
         name = info.filename
         if info.is_dir():
             continue
@@ -79,41 +125,41 @@ def scan_zip(zip_bytes: bytes) -> set[str]:
         except Exception:
             continue
 
-        if name.endswith(".py"):
-            for m in _PY_IMPORT.finditer(content):
-                pkg = _normalise(m.group(1))
-                if pkg:
-                    imported.add(pkg)
-        else:
-            for m in _JS_REQUIRE.finditer(content):
-                pkg = m.group(1)
-                # skip relative imports: ./foo, ../bar
-                if pkg.startswith("."):
-                    continue
-                # scoped npm: @scope/name → keep full but also add bare name
-                imported.add(_normalise(pkg))
+        is_test = _is_test_path(name)
+        for pkg in _extract_packages(content, name):
+            entry = presence.setdefault(pkg, {"main": False, "test": False})
+            if is_test:
+                entry["test"] = True
+            else:
+                entry["main"] = True
 
     zf.close()
-    return imported
+    return presence
 
 
 def classify_vulns(
     vulns,
-    imported_packages: set[str],
-    purl_to_comp: dict,
+    presence: PackagePresence,
+    comp_map: dict,
 ) -> dict[str, str]:
     """
-    For each vuln, determine reachability based on whether the component's
-    package name appears in imported_packages.
-
-    Returns {vuln_id: "imported" | "not_found"}
+    Map each vuln to a reachability label.
+    comp_map: {component_id -> component_obj}
     """
     result: dict[str, str] = {}
     for v in vulns:
-        comp = purl_to_comp.get(v.component_id)
+        comp = comp_map.get(v.component_id)
         if comp is None:
             result[v.id] = "unknown"
             continue
-        pkg_name = _normalise(comp.name)
-        result[v.id] = "imported" if pkg_name in imported_packages else "not_found"
+        pkg = _normalise(comp.name)
+        info = presence.get(pkg)
+        if info is None:
+            result[v.id] = "not_found"
+        elif info["main"]:
+            result[v.id] = "reachable"
+        elif info["test"]:
+            result[v.id] = "test_only"
+        else:
+            result[v.id] = "not_found"
     return result
