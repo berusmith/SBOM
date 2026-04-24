@@ -121,3 +121,66 @@ nginx（靜態檔 + 反向代理）
 ```
 
 FastAPI 的 `STATIC_DIR` 環境變數設為 `frontend/dist`，即使直接存取 port 9100 也能回傳 SPA（備援用）。
+
+---
+
+## 切換 Postgres 資料庫（可選）
+
+SQLite 適合單機、低流量場景。若客戶要求多節點、高可用或 RBAC 審計，可切換至 Postgres。
+
+### 安裝 Postgres（Oracle Linux 9）
+
+```bash
+sudo dnf install -y postgresql-server postgresql-contrib
+sudo postgresql-setup --initdb
+sudo systemctl enable --now postgresql
+
+# 建立資料庫與使用者
+sudo -u postgres psql <<SQL
+CREATE USER sbom_user WITH PASSWORD 'your_strong_password';
+CREATE DATABASE sbom_db OWNER sbom_user;
+GRANT ALL PRIVILEGES ON DATABASE sbom_db TO sbom_user;
+SQL
+```
+
+### 修改後端設定
+
+編輯 `/var/www/sbom/backend/.env`：
+
+```bash
+# 將此行
+DATABASE_URL=sqlite:///./sbom.db
+
+# 改為
+DATABASE_URL=postgresql://sbom_user:your_strong_password@localhost:5432/sbom_db
+```
+
+### 安裝 Postgres Python driver
+
+```bash
+cd /var/www/sbom/backend
+source venv/bin/activate
+pip install psycopg2-binary
+```
+
+### 重啟服務
+
+```bash
+sudo systemctl restart sbom-backend
+# 首次啟動會自動建立所有 table 和 migration
+```
+
+### 從 SQLite 搬移現有資料（使用 pgloader）
+
+```bash
+# 安裝 pgloader
+sudo dnf install -y pgloader
+
+# 搬移（schema 會自動從 Postgres 已建立的 table 推斷）
+pgloader sqlite:///var/www/sbom/data/sbom.db \
+         postgresql://sbom_user:your_password@localhost/sbom_db
+
+# 搬移後記得重建 sequences（UUID 主鍵不受影響）
+```
+
+> **注意**：uploads/ 目錄（SBOM 檔案）和 .env 需手動複製，不在 pgloader 範圍內。

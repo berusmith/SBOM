@@ -23,27 +23,63 @@ from app.models.user import User as _UserModel
 from app.core.security import hash_password as _hash_pw
 from app.core.config import settings as _cfg
 
-# Run column migrations FIRST so existing tables have new columns before SQLAlchemy queries them.
-# Wrap each block in a check so fresh databases (empty tables list) skip gracefully.
-_existing_tables = {row[0] for row in engine.connect().execute(text("SELECT name FROM sqlite_master WHERE type='table'"))}
+# ── Column migration helpers ──────────────────────────────────────────────────
+from app.core.database import _is_sqlite as _db_is_sqlite  # noqa: E402
+
+def _list_columns(conn, table: str) -> set:
+    """Return current column names for a table (SQLite or Postgres)."""
+    if _db_is_sqlite:
+        return {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+    else:
+        rows = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = :t AND table_schema = current_schema()"
+        ), {"t": table})
+        return {row[0] for row in rows}
+
+
+def _table_exists(conn, table: str) -> bool:
+    if _db_is_sqlite:
+        r = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name=:t"), {"t": table})
+    else:
+        r = conn.execute(text(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_name=:t AND table_schema=current_schema()"
+        ), {"t": table})
+    return r.fetchone() is not None
+
+
+def _add_column(conn, table: str, col: str, typedef: str) -> None:
+    """Add a column if it doesn't already exist. typedef uses SQLite syntax;
+    automatically converts INTEGER→INTEGER and REAL→DOUBLE PRECISION for Postgres."""
+    if col in _list_columns(conn, table):
+        return
+    if not _db_is_sqlite:
+        typedef = (typedef
+                   .replace("INTEGER DEFAULT 0", "INTEGER DEFAULT 0")
+                   .replace("REAL", "DOUBLE PRECISION")
+                   .replace("DATETIME", "TIMESTAMP WITH TIME ZONE"))
+    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typedef}"))
+
+
+# ── Run column migrations FIRST ───────────────────────────────────────────────
 
 with engine.connect() as conn:
-    vuln_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(vulnerabilities)"))} if "vulnerabilities" in _existing_tables else set()
-    if "vulnerabilities" in _existing_tables:
+    if _table_exists(conn, "vulnerabilities"):
         for col, typedef in [
-            ("justification",   "TEXT"),
-            ("response",        "TEXT"),
-            ("detail",          "TEXT"),
-            ("epss_score",      "REAL"),
-            ("epss_percentile", "REAL"),
-            ("is_kev",          "INTEGER DEFAULT 0"),
-            ("description",     "TEXT"),
-            ("cwe",             "TEXT"),
-            ("nvd_refs",        "TEXT"),
-            ("cvss_v3_score",   "REAL"),
-            ("cvss_v3_vector",  "TEXT"),
-            ("cvss_v4_score",   "REAL"),
-            ("cvss_v4_vector",  "TEXT"),
+            ("justification",     "TEXT"),
+            ("response",          "TEXT"),
+            ("detail",            "TEXT"),
+            ("epss_score",        "REAL"),
+            ("epss_percentile",   "REAL"),
+            ("is_kev",            "INTEGER DEFAULT 0"),
+            ("description",       "TEXT"),
+            ("cwe",               "TEXT"),
+            ("nvd_refs",          "TEXT"),
+            ("cvss_v3_score",     "REAL"),
+            ("cvss_v3_vector",    "TEXT"),
+            ("cvss_v4_score",     "REAL"),
+            ("cvss_v4_vector",    "TEXT"),
             ("scanned_at",        "DATETIME"),
             ("fixed_at",          "DATETIME"),
             ("suppressed",        "INTEGER DEFAULT 0"),
@@ -53,55 +89,40 @@ with engine.connect() as conn:
             ("ghsa_url",          "TEXT"),
             ("reachability",      "TEXT"),
         ]:
-            if col not in vuln_cols:
-                conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))
+            _add_column(conn, "vulnerabilities", col, typedef)
     conn.commit()
 
-    # releases table migrations
-    if "releases" in _existing_tables:
-        rel_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(releases)"))}
+    if _table_exists(conn, "releases"):
         for col, typedef in [
-            ("sbom_hash", "TEXT"),
-            ("locked",    "INTEGER DEFAULT 0"),
-            ("sbom_signature", "TEXT"),
+            ("sbom_hash",            "TEXT"),
+            ("locked",               "INTEGER DEFAULT 0"),
+            ("sbom_signature",       "TEXT"),
             ("signature_public_key", "TEXT"),
-            ("signature_algorithm", "TEXT"),
-            ("signer_identity", "TEXT"),
-            ("signed_at", "TEXT"),
+            ("signature_algorithm",  "TEXT"),
+            ("signer_identity",      "TEXT"),
+            ("signed_at",            "TEXT"),
         ]:
-            if col not in rel_cols:
-                conn.execute(text(f"ALTER TABLE releases ADD COLUMN {col} {typedef}"))
-        conn.commit()
-
-    # users table — add organization_id
-    user_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))} if "users" in _existing_tables else set()
-    if "organization_id" not in user_cols and "users" in _existing_tables:
-        conn.execute(text("ALTER TABLE users ADD COLUMN organization_id TEXT REFERENCES organizations(id)"))
+            _add_column(conn, "releases", col, typedef)
     conn.commit()
 
-    # cra_incidents — add org_id
-    cra_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(cra_incidents)"))} if "cra_incidents" in _existing_tables else set()
-    if "org_id" not in cra_cols and "cra_incidents" in _existing_tables:
-        conn.execute(text("ALTER TABLE cra_incidents ADD COLUMN org_id TEXT REFERENCES organizations(id)"))
+    if _table_exists(conn, "users"):
+        _add_column(conn, "users", "organization_id", "TEXT REFERENCES organizations(id)")
     conn.commit()
 
-    # alert_config — add monitoring columns
-    alert_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(alert_config)"))} if "alert_config" in _existing_tables else set()
-    for col, typedef in [
-        ("monitor_interval_hours", "INTEGER DEFAULT 24"),
-        ("monitor_last_run",       "DATETIME"),
-    ]:
-        if col not in alert_cols and "alert_config" in _existing_tables:
-            conn.execute(text(f"ALTER TABLE alert_config ADD COLUMN {col} {typedef}"))
+    if _table_exists(conn, "cra_incidents"):
+        _add_column(conn, "cra_incidents", "org_id", "TEXT REFERENCES organizations(id)")
     conn.commit()
 
-    # api_tokens — add scope column (default admin for backward compat)
-    tok_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(api_tokens)"))} if "api_tokens" in _existing_tables else set()
-    if "scope" not in tok_cols and "api_tokens" in _existing_tables:
-        conn.execute(text("ALTER TABLE api_tokens ADD COLUMN scope TEXT NOT NULL DEFAULT 'admin'"))
+    if _table_exists(conn, "alert_config"):
+        _add_column(conn, "alert_config", "monitor_interval_hours", "INTEGER DEFAULT 24")
+        _add_column(conn, "alert_config", "monitor_last_run", "DATETIME")
     conn.commit()
 
-    # Performance indexes — safe to run repeatedly via IF NOT EXISTS (only on existing tables)
+    if _table_exists(conn, "api_tokens"):
+        _add_column(conn, "api_tokens", "scope", "TEXT NOT NULL DEFAULT 'admin'")
+    conn.commit()
+
+    # Performance indexes — safe to run repeatedly via IF NOT EXISTS
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",
         "CREATE INDEX IF NOT EXISTS idx_vuln_severity  ON vulnerabilities(severity)",
@@ -115,7 +136,7 @@ with engine.connect() as conn:
     ]:
         try:
             conn.execute(text(_idx))
-        except:
+        except Exception:
             pass
     conn.commit()
 
