@@ -27,6 +27,7 @@
 | IEC 62443 PDF CJK 字型支援（font_manager + CjkPDF，Windows/Linux/下載） | `ec33a75` |
 | 行動版 UI/UX 全面優化（漏洞卡片、觸控目標、表格欄位隱藏、下拉定位） | `c94b022` |
 | 安全/效能/併發修正（OIDC CSRF、IDOR、N+1、UniqueConstraint、Lock） | `17a12b3` |
+| 稽核紀錄補齊（audit_events 從 8 → 21 種事件，含 VEX/Token/Lock/Plan） | `ad502c5` |
 
 ---
 

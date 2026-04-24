@@ -13,6 +13,9 @@
 
 ## [2.0.0] — 2026-04
 
+### 改善
+- **稽核紀錄覆蓋率補齊**：`audit_events` 表從 8 種事件擴展至 21 種，新增 `org_create/update/plan_change/delete`、`product_create`、`vex_update`、`vex_batch_update`、`vuln_suppress/unsuppress`、`token_create/revoke`、`share_link_create/revoke`、`release_lock/unlock`、`signature_deleted`、`password_change`；VEX 變更記錄 CVE ID 與狀態轉換，Plan 變更記錄新舊方案名稱
+
 ### 修正（安全 / 效能 / 併發）
 - **OIDC CSRF 修補**：`/oidc/callback` 加入 state cookie 驗證，防止 authorization code 注入攻擊
 - **Migration SQL Injection 防護**：`_list_columns` / `_add_column` 加入 `_ALLOWED_TABLES` 白名單，table 名稱不在清單時 raise ValueError
