@@ -23,6 +23,8 @@ const TISAXDetail       = lazy(() => import("./pages/TISAXDetail"));
 const Profile           = lazy(() => import("./pages/Profile"));
 const Users             = lazy(() => import("./pages/Users"));
 const FirmwareUpload    = lazy(() => import("./pages/FirmwareUpload"));
+const ForgotPassword    = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword     = lazy(() => import("./pages/ResetPassword"));
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -57,6 +59,8 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/*"
           element={

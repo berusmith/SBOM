@@ -20,6 +20,8 @@ class Release(Base):
     locked = Column(Boolean, nullable=False, default=False)
 
     # Sigstore / cosign signature fields
+    notes = Column(String, nullable=True)                 # release notes / changelog text
+
     sbom_signature = Column(String, nullable=True)       # base64-encoded signature
     signature_public_key = Column(String, nullable=True)  # PEM-encoded public key or certificate
     signature_algorithm = Column(String, nullable=True)   # e.g. "ecdsa-sha256", "rsa-pss-sha256"

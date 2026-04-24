@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Where the browser should land after OIDC login (defaults to frontend root)
     OIDC_REDIRECT_URI:  str = ""  # e.g. https://sbom.example.com/api/auth/oidc/callback
 
+    # Frontend base URL — used for password-reset email links
+    FRONTEND_URL: str = "http://localhost:3000"
+
     class Config:
         env_file = ".env"
 

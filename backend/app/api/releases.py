@@ -518,6 +518,7 @@ def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope),
         "locked": release.locked or False,
         "has_sbom": bool(release.sbom_file_path),
         "sbom_hash": release.sbom_hash,
+        "notes": release.notes,
         "created_at": release.created_at.isoformat() if release.created_at else None,
     }
 
@@ -1440,6 +1441,22 @@ def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: S
     audit.record(db, "release_unlock", _admin, resource_id=release_id)
     db.commit()
     return {"locked": False}
+
+
+@router.patch("/{release_id}/notes")
+def update_notes(release_id: str, body: dict, _admin: dict = Depends(require_admin),
+                 org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    """Update release notes / changelog text."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法修改備註")
+    _assert_release_org(release, org_scope, db)
+    notes = str(body.get("notes", "") or "")[:5000]  # hard cap 5000 chars
+    release.notes = notes or None
+    db.commit()
+    return {"notes": release.notes}
 
 
 @router.get("/{release_id}/patch-stats")

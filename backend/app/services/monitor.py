@@ -12,11 +12,12 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
-_stop_event   = threading.Event()
-_scan_lock    = threading.Lock()
-_is_scanning  = False
+_stop_event     = threading.Event()
+_scan_lock      = threading.Lock()
+_is_scanning    = False
 _last_run_dt: datetime | None = None
 _last_run_count: int = 0
+_last_skip_dt: datetime | None = None   # last time trigger() was called but scan was already running
 
 
 def _do_scan_all() -> int:
@@ -205,9 +206,11 @@ def stop() -> None:
 
 
 def trigger() -> dict:
+    global _last_skip_dt
     with _scan_lock:
         if _is_scanning:
-            return {"status": "already_running"}
+            _last_skip_dt = datetime.now(timezone.utc)
+            return {"status": "already_running", "skipped_at": _last_skip_dt.isoformat()}
     threading.Thread(target=_do_scan_all, daemon=True, name="monitor-trigger").start()
     return {"status": "started"}
 
@@ -241,4 +244,5 @@ def get_status() -> dict:
         "last_run":            last.isoformat() if last else None,
         "last_run_new_count":  _last_run_count,
         "next_run":            next_run,
+        "last_skip":           _last_skip_dt.isoformat() if _last_skip_dt else None,
     }

@@ -9,6 +9,9 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+import hashlib
+from datetime import timedelta
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -18,6 +21,7 @@ from app.core.deps import get_current_user
 from app.core.rate_limit import check_login_rate_limit, login_limiter, _client_ip
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.organization import Organization
+from app.models.password_reset_token import PasswordResetToken
 from app.models.user import User as UserModel
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -273,3 +277,84 @@ def change_password(payload: ChangePasswordPayload, user: dict = Depends(get_cur
     logger.info("PASSWORD_CHANGE user=%s", user["username"])
     audit.record(db, "password_change", user, resource_label=user["username"])
     db.commit()
+
+
+# ── Forgot / Reset password ────────────────────────────────────────────────────
+
+class ForgotPasswordPayload(BaseModel):
+    username: str
+
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password", status_code=204)
+def forgot_password(payload: ForgotPasswordPayload, request: Request, db: Session = Depends(get_db)):
+    """Send reset email. Always 204 — never reveal if username exists."""
+    from app.services.alerts import send_email
+    from datetime import datetime, timezone
+
+    user = db.query(UserModel).filter(
+        UserModel.username == payload.username.strip(),
+        UserModel.is_active == True,  # noqa: E712
+        UserModel.hashed_password.isnot(None),
+    ).first()
+    if not user:
+        return  # silent
+
+    # Invalidate existing unused tokens for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.username == user.username,
+        PasswordResetToken.used == False,  # noqa: E712
+    ).delete()
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
+    db.add(PasswordResetToken(token_hash=token_hash, username=user.username, expires_at=expires_at))
+    db.commit()
+
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+    body = (
+        f"您好，\n\n"
+        f"請點擊以下連結重設密碼（30 分鐘內有效）：\n\n"
+        f"{reset_url}\n\n"
+        f"若您未提出此請求，請忽略此郵件。\n\n"
+        f"SBOM Platform"
+    )
+    to_addr = user.username if "@" in user.username else ""
+    if to_addr:
+        send_email("SBOM Platform — 密碼重設", body, to_addr)
+    logger.info("PASSWORD_RESET_SENT user=%s ip=%s", user.username, _client_ip(request))
+
+
+@router.post("/reset-password", status_code=204)
+def reset_password(payload: ResetPasswordPayload, db: Session = Depends(get_db)):
+    """Validate token and set new password."""
+    from datetime import datetime, timezone
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=400, detail="新密碼至少 8 個字元")
+
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    rec = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == token_hash,
+        PasswordResetToken.used == False,  # noqa: E712
+    ).first()
+    if not rec:
+        raise HTTPException(status_code=400, detail="重設連結無效或已使用")
+
+    expires = rec.expires_at if rec.expires_at.tzinfo else rec.expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(status_code=400, detail="重設連結已過期，請重新申請")
+
+    user = db.query(UserModel).filter(UserModel.username == rec.username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="帳號不存在")
+
+    user.hashed_password = hash_password(payload.new_password)
+    rec.used = True
+    db.commit()
+    logger.info("PASSWORD_RESET_OK user=%s", rec.username)

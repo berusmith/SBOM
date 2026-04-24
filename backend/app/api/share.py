@@ -89,6 +89,10 @@ def create_share_link(
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         raise HTTPException(status_code=400, detail="此版本尚未上傳 SBOM，無法建立分享連結")
 
+    existing_count = db.query(SbomShareLink).filter(SbomShareLink.release_id == release_id).count()
+    if existing_count >= 20:
+        raise HTTPException(status_code=400, detail="此版本已達分享連結上限（20 條），請先撤銷舊連結")
+
     expires_at = None
     if body.expires_hours and body.expires_hours > 0:
         expires_at = datetime.now(timezone.utc) + timedelta(hours=body.expires_hours)

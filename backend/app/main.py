@@ -18,6 +18,7 @@ from app.models import tisax as _tisax_model  # noqa: F401
 from app.models import firmware_scan as _firmware_scan_model  # noqa: F401
 from app.models import api_token as _api_token_model  # noqa: F401
 from app.models import share_link as _share_link_model  # noqa: F401
+from app.models import password_reset_token as _pw_reset_model  # noqa: F401
 from app.core.database import Base, engine, SessionLocal
 from app.core.deps import get_current_user
 
@@ -139,6 +140,10 @@ with engine.connect() as conn:
         _add_column(conn, "api_tokens", "scope", "TEXT NOT NULL DEFAULT 'admin'")
     conn.commit()
 
+    if _table_exists(conn, "releases"):
+        _add_column(conn, "releases", "notes", "TEXT")
+    conn.commit()
+
     # Performance indexes — safe to run repeatedly via IF NOT EXISTS
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",
@@ -151,6 +156,7 @@ with engine.connect() as conn:
         "CREATE INDEX IF NOT EXISTS idx_cra_org        ON cra_incidents(org_id)",
         "CREATE INDEX IF NOT EXISTS idx_cra_status     ON cra_incidents(status)",
         "CREATE UNIQUE INDEX IF NOT EXISTS uq_comp_cve ON vulnerabilities(component_id, cve_id)",
+        "CREATE INDEX IF NOT EXISTS idx_pw_reset_hash ON password_reset_tokens(token_hash)",
     ]:
         try:
             conn.execute(text(_idx))

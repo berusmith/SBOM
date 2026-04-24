@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
@@ -123,6 +123,11 @@ export default function Login() {
           >
             {loading ? t("login.loggingIn") : t("login.submit")}
           </button>
+          <div className="text-right mt-2">
+            <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-blue-600 hover:underline">
+              忘記密碼？
+            </Link>
+          </div>
         </form>
 
         {oidcEnabled && (

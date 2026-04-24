@@ -356,6 +356,11 @@ export default function Settings() {
               {monitorStatus.next_run && (
                 <span>下次排程：{formatDateTime(monitorStatus.next_run)}</span>
               )}
+              {monitorStatus.last_skip && (
+                <span className="text-orange-500">
+                  ⚠ 上次手動觸發被跳過（掃描中）：{formatDateTime(monitorStatus.last_skip)}
+                </span>
+              )}
             </div>
           </div>
         )}

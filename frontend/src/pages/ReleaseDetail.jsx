@@ -102,6 +102,9 @@ export default function ReleaseDetail() {
   const [depGraph, setDepGraph] = useState(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [advancedMenuOpen, setAdvancedMenuOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [notesEditing, setNotesEditing] = useState(false);
+  const [notesSaving, setNotesSaving] = useState(false);
   const exportMenuRef = useRef();
   const advancedMenuRef = useRef();
   const [confirmLock, setConfirmLock] = useState(false);
@@ -146,7 +149,10 @@ export default function ReleaseDetail() {
     api.get(`/licenses/releases/${releaseId}/violations`).then((r) => setLicenseViolations(r.data)).catch(() => {});
   };
   const fetchRelease = () => {
-    api.get(`/releases/${releaseId}`).then((r) => setLocked(r.data.locked ?? false)).catch(() => toast.error("版本資料載入失敗"));
+    api.get(`/releases/${releaseId}`).then((r) => {
+      setLocked(r.data.locked ?? false);
+      setNotes(r.data.notes ?? "");
+    }).catch(() => toast.error("版本資料載入失敗"));
   };
 
   useEffect(() => {
@@ -1129,6 +1135,55 @@ export default function ReleaseDetail() {
               {sigUploading ? "上傳中..." : "驗證並儲存簽章"}
             </button>
           </div>
+        )}
+      </div>
+
+      {/* Release notes */}
+      <div className="mb-4 bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">版本備註</span>
+          {!locked && !notesEditing && (
+            <button onClick={() => setNotesEditing(true)}
+              className="text-xs text-blue-600 hover:underline px-2 py-1 rounded hover:bg-gray-100">
+              編輯
+            </button>
+          )}
+        </div>
+        {notesEditing ? (
+          <div className="space-y-2">
+            <textarea
+              rows={4}
+              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+              placeholder="輸入版本說明、變更記錄..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={5000}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setNotesSaving(true);
+                  try {
+                    await api.patch(`/releases/${releaseId}/notes`, { notes });
+                    setNotesEditing(false);
+                    toast.success("備註已儲存");
+                  } catch { toast.error("儲存失敗"); }
+                  finally { setNotesSaving(false); }
+                }}
+                disabled={notesSaving}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50">
+                {notesSaving ? "儲存中..." : "儲存"}
+              </button>
+              <button onClick={() => { setNotesEditing(false); fetchRelease(); }}
+                className="px-3 py-1.5 border rounded text-xs text-gray-600 hover:bg-gray-100">
+                取消
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className={`text-sm whitespace-pre-wrap ${notes ? "text-gray-700" : "text-gray-400 italic"}`}>
+            {notes || "（尚無備註）"}
+          </p>
         )}
       </div>
 
