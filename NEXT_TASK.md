@@ -21,7 +21,7 @@
 | # | 項目 | 預估 | 理由 |
 |---|------|------|------|
 | 1 | ~~**Reachability Phase 1**~~（import 層級，Python/Node） | ✅ 完成 | |
-| 2 | **Reachability Phase 2**（模組層級，過濾 test/scripts） | 2–3 週 | Phase 1 完成後接續 |
+| 2 | ~~**Reachability Phase 2**~~（模組層級，過濾 test/scripts） | ✅ 完成 | |
 | 3 | **Reachability Phase 3**（函式層級 call graph） | 1–2 月 | 真正的 Endor Labs 等級 |
 | 4 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關 |
 
