@@ -22,6 +22,8 @@
 | Postgres 後端選項（`_is_sqlite` + `_add_column_safe` helper） | `d3a1cbd` |
 | SSO / OIDC 整合（`/oidc/login` `/oidc/callback`，Azure AD/Google/Keycloak） | `45cd27f` |
 | Plan 分層系統（Starter/Standard/Professional，後端 guard + 前端 UI gating） | `bcbd8cf` |
+| SBOM 脫敏分享連結（時效 token / 內部元件過濾 / 無需登入下載） | `a251c68` |
+| UI/UX 全面修正（19 項：High×3 / Medium×8 / Low×4） | `4de512b` |
 
 ---
 
@@ -33,7 +35,7 @@
 | 2 | ~~**持續監控**~~（新 CVE 自動重評全組合） | ✅ 完成 | monitor.py + scheduler + Settings UI 均已存在 |
 | 3 | ~~**SSO / LDAP 整合**~~ | ✅ 完成 | OIDC（Azure AD/Google/Keycloak），`oidc_sub` 欄位，Login SSO 按鈕 |
 | 4 | ~~**SBOM 脫敏與供應鏈分享**~~ | ✅ 完成 | 分享連結 + 脫敏過濾 + 下載計數，`a251c68` |
-| 5 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
+| 5 | ~~**Binary/PDF 盤點引導**~~ | ❌ 不做 | NLP 替代方案也確認不做 |
 
 ### 持續監控說明
 - 現況：漏洞資料需手動觸發 rescan / enrich-nvd

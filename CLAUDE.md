@@ -83,6 +83,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
 | `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` `/sbom-quality-summary` `/cve-impact` |
 | `convert.py` | `/api/convert` | POST `?target=cyclonedx-json\|cyclonedx-xml\|spdx-json` — 格式互轉，回傳下載檔 |
+| `share.py` | `/api/releases/{id}/share-link` `/api/share/{token}` | 建立/列出/撤銷分享連結（Professional）；`GET /api/share/{token}` 公開無需登入，支援 `mask_internal` 過濾內部元件，記錄 `download_count` |
 | `search.py` | `/api/search` | GET `/components?q=` |
 | `settings.py` | `/api/settings` | GET/POST `/brand` `/alerts`, POST `/brand/logo` |
 | `policies.py` | `/api/policies` | CRUD |
@@ -105,6 +106,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `organization.py` | `organizations` | `plan`: `starter` / `standard` / `professional` (default `starter`); controls feature access via `core/plan.py` |
 | `brand_config.py` / `alert_config.py` | singletons | Always one row; GET creates default if missing |
 | `firmware_scan.py` | `firmware_scans` | UUID `id`, `filename`, `status` (pending/running/completed/failed), `progress` (0-100), `components_count`, `emba_output_json`, `error_message`, timestamps |
+| `share_link.py` | `sbom_share_links` | `token` (unique URL-safe), `release_id` FK, `expires_at` (nullable), `mask_internal` bool, `download_count`, `created_by` |
 
 **`schemas/`** — Pydantic v2 schemas exist only for Organization, Product, Release. All other routers define inline `BaseModel` classes.
 
