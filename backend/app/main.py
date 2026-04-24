@@ -146,6 +146,8 @@ with engine.connect() as conn:
 
     if _table_exists(conn, "releases"):
         _add_column(conn, "releases", "notes", "TEXT")
+        _add_column(conn, "releases", "sbom_quality_score", "INTEGER")
+        _add_column(conn, "releases", "sbom_quality_grade", "TEXT")
     conn.commit()
 
     if _table_exists(conn, "users"):
@@ -312,9 +314,6 @@ def _stop_monitor():
     monitor.stop()
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
 
 
 # Serve React SPA in production (STATIC_DIR env var set by systemd)

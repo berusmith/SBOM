@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -17,6 +17,8 @@ class Release(Base):
     dtrack_project_uuid = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     sbom_hash = Column(String, nullable=True)    # SHA-256 of uploaded SBOM file
+    sbom_quality_score = Column(Integer, nullable=True)   # 0-100, cached from score_sbom()
+    sbom_quality_grade = Column(String, nullable=True)    # A/B/C/D, cached from score_sbom()
     locked = Column(Boolean, nullable=False, default=False)
 
     # Sigstore / cosign signature fields

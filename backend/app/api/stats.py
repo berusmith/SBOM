@@ -1,9 +1,8 @@
-from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_org_scope
@@ -214,40 +213,58 @@ def get_risk_overview(org_scope: str | None = Depends(get_org_scope), db: Sessio
 
 @router.get("/top-risky-components")
 def get_top_risky_components(org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    comp_q = db.query(Component).options(joinedload(Component.vulnerabilities))
-    if org_scope:
-        comp_q = (
-            comp_q
-            .join(Release, Release.id == Component.release_id)
-            .join(Product, Product.id == Release.product_id)
-            .filter(Product.organization_id == org_scope)
+    from sqlalchemy import case, distinct
+    q = (
+        db.query(
+            Component.name,
+            Component.version,
+            func.count(distinct(Component.release_id)).label("release_count"),
+            func.sum(case(
+                (
+                    (Vulnerability.severity.in_(["critical", "high"]))
+                    & (Vulnerability.status.notin_(["fixed", "not_affected"])),
+                    1,
+                ),
+                else_=0,
+            )).label("unpatched_ch"),
+            func.max(Vulnerability.epss_score).label("max_epss"),
         )
+        .join(Vulnerability, Vulnerability.component_id == Component.id)
+        .group_by(Component.name, Component.version)
+    )
+    if org_scope:
+        q = (
+            q.join(Release, Release.id == Component.release_id)
+             .join(Product, Product.id == Release.product_id)
+             .filter(Product.organization_id == org_scope)
+        )
+    q = q.having(func.sum(case(
+        (
+            (Vulnerability.severity.in_(["critical", "high"]))
+            & (Vulnerability.status.notin_(["fixed", "not_affected"])),
+            1,
+        ),
+        else_=0,
+    )) > 0)
+    rows = q.order_by(func.sum(case(
+        (
+            (Vulnerability.severity.in_(["critical", "high"]))
+            & (Vulnerability.status.notin_(["fixed", "not_affected"])),
+            1,
+        ),
+        else_=0,
+    )).desc()).limit(5).all()
 
-    agg = defaultdict(lambda: {"release_ids": set(), "unpatched_ch": 0, "max_epss": None})
-    for comp in comp_q.all():
-        key = (comp.name, comp.version or "")
-        agg[key]["release_ids"].add(comp.release_id)
-        for v in comp.vulnerabilities:
-            if v.severity in ("critical", "high") and v.status not in ("fixed", "not_affected"):
-                agg[key]["unpatched_ch"] += 1
-            if v.epss_score is not None:
-                cur = agg[key]["max_epss"]
-                if cur is None or v.epss_score > cur:
-                    agg[key]["max_epss"] = v.epss_score
-
-    result = [
+    return [
         {
-            "name":          name,
-            "version":       version,
-            "release_count": len(data["release_ids"]),
-            "unpatched_ch":  data["unpatched_ch"],
-            "max_epss":      round(data["max_epss"], 4) if data["max_epss"] is not None else None,
+            "name":          r.name,
+            "version":       r.version or "",
+            "release_count": r.release_count,
+            "unpatched_ch":  r.unpatched_ch,
+            "max_epss":      round(r.max_epss, 4) if r.max_epss is not None else None,
         }
-        for (name, version), data in agg.items()
-        if data["unpatched_ch"] > 0
+        for r in rows
     ]
-    result.sort(key=lambda x: (x["unpatched_ch"], x["release_count"]), reverse=True)
-    return result[:5]
 
 
 @router.get("/top-threats")
@@ -298,11 +315,7 @@ def sbom_quality_summary(
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
-    """彙總所有版本的 SBOM 品質評分分布。"""
-    import json as _json
-    import os as _os
-    from app.services.sbom_parser import score_sbom as _score_sbom
-
+    """彙總所有版本的 SBOM 品質評分分布（從 DB 快取讀取）。"""
     q = db.query(Release).filter(Release.sbom_file_path.isnot(None))
     if org_scope:
         q = (
@@ -311,21 +324,13 @@ def sbom_quality_summary(
         )
     releases = q.all()
 
-    grade_dist: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
-    scores: list[int] = []
+    grade_dist = {"A": 0, "B": 0, "C": 0, "D": 0}
+    scores = []
 
     for rel in releases:
-        path = rel.sbom_file_path
-        if not path or not _os.path.exists(path):
-            continue
-        try:
-            with open(path, "rb") as f:
-                data = _json.loads(f.read())
-            result = _score_sbom(data)
-            grade_dist[result["grade"]] += 1
-            scores.append(result["score"])
-        except Exception:
-            continue
+        if rel.sbom_quality_grade and rel.sbom_quality_score is not None:
+            grade_dist[rel.sbom_quality_grade] = grade_dist.get(rel.sbom_quality_grade, 0) + 1
+            scores.append(rel.sbom_quality_score)
 
     avg_score = round(sum(scores) / len(scores)) if scores else 0
     return {
@@ -333,7 +338,7 @@ def sbom_quality_summary(
         "graded": len(scores),
         "grade_dist": grade_dist,
         "avg_score": avg_score,
-        "low_quality_count": grade_dist["C"] + grade_dist["D"],
+        "low_quality_count": grade_dist.get("C", 0) + grade_dist.get("D", 0),
     }
 
 

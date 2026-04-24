@@ -228,20 +228,24 @@ def oidc_callback(
         if db_user:
             db_user.oidc_sub = sub
         else:
-            # Create new SSO user (role=viewer by default)
+            # Auto-provision SSO user — inactive until admin approves
             db_user = UserModel(
                 username=email or name,
+                email=email or None,
                 hashed_password=None,
                 role="viewer",
-                is_active=True,
+                is_active=False,
                 oidc_sub=sub,
             )
             db.add(db_user)
+            db.commit()
+            db.refresh(db_user)
+            raise HTTPException(status_code=403, detail="帳號已建立，請聯繫管理員啟用")
     db.commit()
     db.refresh(db_user)
 
     if not db_user.is_active:
-        raise HTTPException(status_code=403, detail="此帳號已停用")
+        raise HTTPException(status_code=403, detail="此帳號已停用，請聯繫管理員")
 
     jwt_token = create_access_token(
         db_user.username, db_user.role,

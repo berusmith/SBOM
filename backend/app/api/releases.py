@@ -208,6 +208,14 @@ def upload_sbom(
         f.write(content)
     release.sbom_file_path = str(filepath)
     release.sbom_hash = hashlib.sha256(content).hexdigest()
+    # Cache SBOM quality score
+    try:
+        from app.services.sbom_parser import score_sbom
+        quality = score_sbom(json.loads(content))
+        release.sbom_quality_score = quality["score"]
+        release.sbom_quality_grade = quality["grade"]
+    except Exception:
+        pass
     db.commit()
 
     # Capture previous release snapshot for diff (before we wipe this release's components)
@@ -542,7 +550,7 @@ def update_version(release_id: str, body: dict, _admin: dict = Depends(require_a
 
 
 @router.delete("/{release_id}", status_code=204)
-def delete_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def delete_release(release_id: str, _admin: dict = Depends(require_admin), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -797,14 +805,11 @@ def download_iec62443_report(release_id: str, org_scope: str | None = Depends(ge
                 "justification": v.justification, "detail": v.detail,
             })
 
-    # Get all CRA incidents for this org (not release-specific, org-level context)
+    # Get CRA incidents scoped to this org
     org_id = product.organization_id if product else None
     incidents_raw = []
     if org_id:
-        prods = db.query(Product).filter(Product.organization_id == org_id).all()
-        prod_ids = [p.id for p in prods]
-        # CRA incidents are org-level, fetch all
-        incidents_raw = db.query(CRAIncident).all()
+        incidents_raw = db.query(CRAIncident).filter(CRAIncident.org_id == org_id).all()
 
     cra_incidents = [{"status": i.status} for i in incidents_raw]
 
@@ -881,7 +886,7 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
              for c in components_raw for v in c.vulnerabilities]
 
     org_id = product.organization_id if product else None
-    incidents_raw = db.query(CRAIncident).all() if org_id else []
+    incidents_raw = db.query(CRAIncident).filter(CRAIncident.org_id == org_id).all() if org_id else []
     cra_incidents = [{"status": i.status} for i in incidents_raw]
 
     pdf_bytes = iec62443_33_report.generate(
@@ -918,7 +923,8 @@ def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_or
     vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
               "status": v.status, "cwe": v.cwe, "is_kev": bool(v.is_kev)}
              for c in components_raw for v in c.vulnerabilities]
-    incidents_raw = db.query(CRAIncident).all()
+    org_id = product.organization_id if product else None
+    incidents_raw = db.query(CRAIncident).filter(CRAIncident.org_id == org_id).all() if org_id else []
     cra_incidents = [{"status": i.status} for i in incidents_raw]
 
     pdf_bytes = nis2_report.generate(
