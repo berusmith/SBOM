@@ -66,6 +66,7 @@ export default function ReleaseDetail() {
   const [downloadingIec, setDownloadingIec] = useState(false);
   const [downloadingIec42, setDownloadingIec42] = useState(false);
   const [downloadingIec33, setDownloadingIec33] = useState(false);
+  const [downloadingNis2, setDownloadingNis2] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rescanning, setRescanning] = useState(false);
   const [rescanResult, setRescanResult] = useState(null);
@@ -843,6 +844,18 @@ export default function ReleaseDetail() {
                       {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
                     </button>
                   )}
+                  <button disabled={downloadingNis2} onClick={async () => {
+                      setExportMenuOpen(false); setDownloadingNis2(true);
+                      try {
+                        const resp = await api.get(`/releases/${releaseId}/compliance/nis2`, { responseType: "blob" });
+                        const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                        const a = document.createElement("a"); a.href = url; a.download = `NIS2_${releaseId}.pdf`; a.click();
+                        URL.revokeObjectURL(url);
+                      } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                      finally { setDownloadingNis2(false); }
+                    }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {downloadingNis2 ? "產生中..." : "NIS2 Art. 21 報告"}
+                  </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={downloadingEvidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">

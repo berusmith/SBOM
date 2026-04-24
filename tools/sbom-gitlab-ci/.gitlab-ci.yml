@@ -1,0 +1,143 @@
+# SBOM Platform — GitLab CI Integration Template
+#
+# Usage:
+#   1. Copy this file to your project root as .gitlab-ci.yml (or include it)
+#   2. Set CI/CD variables in GitLab: Settings → CI/CD → Variables
+#      - SBOM_API_TOKEN  : API token with "write" scope (create at SBOM Platform → Tokens)
+#      - SBOM_RELEASE_ID : Release ID from SBOM Platform
+#      - SBOM_API_URL    : SBOM Platform URL (default: http://localhost:9100)
+#   3. Set SBOM_FILE to the path of your generated SBOM JSON file
+#
+# Include in existing pipeline:
+#   include:
+#     - project: 'your-group/sbom-gitlab-ci'
+#       file: '.gitlab-ci.yml'
+
+stages:
+  - test
+  - sbom
+
+variables:
+  SBOM_API_URL: "http://localhost:9100"   # Override in project CI/CD variables
+  SBOM_FILE: "sbom.json"                  # Path to your SBOM file
+  FAIL_ON_GATE: "true"                    # Set "false" to allow pipeline to pass even if gate fails
+
+# ── Upload SBOM ────────────────────────────────────────────────────────────────
+sbom-upload:
+  stage: sbom
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet requests
+  script:
+    - |
+      python - <<'PYEOF'
+      import os, sys, json
+      import urllib.request, urllib.error
+
+      api_url   = os.environ["SBOM_API_URL"].rstrip("/")
+      token     = os.environ["SBOM_API_TOKEN"]
+      release_id = os.environ["SBOM_RELEASE_ID"]
+      sbom_file = os.environ.get("SBOM_FILE", "sbom.json")
+
+      if not os.path.exists(sbom_file):
+          print(f"ERROR: SBOM file not found: {sbom_file}")
+          sys.exit(1)
+
+      import mimetypes
+      boundary = "----SBOMBoundary"
+      with open(sbom_file, "rb") as f:
+          file_data = f.read()
+
+      body = (
+          f"--{boundary}\r\n"
+          f'Content-Disposition: form-data; name="file"; filename="{os.path.basename(sbom_file)}"\r\n'
+          f"Content-Type: application/json\r\n\r\n"
+      ).encode() + file_data + f"\r\n--{boundary}--\r\n".encode()
+
+      req = urllib.request.Request(
+          f"{api_url}/api/releases/{release_id}/sbom",
+          data=body,
+          headers={
+              "Authorization": f"Bearer {token}",
+              "Content-Type": f"multipart/form-data; boundary={boundary}",
+          },
+          method="POST",
+      )
+      try:
+          with urllib.request.urlopen(req, timeout=120) as resp:
+              result = json.loads(resp.read())
+          print(f"✅ SBOM uploaded: {result.get('components_found', 0)} components, "
+                f"{result.get('vulnerabilities_found', 0)} vulnerabilities")
+      except urllib.error.HTTPError as e:
+          print(f"ERROR uploading SBOM: {e.code} {e.read().decode()}")
+          sys.exit(1)
+      PYEOF
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  artifacts:
+    reports:
+      dotenv: sbom_upload.env
+
+# ── Policy Gate Check ──────────────────────────────────────────────────────────
+sbom-gate:
+  stage: sbom
+  image: python:3.11-slim
+  needs: [sbom-upload]
+  before_script:
+    - pip install --quiet requests
+  script:
+    - |
+      python - <<'PYEOF'
+      import os, sys, json
+      import urllib.request, urllib.error
+
+      api_url    = os.environ["SBOM_API_URL"].rstrip("/")
+      token      = os.environ["SBOM_API_TOKEN"]
+      release_id = os.environ["SBOM_RELEASE_ID"]
+      fail_on_gate = os.environ.get("FAIL_ON_GATE", "true").lower() == "true"
+
+      req = urllib.request.Request(
+          f"{api_url}/api/releases/{release_id}/gate",
+          headers={"Authorization": f"Bearer {token}"},
+      )
+      try:
+          with urllib.request.urlopen(req, timeout=30) as resp:
+              gate = json.loads(resp.read())
+      except urllib.error.HTTPError as e:
+          print(f"ERROR checking gate: {e.code} {e.read().decode()}")
+          sys.exit(1)
+
+      overall = gate.get("overall", "fail")
+      passed  = gate.get("passed", 0)
+      total   = gate.get("total", 0)
+
+      print(f"\n{'='*50}")
+      print(f"  SBOM Policy Gate: {overall.upper()}")
+      print(f"  Checks passed: {passed}/{total}")
+      print(f"{'='*50}")
+      for check in gate.get("checks", []):
+          icon = "✅" if check["passed"] else "❌"
+          print(f"  {icon}  {check['label']}: {check.get('detail', '')}")
+      print(f"{'='*50}\n")
+
+      # Write summary for MR comment
+      with open("gate_summary.txt", "w") as f:
+          f.write(f"## SBOM Policy Gate: {overall.upper()} ({passed}/{total})\n\n")
+          for check in gate.get("checks", []):
+              icon = "✅" if check["passed"] else "❌"
+              f.write(f"{icon} **{check['label']}**: {check.get('detail', '')}\n")
+          f.write(f"\n_Release ID: {release_id}_\n")
+
+      if overall != "pass" and fail_on_gate:
+          print("Policy Gate FAILED — pipeline blocked.")
+          sys.exit(1)
+      PYEOF
+  artifacts:
+    when: always
+    paths:
+      - gate_summary.txt
+    expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

@@ -30,7 +30,7 @@ from app.models.organization import Organization
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.models.brand_config import BrandConfig
-from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report
+from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report, nis2_report
 from app.services.sbom_parser import check_ntia as _check_ntia_fn, score_sbom as _score_sbom
 from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
@@ -895,6 +895,43 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
     safe = (product.name if product else "report").replace(" ", "_")
     return Response(content=pdf_bytes, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="IEC62443_3-3_{safe}_{release.version}.pdf"'})
+
+
+@router.get("/{release_id}/compliance/nis2")
+def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    """Generate NIS2 Directive Article 21 compliance PDF report."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    product, org = _assert_release_org(release, org_scope, db)
+    if not product:
+        product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not org and product:
+        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
+    if not components_raw:
+        raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
+
+    components = [{"name": c.name, "version": c.version, "purl": c.purl, "license": c.license,
+                   "vuln_count": len(c.vulnerabilities),
+                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+    vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
+              "status": v.status, "cwe": v.cwe, "is_kev": bool(v.is_kev)}
+             for c in components_raw for v in c.vulnerabilities]
+    incidents_raw = db.query(CRAIncident).all()
+    cra_incidents = [{"status": i.status} for i in incidents_raw]
+
+    pdf_bytes = nis2_report.generate(
+        org_name=org.name if org else "Unknown",
+        product_name=product.name if product else "Unknown",
+        version=release.version,
+        components=components,
+        vulns=vulns,
+        cra_incidents=cra_incidents,
+    )
+    safe = (product.name if product else "report").replace(" ", "_")
+    return Response(content=pdf_bytes, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="NIS2_{safe}_{release.version}.pdf"'})
 
 
 @router.get("/{release_id}/evidence-package")
