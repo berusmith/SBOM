@@ -24,6 +24,8 @@
 | Plan 分層系統（Starter/Standard/Professional，後端 guard + 前端 UI gating） | `bcbd8cf` |
 | SBOM 脫敏分享連結（時效 token / 內部元件過濾 / 無需登入下載） | `a251c68` |
 | UI/UX 全面修正（19 項：High×3 / Medium×8 / Low×4） | `4de512b` |
+| IEC 62443 PDF CJK 字型支援（font_manager + CjkPDF，Windows/Linux/下載） | `ec33a75` |
+| 行動版 UI/UX 全面優化（漏洞卡片、觸控目標、表格欄位隱藏、下拉定位） | `c94b022` |
 
 ---
 
@@ -52,5 +54,4 @@
 
 ## 已知問題
 
-- IEC 62443-4-2 / 3-3 PDF 在 Windows 有 CJK 字型問題（fpdf2 Helvetica 限制）
 - CRA `start-clock` 狀態機在已 `clock_running` 時回 409（設計如此，非 bug）
