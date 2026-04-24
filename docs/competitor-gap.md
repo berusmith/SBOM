@@ -1,6 +1,6 @@
 # 競品落差分析
 
-**日期**：2026-04-24（更新）
+**日期**：2026-04-24（最終更新）
 **對照競品**：Anchore Enterprise、Snyk、Dependency-Track (OWASP)、Black Duck、FOSSA、Cybellum、Finite State、NetRise、Endor Labs、Socket、Phylum、**Cybeats SBOM Studio**、**Keysight SBOM Manager**、**FOSSLight**、**Microsoft SBOM Tool**
 
 ---
@@ -44,7 +44,9 @@
 
 - ✅ 已有：API Token（read/write/admin scope）、GitHub Action、CLI
 - ✅ 已有：Container Image 掃描（Trivy）、IaC/Terraform/K8s misconfiguration 掃描
-- ❌ 缺：GitLab CI 原生範本、Jenkins plugin、IDE 外掛、Splunk/Elastic/Slack 原生整合
+- ✅ 已有：GitLab CI 範本（`tools/sbom-gitlab-ci/`，sbom-upload + sbom-gate）
+- ✅ 已有：Slack Block Kit + Teams MessageCard 格式化通知（Webhook URL 自動偵測）
+- ❌ 缺：Jenkins plugin、IDE 外掛、Splunk/Elastic 整合
 
 ## 4. 規模與多租戶
 
@@ -68,7 +70,7 @@
 - FDA Pre-market Cybersecurity（醫材）— Cybeats、Keysight 有
 - ISO/SAE 21434（汽車）
 - UNECE R155 / R156
-- NIS2 報表
+- ~~NIS2 報表~~ → ✅ 已完成（Art. 21 五控制項評估報告）
 
 ---
 
@@ -93,7 +95,7 @@
 - **DT 有但你沒有**：
   1. ~~持續監控~~ — ✅ 你也有（`monitor.py`，Settings 可設頻率 + 手動觸發）
   2. ~~SSO~~ — ✅ OIDC 已實作（Azure AD / Google / Keycloak；DT 另有 LDAP/AD）
-  3. Slack / Teams / WebEx 原生通知
+  3. ~~Slack / Teams / WebEx 原生通知~~ → ✅ Slack Block Kit + Teams MessageCard 已支援
   4. CPE 誤配問題（你的優勢：PURL-first 更精確）
 - **你有但 DT 沒有**：CRA 時程鐘、IEC 62443、TISAX、Reachability、格式互轉、品質評分、中文化、離線低成本
 - **你的差異化說詞**：「DT 是找漏洞的工具，我是管合規的平台；DT 告訴你有漏洞，我告訴你 CRA 還剩幾天、IEC 62443 哪裡沒過。」

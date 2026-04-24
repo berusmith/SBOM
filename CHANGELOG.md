@@ -13,6 +13,11 @@
 
 ## [2.0.0] — 2026-04
 
+### 新增（競品落差補強）
+- **NIS2 Directive Article 21 合規報告**：`nis2_report.py` 評估 5 個 SBOM 可量化控制項（21.2(b) 事件處理、(d) 供應鏈安全、(e) 漏洞管理、(h) 加密政策 CWE-326/327/310、(i) 資產管理 NTIA）；`GET /api/releases/{id}/compliance/nis2` → PDF；繼承 CjkPDF 支援中文；ReleaseDetail 匯出選單加入
+- **Slack / Teams 格式化通知**：`send_webhook()` 自動偵測 URL 類型；`hooks.slack.com` → Block Kit（fields + 顏色 attachment）；`webhook.office.com` → MessageCard（Adaptive Cards 格式）；其他 URL → 原有通用 JSON，不影響現有設定
+- **GitLab CI 範本**（`tools/sbom-gitlab-ci/`）：`sbom-upload` + `sbom-gate` 兩個 job；純 stdlib 無外部依賴；支援 `SBOM_FILE / SBOM_API_URL / FAIL_ON_GATE` 變數；rules: main + merge_request；附 README 含 Syft SBOM 生成範例
+
 ### 改善
 - **組織刪除二次確認**：`ConfirmModal` 新增 `requireTypeName` 屬性；刪除組織時必須輸入組織名稱才能啟用確認按鈕，防止誤刪
 - **JWT 登出即失效**：`revoked_tokens` 資料表（jti, expires_at）；JWT 加 `jti` claim；`get_current_user` 查黑名單；`POST /auth/logout`；啟動時自動清除過期 token；Layout/Profile 登出前先呼叫 API
