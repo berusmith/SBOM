@@ -9,17 +9,18 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.database import get_db
-from app.services import tisax_pdf
-from app.core.deps import get_org_scope
+from app.core.deps import get_current_user, get_org_scope
 from app.core.plan import require_plan as _require_plan
 from app.models.organization import Organization
 from app.models.tisax import TISAXAssessment, TISAXControl
+from app.services import tisax_pdf
 from app.services.tisax_seed import make_controls
 
 router = APIRouter(prefix="/api/tisax", tags=["tisax"])
 
-MODULE_LABELS = {"infosec": "資訊安全", "prototype": "原型保護"}
+MODULE_LABELS = {"infosec": "資訊安全", "prototype": "原型保護", "dataprotection": "個資保護"}
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -107,10 +108,11 @@ class ControlUpdate(BaseModel):
 def create_assessment(
     payload: AssessmentCreate,
     _plan=Depends(_require_plan("tisax")),
+    user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
-    if payload.module not in ("infosec", "prototype"):
+    if payload.module not in ("infosec", "prototype", "dataprotection"):
         raise HTTPException(status_code=400, detail="module 必須為 infosec 或 prototype")
     if payload.assessment_level not in ("AL1", "AL2", "AL3"):
         raise HTTPException(status_code=400, detail="assessment_level 必須為 AL1/AL2/AL3")
@@ -133,6 +135,10 @@ def create_assessment(
 
     db.commit()
     db.refresh(assessment)
+    audit.record(db, "tisax_create", user, resource_id=assessment.id,
+                 resource_label=f"{MODULE_LABELS.get(payload.module, payload.module)} {payload.assessment_level}",
+                 org_name=org.name if org else None)
+    db.commit()
     return _assessment_summary(assessment)
 
 
@@ -151,6 +157,7 @@ def list_assessments(
 @router.get("/assessments/{assessment_id}")
 def get_assessment(
     assessment_id: str,
+    _plan=Depends(_require_plan("tisax")),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
@@ -176,6 +183,8 @@ def update_control(
     assessment_id: str,
     control_id: str,
     payload: ControlUpdate,
+    _plan=Depends(_require_plan("tisax")),
+    user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
@@ -211,12 +220,17 @@ def update_control(
     ctrl.status = _compute_status(ctrl.current_maturity, ctrl.target_maturity)
     a.updated_at = datetime.now(timezone.utc)
     db.commit()
+    audit.record(db, "tisax_control_update", user, resource_id=control_id,
+                 resource_label=f"{ctrl.control_number} {ctrl.name} → 成熟度 {ctrl.current_maturity}/{ctrl.target_maturity}")
+    db.commit()
     return _control_out(ctrl)
 
 
 @router.delete("/assessments/{assessment_id}", status_code=204)
 def delete_assessment(
     assessment_id: str,
+    _plan=Depends(_require_plan("tisax")),
+    user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
@@ -224,7 +238,10 @@ def delete_assessment(
     if not a:
         raise HTTPException(status_code=404, detail="評估不存在")
     _assert_org_access(a, org_scope)
+    label = f"{MODULE_LABELS.get(a.module, a.module)} {a.assessment_level}"
     db.delete(a)
+    db.commit()
+    audit.record(db, "tisax_delete", user, resource_id=assessment_id, resource_label=label)
     db.commit()
 
 

@@ -19,9 +19,12 @@ const EVENT_LABELS = {
   policy_created:  "Policy 新增",
   policy_updated:  "Policy 更新",
   policy_deleted:  "Policy 刪除",
-  cra_created:     "CRA 事件建立",
-  cra_advanced:    "CRA 狀態推進",
-  cra_closed:      "CRA 事件關閉",
+  cra_created:          "CRA 事件建立",
+  cra_advanced:         "CRA 狀態推進",
+  cra_closed:           "CRA 事件關閉",
+  tisax_create:         "TISAX 評估建立",
+  tisax_control_update: "TISAX 控制項更新",
+  tisax_delete:         "TISAX 評估刪除",
 };
 
 

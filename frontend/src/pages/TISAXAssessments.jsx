@@ -7,7 +7,7 @@ import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { SkeletonTable } from "../components/Skeleton";
 
-const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護" };
+const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護", dataprotection: "個資保護" };
 
 function MaturityBar({ value, max = 5 }) {
   const pct = (value / max) * 100;
@@ -107,6 +107,7 @@ export default function TISAXAssessments() {
                 className="border rounded px-3 py-2 text-sm w-full">
                 <option value="infosec">資訊安全（41 項）</option>
                 <option value="prototype">原型保護（22 項）</option>
+                <option value="dataprotection">個資保護（4 項，GDPR）</option>
               </select>
             </div>
             <div className="flex-1">

@@ -1,6 +1,6 @@
 """
 VDA ISA 6.0 控制項種子資料。
-資訊安全模組 41 項（IS）、原型保護模組 22 項（PP）。
+資訊安全模組 41 項（IS）、原型保護模組 22 項（PP）、個資保護模組 4 項（DP）。
 """
 
 INFOSEC_CONTROLS = [
@@ -168,9 +168,27 @@ PROTOTYPE_CONTROLS = [
 ]
 
 
+DATA_PROTECTION_CONTROLS = [
+    # VDA ISA 6.0 Chapter 9 — Data Protection (個資保護)
+    ("DP-9.1", "9. 個資保護", "個資保護政策",
+     "制定個人資料保護政策，符合 GDPR 或當地個資法規要求，並定期審查"),
+    ("DP-9.2", "9. 個資保護", "個資識別與分類",
+     "識別組織處理的個人資料類型，依敏感程度分類，建立個資資產清冊"),
+    ("DP-9.3", "9. 個資保護", "資料主體權利管理",
+     "建立機制確保資料主體可行使存取、更正、刪除（被遺忘權）等 GDPR 權利"),
+    ("DP-9.4", "9. 個資保護", "個資洩漏事件處理",
+     "建立個資洩漏偵測、通報（72 小時內）及補救程序，符合監管機關通報義務"),
+]
+
+
 def make_controls(assessment_id: str, module: str) -> list[dict]:
     """Return a list of TISAXControl field dicts for the given module."""
-    items = INFOSEC_CONTROLS if module == "infosec" else PROTOTYPE_CONTROLS
+    if module == "infosec":
+        items = INFOSEC_CONTROLS
+    elif module == "prototype":
+        items = PROTOTYPE_CONTROLS
+    else:
+        items = DATA_PROTECTION_CONTROLS
     import uuid as _uuid
     return [
         {
