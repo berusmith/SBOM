@@ -1,6 +1,7 @@
 # TISAX 合規模組 — 規劃筆記
 
-> 狀態：待排程  
+> **狀態：✅ 已完成（2026-04）**  
+> 實作：`backend/app/api/tisax.py`、`backend/app/models/tisax.py`、`frontend/src/pages/TISAXAssessments.jsx`、`TISAXDetail.jsx`  
 > 參考來源：aa.txt（車用資安標準整理，4月17–18日對話記錄）
 
 ---

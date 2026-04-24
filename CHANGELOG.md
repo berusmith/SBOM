@@ -4,13 +4,29 @@
 
 ---
 
-## [Unreleased] — Phase 2 進行中
+## [Unreleased]
 
-### 計畫新增
-- CSAF 2.0 完整匯入/匯出
-- 供應商 VEX 鏈繼承（上游 VEX 自動帶入）
-- 韌體掃描（EMBA 整合）
-- CRA Article 14 合規證據包（完整版）
+### 計畫中
+- Reachability 分析（Python/Node call graph）
+- Postgres 後端選項
+
+---
+
+## [2.0.0] — 2026-04
+
+### 新增
+- **GHSA 漏洞情資補強**：GitHub Security Advisories REST API，支援 npm/pypi/maven/nuget/cargo/gem/go；ghsa_id 欄位；上傳自動觸發 + 手動補充端點
+- **Container / IaC 掃描（Trivy）**：`POST /scan-image`（Container Image）、`POST /scan-iac`（Terraform/K8s zip，回傳 misconfiguration 列表）
+- **SBOM 簽章驗證（Sigstore/cosign）**：ECDSA / RSA-PSS / RSA-PKCS1；自動偵測演算法；Policy Gate 第 6 項
+- **TISAX 模組**：VDA ISA 6.0，63 個控制項，maturity 0–5，AL2/AL3 gap 分析，PDF/CSV 匯出
+- **GitHub Action + CLI**：`tools/sbom-action/`（composite action）、`tools/sbom-cli/sbom.py`（upload/gate/diff）
+- **API Token 最小權限**：read / write / admin scope，`require_admin_scope` 守衛
+- **首屏性能優化**：路由 lazy load、DependencyGraph/TrendChart 獨立 chunk、依賴圖延後 fetch
+
+### 改善
+- License 風險分類（Permissive / Copyleft / Commercial）+ 違規通知
+- 韌體掃描支援 EMBA demo mode（Windows 開發環境）
+- 競品落差文件（`docs/competitor-gap.md`）持續更新
 
 ---
 
@@ -19,18 +35,12 @@
 ### 新增
 - IEC 62443-3-3 系統層級報告（11 項 SR 要求評估）
 - IEC 62443-4-2 元件層級報告（4 大類 12 項 CR 要求）
-- Policy 引擎：自訂規則自動偵測違規（e.g. Critical > 7 天未修補）
-- 跨客戶風險總覽頁（各 Org 未修補 Critical/High 排行）
+- Policy 引擎：自訂規則自動偵測違規
+- 跨客戶風險總覽頁
 - CRA 事件管理（Article 14 狀態機 + 24h/72h/14d SLA 時鐘）
-- 版本鎖定/解鎖（保護已核准版本）
-- 版本 Diff 比對（兩版本間漏洞差異分析）
-- 品牌化報告（Logo 上傳、主題色、頁尾）
-- Webhook 通知（Slack/Teams 相容）
-- Email 通知（SMTP 設定）
-
-### 改善
-- 儀表板新增修補追蹤區塊（修補率圓環圖、平均修補天數）
-- VEX 歷程查詢（每次狀態變更完整記錄）
+- 版本鎖定/解鎖、版本 Diff 比對
+- 品牌化報告、Webhook + Email 通知
+- 漏洞抑制（Suppression / Risk Acceptance）
 
 ---
 
@@ -41,16 +51,7 @@
 - SBOM 上傳解析（CycloneDX JSON + SPDX JSON）
 - CVE 掃描（OSV.dev API，依 PURL 批次查詢）
 - VEX 狀態管理（open / in_triage / not_affected / affected / fixed）
-- 批次 VEX 更新
-- EPSS 整合（FIRST.org，利用可能性分數）
-- CISA KEV 標記（已知被利用漏洞）
-- NVD 豐富化（描述、CWE、CVSS v3/v4、參考連結）
-- PDF 報告匯出（fpdf2）
-- CSV 漏洞匯出
-- CSAF VEX 文件產出
-- 合規證據包 ZIP（PDF + CSAF + SBOM + 清單）
+- EPSS 整合（FIRST.org）、CISA KEV 標記、NVD 豐富化
+- PDF 報告、CSV 匯出、CSAF VEX、合規證據包 ZIP
 - SBOM 完整性驗證（SHA-256）
-- 全域元件搜尋
-- JWT 登入認證（Token 有效期 8 小時）
-- 儀表板統計（嚴重度分布、處理狀態）
-- 25/25 測試通過
+- JWT 登入認證
