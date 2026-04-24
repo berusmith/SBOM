@@ -29,7 +29,7 @@ npm run preview  # serve dist/ locally
 
 No pytest suite. Use stdlib-only ad-hoc scripts (`urllib` + `json` — `requests` and `grep -P` are unavailable).
 
-**Full regression suite** (39 tests, run from `sbom-platform/`):
+**Full regression suite** (54 tests, run from the repo root):
 ```bash
 python test_all.py
 ```
@@ -136,7 +136,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 **`core/plan.py`** — Plan feature gating. `FEATURE_PLAN` maps feature keys to minimum plan. `require_plan(feature)` FastAPI dependency raises 402 if org plan insufficient. `check_starter_limit(db, org_id, resource)` enforces Starter data limits (3 products / 10 releases). Admin users always bypass plan checks. Plans: `starter` < `standard` < `professional`.
 
-**Python 3.9 compatibility** — The server runs Python 3.9. Use `from __future__ import annotations` at the top of any file that uses `X | Y` union syntax or `list[X]` / `dict[K,V]` in type hints outside of string literals.
+**Python compatibility** — The production server runs Python 3.11 (installed by `deploy/setup.sh`). Local dev supports 3.11+. The codebase uses `from __future__ import annotations` in several files for forward-compat; keep this habit for any file using `X | Y` unions or `list[X]` outside string literal hints.
 
 ### Key helpers in `releases.py`
 

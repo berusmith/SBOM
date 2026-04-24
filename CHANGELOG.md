@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+### 修正（安全性 / 生產就緒）
+- **依賴套件升級**：清除 9 個已知 CVE（`pip-audit` 掃描結果）
+  - `fastapi` 0.115.0 → 0.120.4
+  - `starlette` 0.38.6 → 0.49.2（CVE-2024-47874、CVE-2025-54121、CVE-2025-62727）
+  - `python-multipart` 0.0.12 → 0.0.26（CVE-2024-53981、CVE-2026-24486、CVE-2026-40347）
+  - `requests` 2.32.3 → 2.33.0（CVE-2024-47081、CVE-2026-25645）
+  - `pillow` 10.4.0 → 12.2.0（CVE-2026-25990、CVE-2026-40192）
+- **`/health` 誤報修正**：`monitor.get_status()` 加入 `running` 欄位反映 scheduler thread 實際狀態,取代先前永遠為 `false` 的假值（uptime monitor 會被誤判）
+- **移除重複 `/health` endpoint**:`main.py` 末端的精簡版會覆蓋詳細版的 bug 隨之消失（雖然因為 FastAPI 先註冊優先,原本詳細版還是贏,但還是死程式碼）
+- **從 `@app.on_event` 遷移至 `lifespan` context manager**：`on_event` 自 FastAPI 0.109 deprecated,改成 `@asynccontextmanager` 統一管理 startup/shutdown
+- **FastAPI `version` 欄位同步**:`FastAPI(version="0.1.0")` → `"2.0.0"`,與 `/health` 回傳的 `version` 一致
+
+### 文件
+- `SECURITY.md`:版本支援表更新(1.5.x → 2.0.x 為最新)
+- `CLAUDE.md`:Python 版本 3.9 → 3.11 更正;測試數 39 → 54 更正
+- 新增 `.knowledge/`:跨輪次知識庫(ADR / patterns / pitfalls / references)
+
 ### 計畫中
 - 部署 Oracle Cloud 生產環境（所有功能已完成）
 - Binary SBOM 生成（Syft，等客戶需求）
