@@ -135,7 +135,10 @@ export default function TISAXAssessments() {
         <SkeletonTable rows={3} cols={4} />
       ) : assessments.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-600">
-          尚無評估，點擊「新增評估」開始 TISAX 自評
+          <p className="text-lg font-medium mb-2">尚無 TISAX 評估</p>
+          <p className="text-sm mb-1 max-w-md mx-auto">TISAX 是汽車供應鏈資訊安全認證標準（VDA ISA 6.0），共 63 個控制項，成熟度評分 0–5。</p>
+          <p className="text-sm">建立評估後可自動分析 AL2 / AL3 差距，協助準備 TISAX 認證。</p>
+          <p className="text-sm mt-3 text-blue-600">點擊右上角「新增評估」開始</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

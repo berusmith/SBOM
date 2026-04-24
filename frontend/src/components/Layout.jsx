@@ -25,10 +25,9 @@ export default function Layout({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const role = localStorage.getItem("role") || "viewer";
   const currentPlan = getPlan();
-  const navItems = ALL_NAV.filter(item =>
-    (!item.adminOnly || role === "admin") &&
-    (!item.minPlan || hasPlan(item.minPlan))
-  );
+  const navItems = ALL_NAV.filter(item => !item.adminOnly || role === "admin");
+  const lockedItems = navItems.filter(item => item.minPlan && !hasPlan(item.minPlan));
+  const visibleItems = navItems.filter(item => !item.minPlan || hasPlan(item.minPlan));
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -67,7 +66,7 @@ export default function Layout({ children }) {
 
             {/* Desktop nav */}
             <div className="hidden md:flex gap-1 ml-2">
-              {navItems.map((item) => (
+              {visibleItems.map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -79,6 +78,15 @@ export default function Layout({ children }) {
                 >
                   {t(`nav.${item.key}`)}
                 </Link>
+              ))}
+              {lockedItems.map((item) => (
+                <span
+                  key={item.path}
+                  title={`需要 ${item.minPlan === "standard" ? "Standard" : "Professional"} 方案`}
+                  className="px-2.5 py-1.5 rounded text-sm text-gray-600 cursor-not-allowed flex items-center gap-1 whitespace-nowrap"
+                >
+                  🔒 {t(`nav.${item.key}`)}
+                </span>
               ))}
             </div>
 

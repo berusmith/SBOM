@@ -8,11 +8,13 @@ import { PasswordInput } from "../components/PasswordInput";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
 import { validate, validators } from "../utils/validate";
+import { SkeletonTable } from "../components/Skeleton";
 
 export default function Organizations() {
   const { t } = useTranslation();
   const toast = useToast();
   const [orgs, setOrgs] = useState([]);
+  const [orgsLoading, setOrgsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -24,11 +26,16 @@ export default function Organizations() {
   const [editName, setEditName] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [confirmPlan, setConfirmPlan] = useState(null); // {org, newPlan}
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
 
   const fetchOrgs = () => {
-    api.get("/organizations").then((res) => setOrgs(res.data)).catch(() => {});
+    setOrgsLoading(true);
+    api.get("/organizations")
+      .then((res) => setOrgs(res.data))
+      .catch(() => toast.error("客戶清單載入失敗，請重新整理"))
+      .finally(() => setOrgsLoading(false));
   };
 
   useEffect(() => { fetchOrgs(); }, []);
@@ -210,7 +217,8 @@ export default function Organizations() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {orgsLoading ? <SkeletonTable rows={4} cols={4} /> : null}
+      <div className="bg-white rounded-lg shadow overflow-hidden" style={{ display: orgsLoading ? "none" : "" }}>
         {orgs.length === 0 ? (
           <div className="p-8 text-center text-gray-600">{t("organizations.noData")}</div>
         ) : (
@@ -242,10 +250,7 @@ export default function Organizations() {
                     {isAdmin ? (
                       <select
                         value={org.plan || "starter"}
-                        onChange={async (e) => {
-                          await api.patch(`/organizations/${org.id}/plan`, { plan: e.target.value });
-                          fetchOrgs();
-                        }}
+                        onChange={(e) => setConfirmPlan({ org, newPlan: e.target.value })}
                         className="border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
                       >
                         <option value="starter">Starter</option>
@@ -306,6 +311,20 @@ export default function Organizations() {
         isDangerous
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmPlan}
+        title="確認變更方案"
+        message={`確定要將「${confirmPlan?.org?.name}」的方案從 ${confirmPlan?.org?.plan || 'starter'} 變更為 ${confirmPlan?.newPlan}？\n降級可能導致客戶無法存取部分功能。`}
+        confirmText="確認變更"
+        cancelText={t("common.cancel")}
+        onConfirm={async () => {
+          await api.patch(`/organizations/${confirmPlan.org.id}/plan`, { plan: confirmPlan.newPlan });
+          setConfirmPlan(null);
+          fetchOrgs();
+        }}
+        onCancel={() => setConfirmPlan(null)}
       />
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
+import { useToast } from "../components/Toast";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
 
@@ -184,6 +185,7 @@ export default function Dashboard() {
   const orgId = localStorage.getItem("org_id") || "";
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const toast = useToast();
 
   useEffect(() => {
     Promise.all([
@@ -192,13 +194,15 @@ export default function Dashboard() {
       api.get("/stats/top-threats"),
       api.get("/stats/top-risky-components"),
       api.get("/stats/sbom-quality-summary"),
-    ]).then(([s, r, t, rc, q]) => {
+    ]).then(([s, r, th, rc, q]) => {
       setStats(s.data);
       setRiskOverview(r.data);
-      setTopThreats(t.data);
+      setTopThreats(th.data);
       setRiskyComponents(rc.data);
       setQualitySummary(q.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {
+      toast.error("儀表板資料載入失敗，請重新整理頁面");
+    }).finally(() => setLoading(false));
   }, []);
 
   const handleCveSearch = async (e) => {
@@ -375,7 +379,7 @@ export default function Dashboard() {
               {qualitySummary.low_quality_count > 0 && (
                 <div><span className="font-semibold text-red-600 text-lg">{qualitySummary.low_quality_count}</span><br/><span className="text-xs text-red-600">{t("dashboard.qualityLow")}</span></div>
               )}
-              <div><span className="text-xs text-gray-400">{qualitySummary.graded} / {qualitySummary.total} 版本已評分</span></div>
+              <div><span className="text-xs text-gray-400">{t("dashboard.gradedOf", { graded: qualitySummary.graded, total: qualitySummary.total })}</span></div>
             </div>
           </div>
         ) : (
@@ -537,7 +541,7 @@ export default function Dashboard() {
       {riskyComponents.length > 0 && (
         <div className="mt-4 bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-700">高風險元件</h2>
+            <h2 className="font-semibold text-gray-700">{t("dashboard.riskyComponents")}</h2>
             <span className="text-xs text-gray-600">跨版本 Critical/High 未處理漏洞最多</span>
           </div>
           <div className="overflow-x-auto">
@@ -563,7 +567,7 @@ export default function Dashboard() {
                     </td>
                     <td className="py-2.5 pr-4 text-center">
                       <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                        {c.release_count} 個版本
+                        {t("dashboard.releaseCount", { n: c.release_count })}
                       </span>
                     </td>
                     <td className="py-2.5 pr-4 text-center">
@@ -594,7 +598,7 @@ export default function Dashboard() {
       {/* Risk overview table */}
       {riskOverview.length > 0 && (
         <div className="mt-4 bg-white rounded-lg shadow p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">客戶風險總覽</h2>
+          <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.riskOverview")}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

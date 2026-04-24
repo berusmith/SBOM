@@ -268,6 +268,12 @@ export default function ReleaseDetail() {
       fetchQuality();
       fetchGate();
       fetchDepGraph();
+      const vulnCount = res.data.vulnerabilities_found || 0;
+      if (vulnCount > 0) {
+        toast.success(`上傳完成！發現 ${vulnCount} 個漏洞，請切換至「漏洞」頁籤設定 VEX 狀態`);
+      } else {
+        toast.success("上傳完成！未發現已知漏洞");
+      }
     } catch (err) {
       setUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
@@ -396,6 +402,7 @@ export default function ReleaseDetail() {
       });
       setShareNewLink(res.data);
       fetchShareLinks();
+      toast.success("分享連結已建立，請複製後傳給外部人員");
     } catch (err) {
       toast.error("建立分享連結失敗：" + (err.response?.data?.detail || err.message));
     } finally {
@@ -512,12 +519,14 @@ export default function ReleaseDetail() {
     if (selected.size === 0) return;
     setBatching(true);
     try {
+      const count = selected.size;
       await api.patch("/vulnerabilities/batch", {
         vuln_ids: [...selected],
         status: batchStatus,
       });
       setSelected(new Set());
       fetchVulns();
+      toast.success(`已批次更新 ${count} 筆漏洞狀態為「${STATUS_LABEL[batchStatus] || batchStatus}」`);
     } catch (err) {
       toast.error("批次更新失敗：" + (err.response?.data?.detail || err.message));
     } finally {
@@ -897,7 +906,7 @@ export default function ReleaseDetail() {
                 <code className="text-xs bg-violet-100 px-2 py-1 rounded break-all">
                   {window.location.origin}/api/share/{shareNewLink.token}
                 </code>
-                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/share/${shareNewLink.token}`)}
+                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/share/${shareNewLink.token}`).then(() => toast.success("連結已複製")).catch(() => toast.error("複製失敗，請手動選取"))}
                   className="text-xs text-violet-600 hover:text-violet-800 border border-violet-300 px-2 py-0.5 rounded">
                   複製
                 </button>
@@ -1065,11 +1074,15 @@ export default function ReleaseDetail() {
             {sigStatus?.status === "valid" && !locked && (
               <button onClick={handleDeleteSignature} className="text-xs text-red-500 hover:underline">移除</button>
             )}
-            {(!sigStatus || sigStatus.status === "unsigned") && !locked && (
-              <button onClick={() => setShowSigUpload(!showSigUpload)}
-                className="text-xs text-blue-600 hover:underline">
-                {showSigUpload ? "取消" : "上傳簽章"}
-              </button>
+            {(!sigStatus || sigStatus.status === "unsigned") && (
+              locked ? (
+                <span className="text-xs text-gray-400" title="請先解鎖版本才能上傳簽章">🔒 上傳簽章（需先解鎖）</span>
+              ) : (
+                <button onClick={() => setShowSigUpload(!showSigUpload)}
+                  className="text-xs text-blue-600 hover:underline">
+                  {showSigUpload ? "取消" : "上傳簽章"}
+                </button>
+              )
             )}
           </div>
         </div>

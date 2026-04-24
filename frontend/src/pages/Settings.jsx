@@ -470,7 +470,7 @@ function ApiTokens({ flash }) {
       await navigator.clipboard.writeText(newToken.token);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
+    } catch { flash("err", "複製失敗，請手動選取後複製"); }
   };
 
   return (
@@ -527,7 +527,8 @@ function ApiTokens({ flash }) {
 
       {newToken && (
         <div className="bg-yellow-50 border border-yellow-300 rounded p-4 mb-4">
-          <p className="text-sm font-semibold text-yellow-800 mb-2">Token 建立成功，僅顯示此一次，請立即複製保存</p>
+          <p className="text-sm font-semibold text-yellow-800 mb-1">⚠️ Token 建立成功</p>
+          <p className="text-xs text-yellow-700 mb-2">此 Token <strong>只顯示一次</strong>，關閉後無法再次查看。請立即複製並妥善保存。</p>
           <div className="flex gap-2 items-center mb-2">
             <code className="flex-1 bg-white border rounded px-3 py-2 text-xs font-mono break-all">{newToken.token}</code>
             <button
@@ -606,6 +607,7 @@ function UserManagement({ flash }) {
   const [form, setForm] = useState({ username: "", password: "", role: "viewer" });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmRole, setConfirmRole] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const fetchUsers = () => api.get("/users").then((r) => setUsers(r.data)).catch(() => {});
@@ -630,6 +632,12 @@ function UserManagement({ flash }) {
 
   const handleToggleRole = async (u) => {
     const newRole = u.role === "admin" ? "viewer" : "admin";
+    setConfirmRole({ user: u, newRole });
+  };
+
+  const doToggleRole = async () => {
+    const { user: u, newRole } = confirmRole;
+    setConfirmRole(null);
     try {
       await api.patch(`/users/${u.id}`, { role: newRole });
       fetchUsers();
@@ -758,6 +766,16 @@ function UserManagement({ flash }) {
         isDangerous
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!confirmRole}
+        title="確認變更角色"
+        message={`確定要將「${confirmRole?.user?.username}」的角色從 ${confirmRole?.user?.role} 變更為 ${confirmRole?.newRole}？${confirmRole?.newRole === 'viewer' ? '\n降為 viewer 後該帳號將無法進行管理操作。' : ''}`}
+        confirmText="確認變更"
+        cancelText="取消"
+        onConfirm={doToggleRole}
+        onCancel={() => setConfirmRole(null)}
       />
       </div>
     </div>

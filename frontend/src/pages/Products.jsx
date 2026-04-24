@@ -27,7 +27,11 @@ export default function Products() {
       api.get("/organizations").then((res) => {
         const org = res.data.find((o) => o.id === orgId);
         if (org) setOrgName(org.name);
-      }),
+        else api.get(`/organizations`).then(r2 => {
+          const o2 = r2.data.find(o => o.id === orgId);
+          if (o2) setOrgName(o2.name);
+        }).catch(() => {});
+      }).catch(() => {}),
       api.get(`/organizations/${orgId}/products`).then((res) => setProducts(res.data)).catch(() => {}),
     ]).finally(() => setPageLoading(false));
   };
