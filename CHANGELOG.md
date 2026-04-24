@@ -14,6 +14,7 @@
 ## [2.0.0] — 2026-04
 
 ### 新增
+- **IEC 62443 PDF CJK 字型支援**：`font_manager.py` 自動偵測字型（Windows `msyh.ttc`、Linux NotoSansSC、自動下載 fallback）；`CjkPDF` 基礎類別供三份報告（4-1/4-2/3-3）繼承；組織名稱、產品名稱等中文欄位可正確渲染至 PDF
 - **SBOM 脫敏分享連結**：Professional plan；`POST /api/releases/{id}/share-link` 建立時效 token；`GET /api/share/{token}` 無需登入公開下載；`mask_internal` 過濾 `internal://` / `private://` 元件；記錄下載次數；ReleaseDetail 面板含複製、撤銷
 - **UI/UX 全面修正（19 項）**：Plan 降級確認 modal、批次 VEX 操作回饋、Dashboard 錯誤提示、Plan 鎖定功能灰色圖示、麵包屑補抓、骨架屏、SBOM 上傳引導 toast、TISAX/CRA 空白頁說明、角色切換確認、簽章鎖定提示、分享連結 toast、i18n 補完、clipboard 錯誤、Token 只顯示一次警告加強
 - **Plan 分層系統**：Starter / Standard / Professional 三層；後端 `require_plan()` FastAPI dependency（非 admin 回 402）；前端 `utils/plan.js` + Layout badge + 按鈕/頁面自動隱藏；Organizations 頁 admin 可即時切換 plan
