@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import hashlib
 import io
@@ -1650,7 +1651,7 @@ async def upload_source(
 
     content = await file.read()
     try:
-        scan = _scan_zip(content)
+        scan = await asyncio.to_thread(_scan_zip, content)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -1804,7 +1805,7 @@ async def scan_iac_archive(
         raise HTTPException(status_code=400, detail="壓縮檔超過 20MB 上限")
 
     try:
-        cdx = _trivy.scan_iac(content)
+        cdx = await asyncio.to_thread(_trivy.scan_iac, content)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 

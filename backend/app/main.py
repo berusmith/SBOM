@@ -204,8 +204,8 @@ from app.core.rate_limit import api_limiter, _client_ip as _rl_ip
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     path = request.url.path
-    # Only rate-limit API routes; skip static assets and health checks
-    if path.startswith("/api/"):
+    # Only rate-limit API routes; skip static assets, health check
+    if path.startswith("/api/") and path != "/health":
         ip = _rl_ip(request)
         if not api_limiter.is_allowed(ip):
             return JSONResponse(
@@ -237,6 +237,38 @@ app.include_router(convert.router, dependencies=_auth)
 # share router: create/list/delete require auth (handled inside router via Depends)
 # GET /api/share/{token} is public — no global auth dependency
 app.include_router(share.router)
+
+
+@app.get("/health", tags=["health"])
+def health_check():
+    """
+    Health check endpoint — no auth required.
+    Returns DB connectivity status and app version.
+    Used by uptime monitors (UptimeRobot, cron, load balancer).
+    """
+    from datetime import datetime, timezone
+    from sqlalchemy import text as _text
+    db_status = "ok"
+    try:
+        with engine.connect() as _c:
+            _c.execute(_text("SELECT 1"))
+    except Exception:
+        db_status = "error"
+
+    from app.services import monitor as _mon
+    mon_status = _mon.get_status()
+
+    return {
+        "status": "ok" if db_status == "ok" else "degraded",
+        "version": "2.0.0",
+        "db": db_status,
+        "monitor": {
+            "running": mon_status.get("running", False),
+            "last_run": mon_status.get("last_run"),
+            "next_run": mon_status.get("next_run"),
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @app.on_event("startup")
