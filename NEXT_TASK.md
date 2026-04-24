@@ -30,6 +30,8 @@
 | 稽核紀錄補齊（audit_events 從 8 → 21 種事件，含 VEX/Token/Lock/Plan） | `ad502c5` |
 | Rate Limiting（登入 10/5min + 全域 300/min/IP，滑動視窗 middleware） | `cbc681e` |
 | 列表端點分頁保護（components skip/limit，硬上限 5000） | `cbc681e` |
+| Health Check endpoint（GET /health，DB 連通性 + monitor 狀態） | `d0ed38f` |
+| Async I/O 修正（upload_source + scan_iac 改 asyncio.to_thread） | `d0ed38f` |
 
 ---
 
@@ -68,4 +70,4 @@
 | OIDC 自動建立新使用者 | 可加 email domain 白名單；需 OIDC 設定者授權才能觸發 |
 | 無限 share link 建立 | 可加每 release 上限；屬資料 bloat，非安全漏洞 |
 | monitor.py 靜默跳過 | 與手動 rescan 衝突時回傳 0 但無使用者通知；可加狀態端點 |
-| 非同步 endpoint 阻塞 I/O | Trivy / AST 掃描在 async route 中同步執行；可改 `asyncio.to_thread` |
+| ~~非同步 endpoint 阻塞 I/O~~ | ✅ 已修：upload_source + scan_iac 改 asyncio.to_thread |
