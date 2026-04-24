@@ -127,7 +127,7 @@ export default function ReleaseDetail() {
   const [shareNewLink, setShareNewLink] = useState(null);
 
   const fetchComponents = () => {
-    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
+    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data.items ?? r.data)).catch(() => toast.error("元件清單載入失敗"));
   };
   const fetchQuality = () => {
     api.get(`/releases/${releaseId}/sbom-quality`).then((r) => setSbomQuality(r.data)).catch(() => setSbomQuality(null));

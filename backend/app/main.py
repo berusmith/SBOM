@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -196,6 +197,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# General API rate limit: 300 req/min per IP (excludes static files)
+from app.core.rate_limit import api_limiter, _client_ip as _rl_ip
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    # Only rate-limit API routes; skip static assets and health checks
+    if path.startswith("/api/"):
+        ip = _rl_ip(request)
+        if not api_limiter.is_allowed(ip):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "請求過於頻繁，請稍後再試"},
+                headers={"Retry-After": "60"},
+            )
+    return await call_next(request)
 
 _auth = [Depends(get_current_user)]
 

@@ -536,14 +536,24 @@ def delete_release(release_id: str, org_scope: str | None = Depends(get_org_scop
 
 
 @router.get("/{release_id}/components")
-def list_components(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def list_components(
+    release_id: str,
+    skip: int = 0,
+    limit: int = 2000,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    if limit > 5000:
+        limit = 5000
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     _assert_release_org(release, org_scope, db)
+    total = db.query(func.count(Component.id)).filter(Component.release_id == release_id).scalar()
     components = (db.query(Component)
                   .options(selectinload(Component.vulnerabilities))
-                  .filter(Component.release_id == release_id).all())
+                  .filter(Component.release_id == release_id)
+                  .offset(skip).limit(limit).all())
     result = []
     for c in components:
         vulns = c.vulnerabilities
@@ -557,7 +567,7 @@ def list_components(release_id: str, org_scope: str | None = Depends(get_org_sco
             "vuln_count": len(vulns),
             "highest_severity": _highest_severity(vulns),
         })
-    return result
+    return {"total": total, "skip": skip, "limit": limit, "items": result}
 
 
 @router.get("/{release_id}/vulnerabilities")

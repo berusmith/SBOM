@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import check_login_rate_limit, login_limiter, _client_ip
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.organization import Organization
 from app.models.user import User as UserModel
@@ -31,8 +32,9 @@ class LoginPayload(BaseModel):
 
 
 @router.post("/login")
-def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)):
-    client_ip = request.client.host if request.client else "unknown"
+def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db),
+          _rl: None = Depends(check_login_rate_limit)):
+    client_ip = _client_ip(request)
     # Check DB users first
     db_user = db.query(UserModel).filter(
         UserModel.username == payload.username,
@@ -54,6 +56,7 @@ def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)
                      {"username": db_user.username, "user_id": db_user.id, "org_id": db_user.organization_id},
                      org_name=org_name, ip=client_ip)
         db.commit()
+        login_limiter.reset(client_ip)  # clear counter on success
         return {"access_token": token, "token_type": "bearer"}
 
     # Fall back to env-var admin (allows login even if DB is empty)
@@ -62,6 +65,7 @@ def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)
         token = create_access_token(payload.username, "admin")
         audit.record(db, "login_ok", {"username": payload.username}, ip=client_ip)
         db.commit()
+        login_limiter.reset(client_ip)
         return {"access_token": token, "token_type": "bearer"}
 
     logger.warning("AUTH_FAIL user=%s ip=%s", payload.username, client_ip)
