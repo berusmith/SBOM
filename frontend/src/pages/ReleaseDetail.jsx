@@ -119,6 +119,12 @@ export default function ReleaseDetail() {
   const [sourceUploading, setSourceUploading] = useState(false);
   const convertFileRef = useRef();
   const [converting, setConverting] = useState(false);
+  const [shareLinks, setShareLinks] = useState([]);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareCreating, setShareCreating] = useState(false);
+  const [shareExpiresHours, setShareExpiresHours] = useState(72);
+  const [shareMaskInternal, setShareMaskInternal] = useState(false);
+  const [shareNewLink, setShareNewLink] = useState(null);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
@@ -370,6 +376,40 @@ export default function ReleaseDetail() {
     } finally {
       setSourceUploading(false);
       if (sourceFileRef.current) sourceFileRef.current.value = "";
+    }
+  };
+
+  const fetchShareLinks = async () => {
+    try {
+      const res = await api.get(`/releases/${releaseId}/share-links`);
+      setShareLinks(res.data);
+    } catch { setShareLinks([]); }
+  };
+
+  const handleCreateShareLink = async () => {
+    setShareCreating(true);
+    setShareNewLink(null);
+    try {
+      const res = await api.post(`/releases/${releaseId}/share-link`, {
+        expires_hours: shareExpiresHours || null,
+        mask_internal: shareMaskInternal,
+      });
+      setShareNewLink(res.data);
+      fetchShareLinks();
+    } catch (err) {
+      toast.error("建立分享連結失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setShareCreating(false);
+    }
+  };
+
+  const handleRevokeShareLink = async (linkId) => {
+    try {
+      await api.delete(`/releases/${releaseId}/share-links/${linkId}`);
+      fetchShareLinks();
+      if (shareNewLink?.id === linkId) setShareNewLink(null);
+    } catch (err) {
+      toast.error("撤銷失敗：" + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -645,6 +685,16 @@ export default function ReleaseDetail() {
               {locked ? <><Unlock size={16} className="inline mr-1" />{t("releaseDetail.actions.unlockVersion")}</> : <><Lock size={16} className="inline mr-1" />{t("releaseDetail.actions.lockVersion")}</>}
             </button>
 
+            {/* 分享 SBOM — Professional */}
+            {isProPlan && (
+              <button
+                onClick={() => { setShareOpen(o => !o); if (!shareOpen) fetchShareLinks(); }}
+                className="px-4 py-2 rounded text-sm text-white font-medium bg-violet-600 hover:bg-violet-700"
+              >
+                分享 SBOM
+              </button>
+            )}
+
             {/* Container Image 掃描 — Professional */}
             {isProPlan && (
               <button
@@ -809,6 +859,76 @@ export default function ReleaseDetail() {
           </div>
         )}
       </div>
+
+      {/* Share Link Panel */}
+      {shareOpen && isProPlan && (
+        <div className="mb-3 bg-violet-50 border border-violet-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-violet-800 mb-3">分享 SBOM（外部人員不需登入即可下載）</p>
+
+          {/* Create form */}
+          <div className="flex flex-wrap gap-3 items-end mb-3">
+            <div>
+              <label className="block text-xs text-violet-700 mb-1">連結有效期</label>
+              <select value={shareExpiresHours} onChange={e => setShareExpiresHours(Number(e.target.value))}
+                className="border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400">
+                <option value={24}>24 小時</option>
+                <option value={72}>72 小時</option>
+                <option value={168}>7 天</option>
+                <option value={720}>30 天</option>
+                <option value={0}>永不過期</option>
+              </select>
+            </div>
+            <label className="flex items-center gap-1.5 text-sm text-violet-700 cursor-pointer">
+              <input type="checkbox" checked={shareMaskInternal} onChange={e => setShareMaskInternal(e.target.checked)} />
+              過濾內部元件（internal:// / private://）
+            </label>
+            <button onClick={handleCreateShareLink} disabled={shareCreating}
+              className="px-4 py-1.5 rounded text-sm text-white bg-violet-600 hover:bg-violet-700 disabled:opacity-50">
+              {shareCreating ? "建立中..." : "建立連結"}
+            </button>
+            <button onClick={() => setShareOpen(false)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          </div>
+
+          {/* Newly created link */}
+          {shareNewLink && (
+            <div className="bg-white border border-violet-300 rounded p-3 mb-3 text-sm">
+              <p className="font-medium text-violet-800 mb-1">連結已建立</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <code className="text-xs bg-violet-100 px-2 py-1 rounded break-all">
+                  {window.location.origin}/api/share/{shareNewLink.token}
+                </code>
+                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/share/${shareNewLink.token}`)}
+                  className="text-xs text-violet-600 hover:text-violet-800 border border-violet-300 px-2 py-0.5 rounded">
+                  複製
+                </button>
+              </div>
+              {shareNewLink.expires_at && (
+                <p className="text-xs text-gray-500 mt-1">
+                  過期時間：{new Date(shareNewLink.expires_at).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Existing links */}
+          {shareLinks.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs text-violet-700 font-medium mb-1">現有連結（{shareLinks.length}）</p>
+              {shareLinks.map(lk => (
+                <div key={lk.id} className={`flex items-center gap-2 text-xs p-2 rounded ${lk.expired ? "bg-gray-50 text-gray-400" : "bg-white border border-violet-100"}`}>
+                  <span className="font-mono truncate max-w-[200px]">{lk.token.slice(0, 16)}…</span>
+                  <span>{lk.expires_at ? new Date(lk.expires_at).toLocaleDateString() : "永不過期"}</span>
+                  {lk.mask_internal && <span className="px-1 bg-orange-100 text-orange-700 rounded">已脫敏</span>}
+                  {lk.expired && <span className="px-1 bg-gray-200 text-gray-500 rounded">已過期</span>}
+                  <span className="text-gray-400">{lk.download_count} 次下載</span>
+                  <button onClick={() => handleRevokeShareLink(lk.id)}
+                    className="ml-auto text-red-400 hover:text-red-600">撤銷</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Container Image scan inline form */}
       {imageScanOpen && (

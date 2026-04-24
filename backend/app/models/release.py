@@ -30,3 +30,4 @@ class Release(Base):
     components = relationship("Component", back_populates="release", cascade="all, delete-orphan")
     compliance_maps = relationship("ComplianceMap", back_populates="release", cascade="all, delete-orphan")
     vex_statements = relationship("VexStatement", back_populates="release", cascade="all, delete-orphan")
+    share_links = relationship("SbomShareLink", back_populates="release", cascade="all, delete-orphan")
