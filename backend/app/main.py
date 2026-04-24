@@ -27,8 +27,18 @@ from app.core.config import settings as _cfg
 # ── Column migration helpers ──────────────────────────────────────────────────
 from app.core.database import _is_sqlite as _db_is_sqlite  # noqa: E402
 
+_ALLOWED_TABLES = {
+    "vulnerabilities", "releases", "components", "users", "organizations",
+    "products", "cra_incidents", "alert_config", "api_tokens",
+    "vex_statements", "vex_history", "audit_events", "share_links",
+    "firmware_scans", "policy_rules", "brand_config", "license_rules",
+    "tisax_assessments", "tisax_controls",
+}
+
 def _list_columns(conn, table: str) -> set:
     """Return current column names for a table (SQLite or Postgres)."""
+    if table not in _ALLOWED_TABLES:
+        raise ValueError(f"Invalid table name: {table!r}")
     if _db_is_sqlite:
         return {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
     else:
@@ -139,6 +149,7 @@ with engine.connect() as conn:
         "CREATE INDEX IF NOT EXISTS idx_comp_name      ON components(name)",
         "CREATE INDEX IF NOT EXISTS idx_cra_org        ON cra_incidents(org_id)",
         "CREATE INDEX IF NOT EXISTS idx_cra_status     ON cra_incidents(status)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_comp_cve ON vulnerabilities(component_id, cve_id)",
     ]:
         try:
             conn.execute(text(_idx))
@@ -148,6 +159,20 @@ with engine.connect() as conn:
 
 # Create any missing tables (new tables like audit_events)
 Base.metadata.create_all(bind=engine, checkfirst=True)
+
+# Security: warn on weak SECRET_KEY at startup
+import logging as _logging
+_startup_log = _logging.getLogger("sbom.startup")
+if _cfg.SECRET_KEY in ("change-me-in-production", "", "secret"):
+    _startup_log.warning(
+        "⚠️  SECRET_KEY is using an insecure default. "
+        "Set a strong random value in backend/.env before production deployment."
+    )
+if len(_cfg.SECRET_KEY.encode()) < 32:
+    _startup_log.warning(
+        "⚠️  SECRET_KEY is shorter than 32 bytes. "
+        "JWT tokens can be brute-forced. Use at least 32 random bytes."
+    )
 
 # Seed initial admin user from env vars if users table is empty
 _seed_db = SessionLocal()

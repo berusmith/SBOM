@@ -190,6 +190,11 @@ def oidc_callback(
     if not code:
         raise HTTPException(status_code=400, detail="缺少 authorization code")
 
+    # Validate state cookie to prevent CSRF
+    cookie_state = request.cookies.get("oidc_state", "")
+    if not cookie_state or not state or cookie_state != state:
+        raise HTTPException(status_code=400, detail="OIDC state 驗證失敗，疑似 CSRF 攻擊")
+
     # Exchange code for tokens
     redirect_uri = _oidc_redirect_uri(request)
     token_resp = _exchange_code(code, redirect_uri)

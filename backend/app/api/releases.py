@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+import threading
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -12,7 +13,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core import audit
 from app.core.config import settings as _cfg
@@ -50,6 +51,7 @@ UPLOAD_DIR = (
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 _active_enrichments: set[str] = set()
+_enrichment_lock = threading.Lock()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
@@ -306,14 +308,16 @@ def upload_sbom(
 
 
 @router.post("/{release_id}/rescan")
-def rescan_vulnerabilities(release_id: str, admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def rescan_vulnerabilities(release_id: str, admin: dict = Depends(require_admin),
+                           org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法重新掃描")
 
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無元件可掃描")
 
@@ -425,19 +429,22 @@ def enrich_ghsa(
     db: Session = Depends(get_db),
 ):
     """手動補充 GitHub Security Advisories (GHSA) 情資。"""
-    if release_id in _active_enrichments:
-        raise HTTPException(status_code=409, detail="此版本的 GHSA 補充正在執行中，請稍後")
+    with _enrichment_lock:
+        if release_id in _active_enrichments:
+            raise HTTPException(status_code=409, detail="此版本的 GHSA 補充正在執行中，請稍後")
+        _active_enrichments.add(release_id)
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
+        _active_enrichments.discard(release_id)
         raise HTTPException(status_code=404, detail="Release not found")
     _assert_release_org(release, org_scope, db)
     all_comps = db.query(Component).filter(Component.release_id == release_id).all()
     if not all_comps:
+        _active_enrichments.discard(release_id)
         raise HTTPException(status_code=400, detail="此版本尚無元件資料，請先上傳 SBOM")
 
     def _task():
         from app.core.database import SessionLocal
-        _active_enrichments.add(release_id)
         _db = SessionLocal()
         try:
             _comps = _db.query(Component).filter(Component.release_id == release_id).all()
@@ -460,13 +467,17 @@ def enrich_ghsa(
 
 @router.post("/{release_id}/enrich-nvd")
 def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    if release_id in _active_enrichments:
-        raise HTTPException(status_code=409, detail="此版本的 NVD 補充正在執行中，請稍後")
+    with _enrichment_lock:
+        if release_id in _active_enrichments:
+            raise HTTPException(status_code=409, detail="此版本的 NVD 補充正在執行中，請稍後")
+        _active_enrichments.add(release_id)
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
+        _active_enrichments.discard(release_id)
         raise HTTPException(status_code=404, detail="Release not found")
     vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
     if not vulns:
+        _active_enrichments.discard(release_id)
         raise HTTPException(status_code=400, detail="此版本尚無漏洞資料")
     unique_cves = len({v.cve_id for v in vulns if v.cve_id.startswith("CVE-")})
     from app.core.config import settings as _cfg
@@ -475,7 +486,6 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict 
 
     def _task():
         from app.core.database import SessionLocal
-        _active_enrichments.add(release_id)
         _db = SessionLocal()
         try:
             _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
@@ -531,7 +541,9 @@ def list_components(release_id: str, org_scope: str | None = Depends(get_org_sco
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     _assert_release_org(release, org_scope, db)
-    components = db.query(Component).filter(Component.release_id == release_id).all()
+    components = (db.query(Component)
+                  .options(selectinload(Component.vulnerabilities))
+                  .filter(Component.release_id == release_id).all())
     result = []
     for c in components:
         vulns = c.vulnerabilities
@@ -611,7 +623,9 @@ def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(
     _assert_release_org(release, org_scope, db)
 
     product = db.query(Product).filter(Product.id == release.product_id).first()
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component)
+                      .options(selectinload(Component.vulnerabilities))
+                      .filter(Component.release_id == release_id).all())
 
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -666,7 +680,9 @@ def download_report(release_id: str, org_scope: str | None = Depends(get_org_sco
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component)
+                      .options(selectinload(Component.vulnerabilities))
+                      .filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生報告")
 
@@ -733,7 +749,7 @@ def download_iec62443_report(release_id: str, org_scope: str | None = Depends(ge
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
 
@@ -790,7 +806,7 @@ def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec
         product = db.query(Product).filter(Product.id == release.product_id).first()
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
 
@@ -823,7 +839,7 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
         product = db.query(Product).filter(Product.id == release.product_id).first()
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
 
@@ -862,7 +878,7 @@ def download_evidence_package(release_id: str, org_scope: str | None = Depends(g
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生證據包")
 
@@ -1019,7 +1035,7 @@ def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope),
     if not org and product:
         org = db.query(Organization).filter(Organization.id == product.organization_id).first()
 
-    components_raw = db.query(Component).filter(Component.release_id == release_id).all()
+    components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM")
 
