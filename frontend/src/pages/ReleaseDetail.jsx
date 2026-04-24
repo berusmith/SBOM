@@ -69,6 +69,8 @@ export default function ReleaseDetail() {
   const [exportingSpdx, setExportingSpdx] = useState(false);
   const [enrichingNvd, setEnrichingNvd] = useState(false);
   const [nvdMsg, setNvdMsg] = useState(null);
+  const [enrichingGhsa, setEnrichingGhsa] = useState(false);
+  const [ghsaMsg, setGhsaMsg] = useState(null);
   const [expandedVuln, setExpandedVuln] = useState(null);
   const [vulnHistory, setVulnHistory] = useState({});
   const [filterSeverity, setFilterSeverity] = useState("");
@@ -377,6 +379,20 @@ export default function ReleaseDetail() {
     }
   };
 
+  const handleEnrichGhsa = async () => {
+    setEnrichingGhsa(true);
+    setGhsaMsg(null);
+    try {
+      const res = await api.post(`/releases/${releaseId}/enrich-ghsa`);
+      setGhsaMsg(res.data.message);
+      setTimeout(() => { fetchVulns(); }, 5000);
+    } catch (err) {
+      setGhsaMsg("GHSA 補充失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setEnrichingGhsa(false);
+    }
+  };
+
   const handleEnrichNvd = async () => {
     setEnrichingNvd(true);
     setNvdMsg(null);
@@ -544,6 +560,9 @@ export default function ReleaseDetail() {
         {nvdMsg && (
           <span className="text-sm text-blue-600">{nvdMsg}</span>
         )}
+        {ghsaMsg && (
+          <span className="text-sm text-purple-600">{ghsaMsg}</span>
+        )}
         {rescanResult && (
           <span className={`text-sm ${rescanResult.ok ? "text-green-600" : "text-red-500"}`}>
             {rescanResult.ok
@@ -690,6 +709,10 @@ export default function ReleaseDetail() {
                   <button disabled={enriching} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {enriching ? "更新中..." : "更新 EPSS 分數"}
+                  </button>
+                  <button disabled={enrichingGhsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {enrichingGhsa ? "啟動中..." : "補充 GHSA 情資"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={checkingIntegrity} onClick={() => { setAdvancedMenuOpen(false); handleCheckIntegrity(); }}
@@ -1240,6 +1263,14 @@ export default function ReleaseDetail() {
                           {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
                           {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
                           {v.cvss_v4_score != null && <span><span className="font-medium text-gray-700">CVSS v4：</span>{v.cvss_v4_score}</span>}
+                          {v.ghsa_id && (
+                            <span>
+                              <span className="font-medium text-gray-700">GHSA：</span>
+                              <a href={v.ghsa_url || `https://github.com/advisories/${v.ghsa_id}`}
+                                target="_blank" rel="noreferrer"
+                                className="text-purple-600 hover:underline font-mono">{v.ghsa_id}</a>
+                            </span>
+                          )}
                         </div>
                         {v.nvd_refs && v.nvd_refs.length > 0 && (
                           <div className="flex flex-wrap gap-2 text-xs">

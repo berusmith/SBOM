@@ -49,6 +49,8 @@ with engine.connect() as conn:
             ("suppressed",        "INTEGER DEFAULT 0"),
             ("suppressed_until",  "DATETIME"),
             ("suppressed_reason", "TEXT"),
+            ("ghsa_id",           "TEXT"),
+            ("ghsa_url",          "TEXT"),
         ]:
             if col not in vuln_cols:
                 conn.execute(text(f"ALTER TABLE vulnerabilities ADD COLUMN {col} {typedef}"))

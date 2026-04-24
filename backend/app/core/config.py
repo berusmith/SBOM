@@ -21,6 +21,9 @@ class Settings(BaseSettings):
 
     # NVD API (optional — without key: 5 req/30s; with key: 50 req/30s)
     NVD_API_KEY: str = ""
+
+    # GitHub token (optional — without: 60 GHSA req/h; with: 5000 req/h)
+    GITHUB_TOKEN: str = ""
     ALLOWED_ORIGIN: str = "http://localhost:3000"
     UPLOAD_DIR: str = ""  # absolute path; auto-detected from __file__ if empty
 
