@@ -14,6 +14,8 @@
 ## [2.0.0] — 2026-04
 
 ### 改善
+- **Rate Limiting**：`core/rate_limit.py` 滑動視窗（純 stdlib，無外部依賴）；登入端點 10 次/5 分鐘/IP（成功後重置）；全域 API middleware 300 次/分鐘/IP；支援 nginx `X-Forwarded-For`；超限回 429 + Retry-After
+- **列表端點分頁保護**：`GET /releases/{id}/components` 新增 `skip/limit`（預設 2000，硬上限 5000），回傳 `{total, skip, limit, items}`；`list_vulnerabilities` 早有 max=1000 ✅
 - **稽核紀錄覆蓋率補齊**：`audit_events` 表從 8 種事件擴展至 21 種，新增 `org_create/update/plan_change/delete`、`product_create`、`vex_update`、`vex_batch_update`、`vuln_suppress/unsuppress`、`token_create/revoke`、`share_link_create/revoke`、`release_lock/unlock`、`signature_deleted`、`password_change`；VEX 變更記錄 CVE ID 與狀態轉換，Plan 變更記錄新舊方案名稱
 
 ### 修正（安全 / 效能 / 併發）
