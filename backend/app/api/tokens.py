@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.database import get_db
 from app.core.deps import require_admin_scope as require_admin
 from app.models.api_token import VALID_SCOPES, ApiToken, generate_token
@@ -50,6 +51,9 @@ def create_token(payload: TokenCreate, db: Session = Depends(get_db), user: dict
     db.add(tok)
     db.commit()
     db.refresh(tok)
+    audit.record(db, "token_create", user, resource_id=tok.id,
+                 resource_label=f"{tok.name} (scope={tok.scope})")
+    db.commit()
     return {
         "id": tok.id,
         "name": tok.name,
@@ -66,4 +70,7 @@ def revoke_token(token_id: str, db: Session = Depends(get_db), user: dict = Depe
     if not tok:
         raise HTTPException(status_code=404, detail="Token 不存在")
     tok.revoked = True
+    db.commit()
+    audit.record(db, "token_revoke", user, resource_id=token_id,
+                 resource_label=f"{tok.name} (scope={tok.scope})")
     db.commit()

@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.plan import require_plan
@@ -102,6 +103,9 @@ def create_share_link(
     db.add(link)
     db.commit()
     db.refresh(link)
+    audit.record(db, "share_link_create", user, resource_id=link.id,
+                 resource_label=f"release={release_id} mask={body.mask_internal}")
+    db.commit()
 
     return {
         "id":           link.id,
@@ -157,6 +161,9 @@ def revoke_share_link(
     if not lk:
         raise HTTPException(status_code=404, detail="分享連結不存在")
     db.delete(lk)
+    db.commit()
+    audit.record(db, "share_link_revoke", _user, resource_id=link_id,
+                 resource_label=f"release={release_id}")
     db.commit()
 
 

@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.database import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, get_current_user
 from app.models.component import Component
 from app.models.release import Release
 from app.models.vex_history import VexHistory
@@ -83,7 +84,7 @@ def _apply_vex(vuln: Vulnerability, status: str, justification, response, detail
 
 
 @router.patch("/batch")
-def batch_update_vex(payload: BatchVexUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def batch_update_vex(payload: BatchVexUpdate, _admin: dict = Depends(require_admin), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     if not payload.vuln_ids:
         raise HTTPException(status_code=400, detail="未提供漏洞 ID")
     if payload.status not in VALID_STATUSES:
@@ -109,11 +110,15 @@ def batch_update_vex(payload: BatchVexUpdate, _admin: dict = Depends(require_adm
         updated += 1
 
     db.commit()
+    if updated:
+        audit.record(db, "vex_batch_update", user,
+                     resource_label=f"status={payload.status} count={updated}")
+        db.commit()
     return {"updated": updated, "skipped_locked": skipped_locked, "not_found": not_found}
 
 
 @router.patch("/{vuln_id}/status")
-def update_vex(vuln_id: str, payload: VexUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def update_vex(vuln_id: str, payload: VexUpdate, _admin: dict = Depends(require_admin), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     if payload.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {VALID_STATUSES}")
     if payload.justification and payload.justification not in VALID_JUSTIFICATIONS:
@@ -126,8 +131,13 @@ def update_vex(vuln_id: str, payload: VexUpdate, _admin: dict = Depends(require_
         raise HTTPException(status_code=404, detail="Vulnerability not found")
     _check_not_locked(vuln, db)
 
+    old_status = vuln.status
     _apply_vex(vuln, payload.status, payload.justification, payload.response, payload.detail, payload.note, db)
     db.commit()
+    if old_status != vuln.status:
+        audit.record(db, "vex_update", user, resource_id=vuln_id,
+                     resource_label=f"{vuln.cve_id}: {old_status} → {vuln.status}")
+        db.commit()
     return {
         "id": vuln_id,
         "status": vuln.status,
@@ -144,7 +154,7 @@ class SuppressUpdate(BaseModel):
 
 
 @router.patch("/{vuln_id}/suppress")
-def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(require_admin), user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
@@ -162,6 +172,10 @@ def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(
     else:
         vuln.suppressed_until = None
         vuln.suppressed_reason = None
+    db.commit()
+    action = "suppress" if payload.suppressed else "unsuppress"
+    audit.record(db, f"vuln_{action}", user, resource_id=vuln_id,
+                 resource_label=getattr(vuln, "cve_id", vuln_id))
     db.commit()
     return {"id": vuln_id, "suppressed": vuln.suppressed, "suppressed_until": vuln.suppressed_until.isoformat() if vuln.suppressed_until else None}
 

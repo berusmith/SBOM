@@ -267,3 +267,5 @@ def change_password(payload: ChangePasswordPayload, user: dict = Depends(get_cur
     db_user.hashed_password = hash_password(payload.new_password)
     db.commit()
     logger.info("PASSWORD_CHANGE user=%s", user["username"])
+    audit.record(db, "password_change", user, resource_label=user["username"])
+    db.commit()

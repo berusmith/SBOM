@@ -1400,6 +1400,8 @@ def delete_signature(release_id: str, _admin: dict = Depends(require_admin), db:
     release.signer_identity = None
     release.signed_at = None
     db.commit()
+    audit.record(db, "signature_deleted", _admin, resource_id=release_id)
+    db.commit()
     return {"status": "ok", "message": "簽章已移除"}
 
 
@@ -1412,6 +1414,8 @@ def lock_release(release_id: str, _admin: dict = Depends(require_admin), db: Ses
         raise HTTPException(status_code=409, detail="版本已鎖定")
     release.locked = True
     db.commit()
+    audit.record(db, "release_lock", _admin, resource_id=release_id)
+    db.commit()
     return {"locked": True}
 
 
@@ -1421,6 +1425,8 @@ def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: S
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     release.locked = False
+    db.commit()
+    audit.record(db, "release_unlock", _admin, resource_id=release_id)
     db.commit()
     return {"locked": False}
 

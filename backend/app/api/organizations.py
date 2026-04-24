@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin
 from app.core.security import hash_password
@@ -21,7 +22,7 @@ class OrganizationUpdate(BaseModel):
 
 
 @router.post("")
-def create_organization(payload: OrganizationCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def create_organization(payload: OrganizationCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):  # noqa: E501
     if payload.username and len(payload.username.strip()) < 3:
         raise HTTPException(status_code=400, detail="帳號至少 3 個字元")
     if payload.password and len(payload.password) < 6:
@@ -54,6 +55,8 @@ def create_organization(payload: OrganizationCreate, _admin: dict = Depends(requ
 
     db.commit()
     db.refresh(org)
+    audit.record(db, "org_create", _admin, resource_id=org.id, resource_label=org.name)
+    db.commit()
     return {
         "id": org.id,
         "name": org.name,
@@ -74,7 +77,8 @@ def list_organizations(org_scope: str | None = Depends(get_org_scope), db: Sessi
 
 
 @router.post("/{org_id}/products", response_model=ProductResponse)
-def create_product(org_id: str, payload: ProductCreate, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def create_product(org_id: str, payload: ProductCreate, user: dict = Depends(require_admin),
+                   org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     if org_scope and org_scope != org_id:
         raise HTTPException(status_code=403, detail="無權在此組織建立產品")
     org = db.query(Organization).filter(Organization.id == org_id).first()
@@ -85,6 +89,8 @@ def create_product(org_id: str, payload: ProductCreate, org_scope: str | None = 
     db.add(product)
     db.commit()
     db.refresh(product)
+    audit.record(db, "product_create", user, resource_id=product.id, resource_label=product.name, org_name=org.name)
+    db.commit()
     return product
 
 
@@ -93,12 +99,15 @@ def update_organization(org_id: str, payload: OrganizationUpdate, _admin: dict =
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    old_name = org.name
     org.name = payload.name.strip()
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="客戶名稱已存在")
+    audit.record(db, "org_update", _admin, resource_id=org_id, resource_label=f"{old_name} → {org.name}")
+    db.commit()
     db.refresh(org)
     return org
 
@@ -115,7 +124,10 @@ def update_org_plan(org_id: str, payload: PlanUpdate, _admin: dict = Depends(req
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    old_plan = org.plan
     org.plan = payload.plan
+    db.commit()
+    audit.record(db, "org_plan_change", _admin, resource_id=org_id, resource_label=f"{org.name}: {old_plan} → {payload.plan}")
     db.commit()
     return {"id": org_id, "plan": org.plan}
 
@@ -125,7 +137,10 @@ def delete_organization(org_id: str, _admin: dict = Depends(require_admin), db: 
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    org_name = org.name
     db.delete(org)
+    db.commit()
+    audit.record(db, "org_delete", _admin, resource_id=org_id, resource_label=org_name)
     db.commit()
 
 
