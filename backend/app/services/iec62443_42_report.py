@@ -5,11 +5,11 @@ Evaluates software components against key Capability Requirements (CRs).
 from datetime import datetime, timezone
 from io import BytesIO
 
-from fpdf import FPDF, XPos, YPos
+from fpdf import XPos, YPos
+from app.services.cjk_pdf import CjkPDF, _latin as _s
 
 
-def _s(text) -> str:
-    return str(text).encode("latin-1", errors="replace").decode("latin-1")
+
 
 
 STATUS_COLOR = {
@@ -168,7 +168,7 @@ def assess(components: list[dict], vulns: list[dict]) -> list[dict]:
     return reqs
 
 
-class IEC4_2Report(FPDF):
+class IEC4_2Report(CjkPDF):
     def __init__(self, org: str, product: str, version: str):
         super().__init__()
         self.org, self.product, self.version = org, product, version
@@ -176,9 +176,9 @@ class IEC4_2Report(FPDF):
         self.set_auto_page_break(auto=True, margin=20)
 
     def header(self):
-        self.set_font("Helvetica", "B", 9)
+        self.sfb(9)
         self.set_text_color(120, 120, 120)
-        self.cell(0, 7, f"IEC 62443-4-2 Component Security Report  |  {_s(self.product)} {_s(self.version)}", align="L")
+        self.cell(0, 7, f"IEC 62443-4-2 Component Security Report  |  {self.t(self.product)} {self.t(self.version)}", align="L")
         self.ln(1)
         self.set_draw_color(200, 200, 200)
         self.line(15, self.get_y(), 195, self.get_y())
@@ -186,7 +186,7 @@ class IEC4_2Report(FPDF):
 
     def footer(self):
         self.set_y(-15)
-        self.set_font("Helvetica", "", 8)
+        self.sf("", 8)
         self.set_text_color(150, 150, 150)
         self.cell(0, 8,
             f"Page {self.page_no()}  |  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}  |  IEC 62443-4-2",
@@ -213,13 +213,13 @@ def generate(org_name: str, product_name: str, version: str,
     pdf.add_page()
 
     # Title
-    pdf.set_font("Helvetica", "B", 18)
+    pdf.sfb(18)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "IEC 62443-4-2 Component Security Report", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 11)
+    pdf.sf("", 11)
     pdf.set_text_color(71, 85, 105)
-    pdf.cell(0, 6, _s(f"Organization: {org_name}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.cell(0, 6, _s(f"Product: {product_name}  |  Version: {version}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 6, pdf.t(f"Organization: {org_name}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 6, pdf.t(f"Product: {product_name}  |  Version: {version}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.cell(0, 6, f"Assessment Date: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.cell(0, 6, "Standard: IEC 62443-4-2:2019  |  Software Component (SC) Capability Requirements", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
@@ -227,12 +227,12 @@ def generate(org_name: str, product_name: str, version: str,
     # Score + SL
     _section_title(pdf, "Security Level Assessment")
     score_color = (22, 163, 74) if pct >= 75 else (202, 138, 4) if pct >= 50 else (220, 38, 38)
-    pdf.set_font("Helvetica", "B", 32)
+    pdf.sfb(32)
     pdf.set_text_color(*score_color)
     pdf.cell(40, 14, f"{pct}%", new_x=XPos.RIGHT, new_y=YPos.LAST)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.sf("", 10)
     pdf.set_text_color(60, 60, 60)
-    pdf.cell(0, 14, _s(f"  Estimated {sl}  ({sat} Satisfied / {par} Partial / {ns} Not Satisfied)"),
+    pdf.cell(0, 14, pdf.t(f"  Estimated {sl}  ({sat} Satisfied / {par} Partial / {ns} Not Satisfied)"),
              new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     bar_w = 160
     pdf.set_fill_color(230, 230, 230)
@@ -243,9 +243,9 @@ def generate(org_name: str, product_name: str, version: str,
 
     # Component summary
     _section_title(pdf, "Component Inventory Summary")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.sf("", 10)
     pdf.set_text_color(50, 50, 50)
-    pdf.cell(0, 6, _s(f"Total Components: {len(components)}   |   Total CVEs: {len(vulns)}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 6, pdf.t(f"Total Components: {len(components)}   |   Total CVEs: {len(vulns)}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(3)
 
     # Requirements table
@@ -261,23 +261,23 @@ def generate(org_name: str, product_name: str, version: str,
         if pdf.get_y() > 240:
             pdf.add_page()
         pdf.set_fill_color(241, 245, 249)
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.sfb(10)
         pdf.set_text_color(15, 23, 42)
-        pdf.cell(0, 8, _s(f"  {r['id']} (Clause {r['clause']}) — {r['title']}"),
+        pdf.cell(0, 8, pdf.t(f"  {r['id']} (Clause {r['clause']}) — {r['title']}"),
                  fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.sf("", 9)
         pdf.set_text_color(80, 80, 80)
         pdf.cell(22, 6, "Status:", new_x=XPos.RIGHT, new_y=YPos.LAST)
         pdf.set_fill_color(*STATUS_COLOR[r["status"]])
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.sfb(9)
         pdf.cell(28, 6, f" {STATUS_LABEL[r['status']]}", fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "I", 9)
+        pdf.sfi(9)
         pdf.set_text_color(100, 100, 100)
-        pdf.multi_cell(0, 5, _s(f"Requirement: {r['description']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.multi_cell(0, 5, pdf.t(f"Requirement: {r['description']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.sf("", 9)
         pdf.set_text_color(40, 40, 40)
-        pdf.multi_cell(0, 5, _s(f"Evidence: {r['evidence']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.multi_cell(0, 5, pdf.t(f"Evidence: {r['evidence']}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(3)
 
     out = BytesIO()
@@ -286,15 +286,15 @@ def generate(org_name: str, product_name: str, version: str,
 
 
 def _section_title(pdf, title):
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.sfb(12)
     pdf.set_text_color(15, 23, 42)
     pdf.set_fill_color(241, 245, 249)
-    pdf.cell(0, 8, _s(f"  {title}"), fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 8, pdf.t(f"  {title}"), fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(2)
 
 
 def _table_header(pdf, cols, widths):
-    pdf.set_font("Helvetica", "B", 9)
+    pdf.sfb(9)
     pdf.set_fill_color(30, 41, 59)
     pdf.set_text_color(255, 255, 255)
     for col, w in zip(cols, widths):
@@ -304,16 +304,16 @@ def _table_header(pdf, cols, widths):
 
 
 def _req_row(pdf, req_id, clause, title, status_label, color):
-    pdf.set_font("Helvetica", "B", 8)
+    pdf.sfb(8)
     pdf.set_text_color(30, 30, 30)
     pdf.set_fill_color(250, 250, 252)
     pdf.cell(22, 6, f" {req_id}", fill=True)
     pdf.cell(18, 6, f" {clause}", fill=True)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.cell(100, 6, _s(f" {title}"), fill=True)
+    pdf.sf("", 8)
+    pdf.cell(100, 6, pdf.t(f" {title}"), fill=True)
     pdf.set_fill_color(*color)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Helvetica", "B", 8)
+    pdf.sfb(8)
     pdf.cell(30, 6, f" {status_label}", fill=True)
     pdf.ln()
     pdf.set_text_color(30, 30, 30)
