@@ -11,6 +11,7 @@
 | SBOM Sigstore 簽章驗證（ECDSA/RSA，Policy Gate 第 6 項） | `6b755ad` |
 | TISAX 模組（VDA ISA 6.0，63 控制項，AL2/AL3 gap 分析） | — |
 | Container/IaC 掃描（Trivy，`POST /scan-image` + `/scan-iac`） | `9e0df10` |
+| GHSA 漏洞情資補強（GitHub Advisory Database，ghsa_id 欄位） | `5c6538b` |
 
 ---
 
@@ -18,9 +19,8 @@
 
 | # | 項目 | 預估 | 理由 |
 |---|------|------|------|
-| 1 | **漏洞情資補強**（GHSA + Debian/RHEL advisory） | 3–5 天 | 縮短比 NVD 早 47 天的情資落差；顧問話術直接加分 |
-| 2 | **Reachability 分析**（Python/Node 先行） | ~2 月 | 2026 SCA 最熱賣點；Endor 號稱噪音砍 90% |
-| 3 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關 |
+| 1 | **Reachability 分析**（Python/Node 先行） | ~2 月 | 2026 SCA 最熱賣點；Endor 號稱噪音砍 90% |
+| 2 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關 |
 
 ---
 

@@ -69,6 +69,6 @@
 | 2 | ~~**SBOM Sigstore 簽章驗證**~~ | ✅ 完成 | |
 | 3 | ~~**Container / IaC 掃描（Trivy）**~~ | ✅ 完成 | |
 | 4 | ~~**TISAX 模組**~~ | ✅ 完成 | |
-| 5 | **漏洞情資補強**（GHSA + Debian/RHEL advisory） | 3–5 天 | 縮短比 NVD 早 47 天的情資落差 |
+| 5 | ~~**漏洞情資補強（GHSA）**~~ | ✅ 完成 | |
 | 6 | **Reachability**（Python/Node 先行） | 2 月 | 2026 年 SCA 最熱賣點；Endor 號稱噪音砍 90% |
 | 7 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |
