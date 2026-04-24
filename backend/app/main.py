@@ -204,7 +204,35 @@ try:
 finally:
     _seed_db.close()
 
-app = FastAPI(title="SBOM Management Platform", version="0.1.0")
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── startup ──────────────────────────────────────────────────────────────
+    # Purge expired revoked tokens — they're no longer valid anyway
+    from app.models.revoked_token import RevokedToken
+    _db = SessionLocal()
+    try:
+        _db.query(RevokedToken).filter(
+            RevokedToken.expires_at < datetime.now(timezone.utc)
+        ).delete()
+        _db.commit()
+    finally:
+        _db.close()
+
+    # Start background vulnerability monitor
+    from app.services import monitor
+    monitor.start()
+
+    yield
+
+    # ── shutdown ─────────────────────────────────────────────────────────────
+    monitor.stop()
+
+
+app = FastAPI(title="SBOM Management Platform", version="2.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -285,35 +313,6 @@ def health_check():
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-
-
-@app.on_event("startup")
-def _purge_expired_tokens():
-    """Remove expired revoked tokens — they're no longer valid anyway."""
-    from datetime import datetime, timezone
-    from app.models.revoked_token import RevokedToken
-    _db = SessionLocal()
-    try:
-        _db.query(RevokedToken).filter(
-            RevokedToken.expires_at < datetime.now(timezone.utc)
-        ).delete()
-        _db.commit()
-    finally:
-        _db.close()
-
-
-@app.on_event("startup")
-def _start_monitor():
-    from app.services import monitor
-    monitor.start()
-
-
-@app.on_event("shutdown")
-def _stop_monitor():
-    from app.services import monitor
-    monitor.stop()
-
-
 
 
 # Serve React SPA in production (STATIC_DIR env var set by systemd)

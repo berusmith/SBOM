@@ -18,6 +18,7 @@ _is_scanning    = False
 _last_run_dt: datetime | None = None
 _last_run_count: int = 0
 _last_skip_dt: datetime | None = None   # last time trigger() was called but scan was already running
+_scheduler_thread: threading.Thread | None = None
 
 
 def _do_scan_all() -> int:
@@ -209,7 +210,7 @@ def _scheduler_loop() -> None:
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def start() -> None:
-    global _last_run_dt
+    global _last_run_dt, _scheduler_thread
     try:
         from app.core.database import SessionLocal
         from app.models.alert_config import AlertConfig
@@ -225,7 +226,10 @@ def start() -> None:
         logger.exception("Monitor: failed to restore last_run from DB")
 
     _stop_event.clear()
-    threading.Thread(target=_scheduler_loop, daemon=True, name="monitor-scheduler").start()
+    _scheduler_thread = threading.Thread(
+        target=_scheduler_loop, daemon=True, name="monitor-scheduler"
+    )
+    _scheduler_thread.start()
 
 
 def stop() -> None:
@@ -268,6 +272,7 @@ def get_status() -> dict:
     return {
         "interval_hours":      interval_h,
         "is_scanning":         scanning,
+        "running":             bool(_scheduler_thread and _scheduler_thread.is_alive()),
         "last_run":            last.isoformat() if last else None,
         "last_run_new_count":  _last_run_count,
         "next_run":            next_run,
