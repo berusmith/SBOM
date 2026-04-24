@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getPlan, hasPlan, PLAN_LABEL, PLAN_COLOR } from "../utils/plan";
 
 const ALL_NAV = [
-  { path: "/",               key: "dashboard",    adminOnly: false },
-  { path: "/organizations",  key: "customers",    adminOnly: true  },
-  { path: "/risk-overview",  key: "riskOverview", adminOnly: false },
-  { path: "/policies",       key: "policy",       adminOnly: false },
-  { path: "/cra",            key: "cra",          adminOnly: false },
-  { path: "/tisax",          key: "tisax",        adminOnly: false },
-  { path: "/firmware",       key: "firmware",     adminOnly: false },
-  { path: "/admin/users",    key: "users",        adminOnly: true  },
-  { path: "/admin/activity", key: "auditLog",     adminOnly: true  },
-  { path: "/settings",       key: "settings",     adminOnly: true  },
-  { path: "/help",           key: "help",         adminOnly: false },
+  { path: "/",               key: "dashboard",    adminOnly: false, minPlan: null },
+  { path: "/organizations",  key: "customers",    adminOnly: true,  minPlan: null },
+  { path: "/risk-overview",  key: "riskOverview", adminOnly: false, minPlan: null },
+  { path: "/policies",       key: "policy",       adminOnly: false, minPlan: null },
+  { path: "/cra",            key: "cra",          adminOnly: false, minPlan: "standard" },
+  { path: "/tisax",          key: "tisax",        adminOnly: false, minPlan: "professional" },
+  { path: "/firmware",       key: "firmware",     adminOnly: false, minPlan: null },
+  { path: "/admin/users",    key: "users",        adminOnly: true,  minPlan: null },
+  { path: "/admin/activity", key: "auditLog",     adminOnly: true,  minPlan: null },
+  { path: "/settings",       key: "settings",     adminOnly: true,  minPlan: null },
+  { path: "/help",           key: "help",         adminOnly: false, minPlan: null },
 ];
 
 export default function Layout({ children }) {
@@ -23,7 +24,11 @@ export default function Layout({ children }) {
   const [searchQ, setSearchQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const role = localStorage.getItem("role") || "viewer";
-  const navItems = ALL_NAV.filter(item => !item.adminOnly || role === "admin");
+  const currentPlan = getPlan();
+  const navItems = ALL_NAV.filter(item =>
+    (!item.adminOnly || role === "admin") &&
+    (!item.minPlan || hasPlan(item.minPlan))
+  );
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -95,6 +100,9 @@ export default function Layout({ children }) {
               >
                 {i18n.language === "zh" ? "EN" : "中"}
               </button>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PLAN_COLOR[currentPlan]}`}>
+                {PLAN_LABEL[currentPlan]}
+              </span>
               <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
                 {username || t("nav.account")}
               </Link>

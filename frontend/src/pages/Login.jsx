@@ -31,6 +31,7 @@ export default function Login() {
         localStorage.setItem("role", me.data.role || "viewer");
         localStorage.setItem("org_id", me.data.org_id || "");
         localStorage.setItem("username", me.data.username || "");
+        localStorage.setItem("plan", me.data.plan || "starter");
         if (me.data.role !== "admin" && me.data.org_id) {
           navigate(`/organizations/${me.data.org_id}/products`, { replace: true });
         } else {

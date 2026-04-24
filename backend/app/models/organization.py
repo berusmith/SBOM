@@ -13,6 +13,7 @@ class Organization(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, unique=True)
     license_status = Column(String, default="trial", nullable=False)  # active | trial | expired
+    plan = Column(String, default="starter", nullable=False)  # starter | standard | professional
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     products = relationship("Product", back_populates="organization", cascade="all, delete-orphan")

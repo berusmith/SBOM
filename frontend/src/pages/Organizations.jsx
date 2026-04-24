@@ -220,6 +220,7 @@ export default function Organizations() {
               <tr>
                 <th className="px-4 py-3">{t("organizations.name")}</th>
                 <th className="px-4 py-3">授權狀態</th>
+                <th className="px-4 py-3">方案</th>
                 <th className="px-4 py-3">建立時間</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -236,6 +237,30 @@ export default function Organizations() {
                     }`}>
                       {org.license_status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {isAdmin ? (
+                      <select
+                        value={org.plan || "starter"}
+                        onChange={async (e) => {
+                          await api.patch(`/organizations/${org.id}/plan`, { plan: e.target.value });
+                          fetchOrgs();
+                        }}
+                        className="border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      >
+                        <option value="starter">Starter</option>
+                        <option value="standard">Standard</option>
+                        <option value="professional">Professional</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        org.plan === "professional" ? "bg-purple-100 text-purple-700" :
+                        org.plan === "standard"     ? "bg-blue-100 text-blue-700" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>
+                        {org.plan || "Starter"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {formatDate(org.created_at)}

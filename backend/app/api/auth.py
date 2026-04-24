@@ -71,8 +71,16 @@ def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)
 
 
 @router.get("/me")
-def me(user: dict = Depends(get_current_user)):
-    return {"username": user["username"], "role": user["role"], "org_id": user.get("org_id")}
+def me(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.core.plan import get_org_plan, _org_plan
+    org_id = user.get("org_id")
+    plan = _org_plan(db, org_id) if user.get("role") != "admin" else "professional"
+    return {
+        "username": user["username"],
+        "role":     user["role"],
+        "org_id":   org_id,
+        "plan":     plan,
+    }
 
 
 # ── OIDC helpers ──────────────────────────────────────────────────────────────

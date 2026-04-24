@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin
 from app.core.security import hash_password
+from app.core.plan import check_starter_limit
 from app.models.organization import Organization
 from app.models.product import Product
 from app.models.user import User
@@ -28,7 +29,11 @@ def create_organization(payload: OrganizationCreate, _admin: dict = Depends(requ
     if payload.username and db.query(User).filter(User.username == payload.username.strip()).first():
         raise HTTPException(status_code=409, detail="帳號名稱已存在")
 
-    org = Organization(name=payload.name.strip(), license_status=payload.license_status)
+    org = Organization(
+        name=payload.name.strip(),
+        license_status=payload.license_status,
+        plan=getattr(payload, "plan", "starter") or "starter",
+    )
     db.add(org)
     try:
         db.flush()
@@ -53,6 +58,7 @@ def create_organization(payload: OrganizationCreate, _admin: dict = Depends(requ
         "id": org.id,
         "name": org.name,
         "license_status": org.license_status,
+        "plan": org.plan,
         "created_at": org.created_at,
         "account_created": account_created,
         "username": payload.username.strip() if account_created else None,
@@ -74,6 +80,7 @@ def create_product(org_id: str, payload: ProductCreate, org_scope: str | None = 
     org = db.query(Organization).filter(Organization.id == org_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
+    check_starter_limit(db, org_id, "products")
     product = Product(organization_id=org_id, name=payload.name, description=payload.description)
     db.add(product)
     db.commit()
@@ -94,6 +101,23 @@ def update_organization(org_id: str, payload: OrganizationUpdate, _admin: dict =
         raise HTTPException(status_code=409, detail="客戶名稱已存在")
     db.refresh(org)
     return org
+
+
+class PlanUpdate(BaseModel):
+    plan: str   # starter | standard | professional
+
+
+@router.patch("/{org_id}/plan")
+def update_org_plan(org_id: str, payload: PlanUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin only: set the plan for an organization."""
+    if payload.plan not in ("starter", "standard", "professional"):
+        raise HTTPException(status_code=400, detail="plan 必須為 starter / standard / professional")
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    org.plan = payload.plan
+    db.commit()
+    return {"id": org_id, "plan": org.plan}
 
 
 @router.delete("/{org_id}", status_code=204)

@@ -39,6 +39,7 @@ from app.services.signature_verifier import verify_signature as _verify_sig, det
 from app.services import trivy_scanner as _trivy
 from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
 from app.services.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
+from app.core.plan import require_plan, check_starter_limit
 
 # Use env-configured path in production; auto-detect from source tree in dev
 UPLOAD_DIR = (
@@ -780,7 +781,7 @@ def download_iec62443_report(release_id: str, org_scope: str | None = Depends(ge
 
 
 @router.get("/{release_id}/compliance/iec62443-4-2")
-def download_iec62443_42_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec62443_42")), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -813,7 +814,7 @@ def download_iec62443_42_report(release_id: str, org_scope: str | None = Depends
 
 
 @router.get("/{release_id}/compliance/iec62443-3-3")
-def download_iec62443_33_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec62443_33")), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
@@ -1277,7 +1278,7 @@ def verify_integrity(release_id: str, org_scope: str | None = Depends(get_org_sc
 
 
 @router.post("/{release_id}/signature")
-def upload_signature(release_id: str, body: dict, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
+def upload_signature(release_id: str, body: dict, _plan=Depends(require_plan("signature")), _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Upload a cryptographic signature for the SBOM file."""
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
@@ -1598,6 +1599,7 @@ def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_or
 async def upload_source(
     release_id: str,
     file: UploadFile = File(...),
+    _plan=Depends(require_plan("reachability")),
     user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
@@ -1662,6 +1664,7 @@ def scan_container_image(
     release_id: str,
     body: dict,
     background_tasks: BackgroundTasks,
+    _plan=Depends(require_plan("trivy")),
     user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
@@ -1741,6 +1744,7 @@ def scan_container_image(
 async def scan_iac_archive(
     release_id: str,
     file: UploadFile = File(...),
+    _plan=Depends(require_plan("trivy")),
     user: dict = Depends(get_current_user),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),

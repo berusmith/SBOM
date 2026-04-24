@@ -110,6 +110,10 @@ with engine.connect() as conn:
         _add_column(conn, "users", "oidc_sub", "TEXT")
     conn.commit()
 
+    if _table_exists(conn, "organizations"):
+        _add_column(conn, "organizations", "plan", "TEXT NOT NULL DEFAULT 'starter'")
+    conn.commit()
+
     if _table_exists(conn, "cra_incidents"):
         _add_column(conn, "cra_incidents", "org_id", "TEXT REFERENCES organizations(id)")
     conn.commit()

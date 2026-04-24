@@ -8,6 +8,7 @@ import { useToast } from "../components/Toast";
 import { SkeletonInline } from "../components/Skeleton";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDateTime } from "../utils/date";
+import { hasPlan } from "../utils/plan";
 
 const DependencyGraph = lazy(() => import("../components/DependencyGraph").then(m => ({ default: m.DependencyGraph })));
 
@@ -45,6 +46,8 @@ const RESPONSE_OPTIONS = [
 export default function ReleaseDetail() {
   const { t } = useTranslation();
   const toast = useToast();
+  const isProPlan = hasPlan("professional");
+  const isStdPlan = hasPlan("standard");
   const { releaseId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -642,26 +645,32 @@ export default function ReleaseDetail() {
               {locked ? <><Unlock size={16} className="inline mr-1" />{t("releaseDetail.actions.unlockVersion")}</> : <><Lock size={16} className="inline mr-1" />{t("releaseDetail.actions.lockVersion")}</>}
             </button>
 
-            {/* Container Image 掃描 */}
-            <button
-              onClick={() => { setImageScanOpen(o => !o); setImageScanResult(null); }}
-              disabled={locked}
-              className="px-4 py-2 rounded text-sm text-white font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {t("releaseDetail.actions.scanImage")}
-            </button>
+            {/* Container Image 掃描 — Professional */}
+            {isProPlan && (
+              <button
+                onClick={() => { setImageScanOpen(o => !o); setImageScanResult(null); }}
+                disabled={locked}
+                className="px-4 py-2 rounded text-sm text-white font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("releaseDetail.actions.scanImage")}
+              </button>
+            )}
 
-            {/* IaC 掃描 */}
-            <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${locked || iacScanLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}>
-              {iacScanLoading ? t("common.scanning") : t("releaseDetail.actions.scanIac")}
-              <input ref={iacFileRef} type="file" accept=".zip" className="hidden" onChange={handleIacScan} disabled={locked || iacScanLoading} />
-            </label>
+            {/* IaC 掃描 — Professional */}
+            {isProPlan && (
+              <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${locked || iacScanLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}>
+                {iacScanLoading ? t("common.scanning") : t("releaseDetail.actions.scanIac")}
+                <input ref={iacFileRef} type="file" accept=".zip" className="hidden" onChange={handleIacScan} disabled={locked || iacScanLoading} />
+              </label>
+            )}
 
-            {/* 原始碼可達性分析 */}
-            <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${sourceUploading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
-              {sourceUploading ? t("common.analyzing") : t("releaseDetail.actions.reachability")}
-              <input ref={sourceFileRef} type="file" accept=".zip" className="hidden" onChange={handleSourceUpload} disabled={sourceUploading} />
-            </label>
+            {/* 原始碼可達性分析 — Professional */}
+            {isProPlan && (
+              <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${sourceUploading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+                {sourceUploading ? t("common.analyzing") : t("releaseDetail.actions.reachability")}
+                <input ref={sourceFileRef} type="file" accept=".zip" className="hidden" onChange={handleSourceUpload} disabled={sourceUploading} />
+              </label>
+            )}
 
             {/* 匯出 / 下載 dropdown */}
             <div className="relative" ref={exportMenuRef}>
@@ -723,30 +732,34 @@ export default function ReleaseDetail() {
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {downloadingIec ? "產生中..." : "IEC 62443-4-1 報告"}
                   </button>
-                  <button disabled={downloadingIec42} onClick={async () => {
-                    setExportMenuOpen(false); setDownloadingIec42(true);
-                    try {
-                      const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
-                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
-                      const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
-                      URL.revokeObjectURL(url);
-                    } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                    finally { setDownloadingIec42(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingIec42 ? "產生中..." : "IEC 62443-4-2 報告"}
-                  </button>
-                  <button disabled={downloadingIec33} onClick={async () => {
-                    setExportMenuOpen(false); setDownloadingIec33(true);
-                    try {
-                      const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
-                      const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
-                      const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
-                      URL.revokeObjectURL(url);
-                    } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                    finally { setDownloadingIec33(false); }
-                  }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
-                  </button>
+                  {isProPlan && (
+                    <button disabled={downloadingIec42} onClick={async () => {
+                      setExportMenuOpen(false); setDownloadingIec42(true);
+                      try {
+                        const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
+                        const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                        const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
+                        URL.revokeObjectURL(url);
+                      } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                      finally { setDownloadingIec42(false); }
+                    }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {downloadingIec42 ? "產生中..." : "IEC 62443-4-2 報告"}
+                    </button>
+                  )}
+                  {isProPlan && (
+                    <button disabled={downloadingIec33} onClick={async () => {
+                      setExportMenuOpen(false); setDownloadingIec33(true);
+                      try {
+                        const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
+                        const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
+                        const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
+                        URL.revokeObjectURL(url);
+                      } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
+                      finally { setDownloadingIec33(false); }
+                    }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
+                    </button>
+                  )}
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={downloadingEvidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
@@ -778,10 +791,12 @@ export default function ReleaseDetail() {
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {enriching ? t("common.loading") : t("releaseDetail.actions.enrichEpss")}
                   </button>
-                  <button disabled={enrichingGhsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enrichingGhsa ? t("common.loading") : t("releaseDetail.actions.enrichGhsa")}
-                  </button>
+                  {isStdPlan && (
+                    <button disabled={enrichingGhsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                      {enrichingGhsa ? t("common.loading") : t("releaseDetail.actions.enrichGhsa")}
+                    </button>
+                  )}
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={checkingIntegrity} onClick={() => { setAdvancedMenuOpen(false); handleCheckIntegrity(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">

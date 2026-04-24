@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.services import tisax_pdf
 from app.core.deps import get_org_scope
+from app.core.plan import require_plan as _require_plan
 from app.models.organization import Organization
 from app.models.tisax import TISAXAssessment, TISAXControl
 from app.services.tisax_seed import make_controls
@@ -105,6 +106,7 @@ class ControlUpdate(BaseModel):
 @router.post("/assessments", status_code=201)
 def create_assessment(
     payload: AssessmentCreate,
+    _plan=Depends(_require_plan("tisax")),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
@@ -136,6 +138,7 @@ def create_assessment(
 
 @router.get("/assessments")
 def list_assessments(
+    _plan=Depends(_require_plan("tisax")),
     org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
