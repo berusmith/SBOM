@@ -13,6 +13,12 @@
 
 ## [2.0.0] — 2026-04
 
+### 改善（通知與搜尋）
+- **漏洞文字搜尋**：ReleaseDetail 漏洞篩選列新增文字輸入框，支援 CVE ID 和元件名稱模糊搜尋（不分大小寫），納入「清除篩選」重置
+- **通知規則（Alert Rules）**：`AlertConfig` 新增 `alert_min_severity / alert_kev_always / alert_epss_threshold` 三欄；`_passes_alert_rule()` 過濾函式；Settings 頁新增「通知規則」卡片（嚴重度下拉 / EPSS 滑桿 / KEV 一律通知 checkbox）；規則全不通過時靜默跳過
+- **多收件人 Email**：`alert_email_to` 改支援逗號分隔多地址；`send_email()` 拆分 recipients 清單；測試信同樣寄送所有收件人
+- **抑制到期通知**：`monitor.py` 每次掃描後查詢 `suppressed_until < now`，自動清除到期抑制並觸發通知（受通知規則篩選）
+
 ### 新增（競品落差補強）
 - **NIS2 Directive Article 21 合規報告**：`nis2_report.py` 評估 5 個 SBOM 可量化控制項（21.2(b) 事件處理、(d) 供應鏈安全、(e) 漏洞管理、(h) 加密政策 CWE-326/327/310、(i) 資產管理 NTIA）；`GET /api/releases/{id}/compliance/nis2` → PDF；繼承 CjkPDF 支援中文；ReleaseDetail 匯出選單加入
 - **Slack / Teams 格式化通知**：`send_webhook()` 自動偵測 URL 類型；`hooks.slack.com` → Block Kit（fields + 顏色 attachment）；`webhook.office.com` → MessageCard（Adaptive Cards 格式）；其他 URL → 原有通用 JSON，不影響現有設定

@@ -46,6 +46,10 @@
 | Webhook 失敗重試（指數退避 3 次，1s / 2s 間隔） | `d6c9c63` |
 | SBOM 上傳進度條（Axios onUploadProgress，百分比顯示） | `d6c9c63` |
 | 組織刪除二次確認（ConfirmModal requireTypeName，必須輸入名稱才能確認） | `8650bcd` |
+| 漏洞文字搜尋（CVE ID / 元件名稱模糊搜尋，ReleaseDetail 篩選列）| `14e3d1f` |
+| 通知規則（min_severity / epss_threshold / kev_always，Settings UI）| `14e3d1f` |
+| 多收件人 Email（逗號分隔，send_email 支援 recipients 清單）| `14e3d1f` |
+| 抑制到期通知（monitor 掃描後自動清除過期抑制並發通知）| `14e3d1f` |
 | NIS2 Art.21 合規報告（5 控制項評估，GET /compliance/nis2，PDF）| `3fd8d8b` |
 | Slack / Teams 格式化通知（Block Kit / MessageCard 自動偵測）| `3fd8d8b` |
 | GitLab CI 範本（tools/sbom-gitlab-ci/，sbom-upload + sbom-gate）| `3fd8d8b` |
