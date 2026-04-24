@@ -54,8 +54,25 @@ const en = {
     yes:         "Yes",
     no:          "No",
     na:          "N/A",
-    copy:        "Copy",
-    refresh:     "Refresh",
+    copy:           "Copy",
+    refresh:        "Refresh",
+    creating:       "Creating...",
+    updating:       "Updating...",
+    deleting:       "Deleting...",
+    applying:       "Apply",
+    confirmCreate:  "Create",
+    confirmDelete:  "Delete",
+    confirmLock:    "Lock",
+    detail:         "Details",
+    releaseDiff:    "Compare Releases",
+    showTrend:      "Show Vulnerability Trend",
+    filterAll:      "All Severities",
+    filterAllStatus:"All Statuses",
+    epssFilter:     "High EPSS only (>10%)",
+    kevFilter:      "CISA KEV only",
+    showSuppressed: "Show Suppressed ({{n}})",
+    clearFilter:    "Clear Filters",
+    showing:        "Showing {{shown}} / {{total}}",
   },
 
   // ── Severity ──────────────────────────────────────────────────────────────
@@ -131,6 +148,13 @@ const en = {
     viewerHint:       "Your vulnerability data is scoped to your organization.",
     viewerGoToProducts: "Go to Products →",
     noVulns:          "No vulnerabilities scanned yet. Upload an SBOM to start.",
+    onboarding: {
+      title:  "Welcome to SBOM Platform",
+      hint:   "No vulnerability data yet. Follow these steps to analyze your product security:",
+      step1:  { title: "Go to Product List", desc: "Click 'Customers' in the nav to view your products", action: "Go Now" },
+      step2:  { title: "Create a Product",   desc: "Click '+ Add Product' and enter the product name and version" },
+      step3:  { title: "Upload SBOM & Scan", desc: "Go to the release page, upload a CycloneDX or SPDX JSON file, then click 'Scan CVEs'" },
+    },
   },
 
   // ── Organizations ─────────────────────────────────────────────────────────
@@ -141,8 +165,10 @@ const en = {
     contact:       "Contact",
     email:         "Email",
     noData:        "No customers yet. Click Add to create one.",
-    deleteConfirm: "Delete this customer? All associated data will be removed.",
-    viewProducts:  "View Products",
+    deleteConfirm:  "Delete this customer? All associated data will be removed.",
+    deleteTitle:    "Confirm Delete Customer",
+    deleteMessage:  "Delete \"{{name}}\"?\nThis will permanently remove all products, releases, and vulnerability data.",
+    viewProducts:   "View Products",
   },
 
   // ── Products ──────────────────────────────────────────────────────────────
@@ -151,9 +177,11 @@ const en = {
     add:          "Add Product",
     name:         "Product Name",
     noData:       "No products yet",
-    viewReleases: "View Releases",
-    vulnTrend:    "Vulnerability Trend",
-    showTrend:    "Show Trend Chart",
+    viewReleases:  "View Releases",
+    vulnTrend:     "Vulnerability Trend",
+    showTrend:     "Show Trend Chart",
+    deleteTitle:   "Confirm Delete Product",
+    deleteMessage: "Delete product \"{{name}}\"?\nThis will permanently remove all releases and vulnerability data.",
   },
 
   // ── Releases ──────────────────────────────────────────────────────────────
@@ -162,8 +190,10 @@ const en = {
     add:      "Add Release",
     version:  "Version",
     noData:   "No releases yet",
-    locked:   "Locked",
-    unlocked: "Unlocked",
+    locked:        "Locked",
+    unlocked:      "Unlocked",
+    deleteTitle:   "Confirm Delete Release",
+    deleteMessage: "Delete release \"{{version}}\"?\nThis will permanently remove the SBOM file and all vulnerability data.",
   },
 
   // ── ReleaseDetail ─────────────────────────────────────────────────────────

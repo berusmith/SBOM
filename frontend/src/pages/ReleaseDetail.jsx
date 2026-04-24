@@ -564,21 +564,21 @@ export default function ReleaseDetail() {
           <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
             {uploadResult.ok ? (
           <span>
-            完成：{uploadResult.components_found} 個元件，{uploadResult.vulnerabilities_found} 個漏洞
+            {t("releaseDetail.upload.success", { components: uploadResult.components_found, vulns: uploadResult.vulnerabilities_found })}
             {uploadResult.diff && (
               <span className="ml-2 text-gray-500">
-                ｜相較 <span className="font-medium text-gray-700">{uploadResult.diff.prev_version}</span>：
-                {uploadResult.diff.components_added > 0 && <span className="text-orange-600"> +{uploadResult.diff.components_added} 元件</span>}
-                {uploadResult.diff.components_removed > 0 && <span className="text-blue-600"> -{uploadResult.diff.components_removed} 元件</span>}
-                {uploadResult.diff.vulns_added > 0 && <span className="text-red-600"> +{uploadResult.diff.vulns_added} 漏洞</span>}
-                {uploadResult.diff.vulns_removed > 0 && <span className="text-green-600"> -{uploadResult.diff.vulns_removed} 漏洞</span>}
+                ｜{t("releaseDetail.upload.diff.prev")} <span className="font-medium text-gray-700">{uploadResult.diff.prev_version}</span>：
+                {uploadResult.diff.components_added > 0 && <span className="text-orange-600"> {t("releaseDetail.upload.diff.compAdded", { n: uploadResult.diff.components_added })}</span>}
+                {uploadResult.diff.components_removed > 0 && <span className="text-blue-600"> {t("releaseDetail.upload.diff.compRemoved", { n: uploadResult.diff.components_removed })}</span>}
+                {uploadResult.diff.vulns_added > 0 && <span className="text-red-600"> {t("releaseDetail.upload.diff.vulnAdded", { n: uploadResult.diff.vulns_added })}</span>}
+                {uploadResult.diff.vulns_removed > 0 && <span className="text-green-600"> {t("releaseDetail.upload.diff.vulnRemoved", { n: uploadResult.diff.vulns_removed })}</span>}
                 {uploadResult.diff.components_added === 0 && uploadResult.diff.components_removed === 0 &&
                  uploadResult.diff.vulns_added === 0 && uploadResult.diff.vulns_removed === 0 &&
-                  <span className="text-green-600"> 無差異</span>}
+                  <span className="text-green-600"> {t("releaseDetail.upload.diff.noChange")}</span>}
               </span>
             )}
           </span>
-        ) : `失敗：${uploadResult.msg}`}
+        ) : t("releaseDetail.upload.failed", { msg: uploadResult.msg })}
           </span>
         )}
         {nvdMsg && (
@@ -949,7 +949,7 @@ export default function ReleaseDetail() {
       {/* Lock banner */}
       {locked && (
         <div className="mb-3 px-4 py-2 rounded bg-gray-100 border border-gray-300 text-sm text-gray-700 flex items-center gap-2">
-          🔒 <span>此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。</span>
+          🔒 <span>{t("releaseDetail.locked")}</span>
         </div>
       )}
 
@@ -1083,10 +1083,7 @@ export default function ReleaseDetail() {
                           c.license_risk === "commercial" ? "bg-red-100 text-red-800" :
                           "bg-gray-100 text-gray-800"
                         }`}>
-                          {c.license_risk === "permissive" ? "寬鬆" :
-                           c.license_risk === "copyleft" ? "互惠" :
-                           c.license_risk === "commercial" ? "商業" :
-                           "未知"}
+                          {t(`licenseRisk.${c.license_risk}`) || t("licenseRisk.unknown")}
                         </span>
                       ) : "—"}
                     </td>
@@ -1128,7 +1125,7 @@ export default function ReleaseDetail() {
                   onChange={(e) => setFilterSeverity(e.target.value)}
                   className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  <option value="">全部嚴重度</option>
+                  <option value="">{t("common.filterAll")}</option>
                   {["critical","high","medium","low","info"].map((s) => (
                     <option key={s} value={s}>{s}{severityCounts[s] ? ` (${severityCounts[s]})` : ""}</option>
                   ))}
@@ -1138,23 +1135,23 @@ export default function ReleaseDetail() {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="w-full sm:w-auto border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 >
-                  <option value="">全部狀態</option>
+                  <option value="">{t("common.filterAllStatus")}</option>
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>{STATUS_LABEL[s]}</option>
                   ))}
                 </select>
                 <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
                   <input type="checkbox" checked={filterEpss} onChange={(e) => setFilterEpss(e.target.checked)} />
-                  僅顯示高 EPSS (&gt;10%)
+                  {t("common.epssFilter")}
                 </label>
                 <label className="flex items-center gap-1.5 text-sm text-red-600 cursor-pointer select-none font-medium">
                   <input type="checkbox" checked={filterKev} onChange={(e) => setFilterKev(e.target.checked)} />
-                  僅顯示 CISA KEV
+                  {t("common.kevFilter")}
                 </label>
                 {suppressedCount > 0 && (
                   <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
                     <input type="checkbox" checked={showSuppressed} onChange={(e) => setShowSuppressed(e.target.checked)} />
-                    顯示已抑制 ({suppressedCount})
+                    {t("common.showSuppressed", { n: suppressedCount })}
                   </label>
                 )}
                 {(filterSeverity || filterStatus || filterEpss || filterKev) && (
@@ -1162,11 +1159,11 @@ export default function ReleaseDetail() {
                     onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); }}
                     className="text-xs text-gray-600 hover:text-gray-600 underline"
                   >
-                    清除篩選
+                    {t("common.clearFilter")}
                   </button>
                 )}
                 <span className="ml-auto text-xs text-gray-600">
-                  顯示 {displayedVulns.length} / {vulns.length} 筆
+                  {t("common.showing", { shown: displayedVulns.length, total: vulns.length })}
                 </span>
               </div>
             <div className="overflow-x-auto relative">
@@ -1276,14 +1273,14 @@ export default function ReleaseDetail() {
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {v.sla_status === "overdue" ? (
                         <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
-                          逾 {Math.abs(v.sla_days)} 天
+                          {t("releaseDetail.vulns.overdue", { n: Math.abs(v.sla_days) })}
                         </span>
                       ) : v.sla_status === "warning" ? (
                         <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                          剩 {v.sla_days} 天
+                          {t("releaseDetail.vulns.warningDays", { n: v.sla_days })}
                         </span>
                       ) : v.sla_status === "ok" ? (
-                        <span className="text-xs text-gray-600">{v.sla_days} 天</span>
+                        <span className="text-xs text-gray-600">{t("releaseDetail.vulns.okDays", { n: v.sla_days })}</span>
                       ) : (
                         <span className="text-gray-200">—</span>
                       )}

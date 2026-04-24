@@ -54,8 +54,25 @@ const zh = {
     yes:         "是",
     no:          "否",
     na:          "N/A",
-    copy:        "複製",
-    refresh:     "重新整理",
+    copy:           "複製",
+    refresh:        "重新整理",
+    creating:       "建立中...",
+    updating:       "更新中...",
+    deleting:       "刪除中...",
+    applying:       "套用",
+    confirmCreate:  "確認建立",
+    confirmDelete:  "刪除",
+    confirmLock:    "鎖定",
+    detail:         "詳細",
+    releaseDiff:    "版本比對",
+    showTrend:      "顯示漏洞趨勢圖",
+    filterAll:      "全部嚴重度",
+    filterAllStatus:"全部狀態",
+    epssFilter:     "僅顯示高 EPSS (>10%)",
+    kevFilter:      "僅顯示 CISA KEV",
+    showSuppressed: "顯示已抑制 ({{n}})",
+    clearFilter:    "清除篩選",
+    showing:        "顯示 {{shown}} / {{total}} 筆",
   },
 
   // ── 嚴重度 ────────────────────────────────────────────────────────────────
@@ -131,6 +148,13 @@ const zh = {
     viewerHint:         "您的漏洞資料已依您的組織範圍顯示。",
     viewerGoToProducts: "前往產品列表 →",
     noVulns:            "尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。",
+    onboarding: {
+      title:   "歡迎使用 SBOM 平台",
+      hint:    "尚未有任何漏洞資料。請依照以下步驟開始分析您的產品安全狀態：",
+      step1:   { title: "前往產品列表", desc: "點擊左側「客戶管理」進入您的產品列表", action: "立即前往" },
+      step2:   { title: "建立產品",     desc: "點擊「+ 新增產品」，輸入產品名稱與版本資訊" },
+      step3:   { title: "上傳 SBOM 並掃描", desc: "進入版本頁面，上傳 CycloneDX 或 SPDX JSON 檔案，點擊「掃描漏洞」" },
+    },
   },
 
   // ── 組織 ──────────────────────────────────────────────────────────────────
@@ -141,8 +165,10 @@ const zh = {
     contact:     "聯絡人",
     email:       "Email",
     noData:      "尚無客戶，請新增",
-    deleteConfirm: "確定要刪除此客戶？相關資料將一併刪除。",
-    viewProducts: "查看產品",
+    deleteConfirm:  "確定要刪除此客戶？相關資料將一併刪除。",
+    deleteTitle:    "確認刪除客戶",
+    deleteMessage:  "確定要刪除「{{name}}」？\n此操作將同時刪除所有產品、版本及漏洞資料，無法還原。",
+    viewProducts:   "查看產品",
   },
 
   // ── 產品 ──────────────────────────────────────────────────────────────────
@@ -151,9 +177,11 @@ const zh = {
     add:          "新增產品",
     name:         "產品名稱",
     noData:       "尚無產品",
-    viewReleases: "查看版本",
-    vulnTrend:    "漏洞趨勢",
-    showTrend:    "顯示趨勢圖",
+    viewReleases:  "查看版本",
+    vulnTrend:     "漏洞趨勢",
+    showTrend:     "顯示趨勢圖",
+    deleteTitle:   "確認刪除產品",
+    deleteMessage: "確定要刪除產品「{{name}}」？\n此操作將同時刪除所有版本及漏洞資料，無法還原。",
   },
 
   // ── 版本 ──────────────────────────────────────────────────────────────────
@@ -162,8 +190,10 @@ const zh = {
     add:       "新增版本",
     version:   "版本號",
     noData:    "尚無版本",
-    locked:    "已鎖定",
-    unlocked:  "未鎖定",
+    locked:        "已鎖定",
+    unlocked:      "未鎖定",
+    deleteTitle:   "確認刪除版本",
+    deleteMessage: "確定要刪除版本「{{version}}」？\n此操作將同時刪除 SBOM 檔案及所有漏洞資料，無法還原。",
   },
 
   // ── ReleaseDetail ─────────────────────────────────────────────────────────

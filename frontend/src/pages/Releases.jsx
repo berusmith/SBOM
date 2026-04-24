@@ -95,7 +95,7 @@ export default function Releases() {
               onClick={() => setShowDiff(!showDiff)}
               className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm"
             >
-              版本比對
+              {t("common.releaseDiff")}
             </button>
           )}
           <button
@@ -118,11 +118,11 @@ export default function Releases() {
           <div className="flex gap-2">
             <button type="submit" disabled={loading}
               className="flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? "建立中..." : "確認"}
+              {loading ? t("common.creating") : t("common.confirm")}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
               className="flex-1 sm:flex-none text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">
-              取消
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -135,7 +135,7 @@ export default function Releases() {
               onClick={() => setShowTrend(true)}
               className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-blue-600 hover:bg-blue-50 mb-4"
             >
-              顯示漏洞趨勢圖
+              {t("common.showTrend")}
             </button>
           ) : (
             <Suspense fallback={<SkeletonInline rows={5} />}>
@@ -225,13 +225,13 @@ export default function Releases() {
                       onClick={() => navigate(`/releases/${r.id}`, { state: { orgId, orgName, productId, productName, version: r.version } })}
                       className="text-blue-600 hover:underline text-xs"
                     >
-                      詳細
+                      {t("common.detail")}
                     </button>
                     <button
                       onClick={() => setConfirmDelete(r)}
                       className="text-red-500 hover:underline text-xs"
                     >
-                      刪除
+                      {t("common.delete")}
                     </button>
                   </td>
                 </tr>
@@ -244,10 +244,10 @@ export default function Releases() {
 
       <ConfirmModal
         isOpen={!!confirmDelete}
-        title="確認刪除版本"
-        message={`確定要刪除版本「${confirmDelete?.version}」？\n此操作將同時刪除 SBOM 檔案及所有漏洞資料，無法還原。`}
-        confirmText="刪除"
-        cancelText="取消"
+        title={t("releases.deleteTitle")}
+        message={t("releases.deleteMessage", { version: confirmDelete?.version })}
+        confirmText={t("common.confirmDelete")}
+        cancelText={t("common.cancel")}
         isDangerous
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}

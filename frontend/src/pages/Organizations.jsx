@@ -177,14 +177,14 @@ export default function Organizations() {
               onClick={() => { setShowForm(false); setUsername(""); setPassword(""); }}
               className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border"
             >
-              取消
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "建立中..." : "確認建立"}
+              {loading ? t("common.creating") : t("common.confirmCreate")}
             </button>
           </div>
         </form>
@@ -253,13 +253,13 @@ export default function Organizations() {
                           onClick={() => { setEditOrg(org); setEditName(org.name); }}
                           className="text-yellow-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                         >
-                          編輯
+                          {t("common.edit")}
                         </button>
                         <button
                           onClick={() => setConfirmDelete(org)}
                           className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                         >
-                          刪除
+                          {t("common.delete")}
                         </button>
                       </>
                     )}
@@ -274,10 +274,10 @@ export default function Organizations() {
 
       <ConfirmModal
         isOpen={!!confirmDelete}
-        title="確認刪除客戶"
-        message={`確定要刪除「${confirmDelete?.name}」？\n此操作將同時刪除所有產品、版本及漏洞資料，無法還原。`}
-        confirmText="刪除"
-        cancelText="取消"
+        title={t("organizations.deleteTitle")}
+        message={t("organizations.deleteMessage", { name: confirmDelete?.name })}
+        confirmText={t("common.confirmDelete")}
+        cancelText={t("common.cancel")}
         isDangerous
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}

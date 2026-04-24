@@ -100,11 +100,11 @@ export default function Products() {
           <div className="flex gap-2">
             <button type="submit" disabled={loading}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? "建立中..." : "確認"}
+              {loading ? t("common.creating") : t("common.confirm")}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
               className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100">
-              取消
+              {t("common.cancel")}
             </button>
           </div>
         </form>
@@ -151,7 +151,7 @@ export default function Products() {
                       onClick={() => setConfirmDelete(p)}
                       className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
-                      刪除
+                      {t("common.delete")}
                     </button>
                   </td>
                 </tr>
@@ -165,10 +165,10 @@ export default function Products() {
 
       <ConfirmModal
         isOpen={!!confirmDelete}
-        title="確認刪除產品"
-        message={`確定要刪除產品「${confirmDelete?.name}」？\n此操作將同時刪除所有版本及漏洞資料，無法還原。`}
-        confirmText="刪除"
-        cancelText="取消"
+        title={t("products.deleteTitle")}
+        message={t("products.deleteMessage", { name: confirmDelete?.name })}
+        confirmText={t("common.confirmDelete")}
+        cancelText={t("common.cancel")}
         isDangerous
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}

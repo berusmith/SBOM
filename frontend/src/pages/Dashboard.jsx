@@ -130,10 +130,11 @@ const STATUS = [
 
 function ViewerOnboarding({ orgId }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const steps = [
-    { num: 1, title: "前往產品列表", desc: "點擊左側「客戶管理」進入您的產品列表", action: () => navigate(`/organizations/${orgId}/products`), actionLabel: "立即前往" },
-    { num: 2, title: "建立產品", desc: "點擊「+ 新增產品」，輸入產品名稱與版本資訊", action: null, actionLabel: null },
-    { num: 3, title: "上傳 SBOM 並掃描", desc: "進入版本頁面，上傳 CycloneDX 或 SPDX JSON 檔案，點擊「掃描漏洞」", action: null, actionLabel: null },
+    { num: 1, title: t("dashboard.onboarding.step1.title"), desc: t("dashboard.onboarding.step1.desc"), action: () => navigate(`/organizations/${orgId}/products`), actionLabel: t("dashboard.onboarding.step1.action") },
+    { num: 2, title: t("dashboard.onboarding.step2.title"), desc: t("dashboard.onboarding.step2.desc"), action: null, actionLabel: null },
+    { num: 3, title: t("dashboard.onboarding.step3.title"), desc: t("dashboard.onboarding.step3.desc"), action: null, actionLabel: null },
   ];
 
   return (
@@ -145,8 +146,8 @@ function ViewerOnboarding({ orgId }) {
           </svg>
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-gray-800 mb-1">歡迎使用 SBOM 平台</h2>
-          <p className="text-sm text-gray-500 mb-4">尚未有任何漏洞資料。請依照以下步驟開始分析您的產品安全狀態：</p>
+          <h2 className="font-semibold text-gray-800 mb-1">{t("dashboard.onboarding.title")}</h2>
+          <p className="text-sm text-gray-500 mb-4">{t("dashboard.onboarding.hint")}</p>
           <div className="space-y-3">
             {steps.map((s) => (
               <div key={s.num} className="flex items-start gap-3">
