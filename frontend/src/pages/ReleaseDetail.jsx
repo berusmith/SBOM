@@ -109,6 +109,9 @@ export default function ReleaseDetail() {
   const iacFileRef = useRef();
   const [iacScanResult, setIacScanResult] = useState(null);
   const [iacScanLoading, setIacScanLoading] = useState(false);
+  const sourceFileRef = useRef();
+  const [sourceUploadResult, setSourceUploadResult] = useState(null);
+  const [sourceUploading, setSourceUploading] = useState(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
@@ -341,6 +344,25 @@ export default function ReleaseDetail() {
       setImageScanResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
       setImageScanLoading(false);
+    }
+  };
+
+  const handleSourceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSourceUploading(true);
+    setSourceUploadResult(null);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await api.post(`/releases/${releaseId}/upload-source`, form, { headers: { "Content-Type": "multipart/form-data" } });
+      setSourceUploadResult({ ok: true, ...res.data });
+      fetchVulns();
+    } catch (err) {
+      setSourceUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
+    } finally {
+      setSourceUploading(false);
+      if (sourceFileRef.current) sourceFileRef.current.value = "";
     }
   };
 
@@ -610,6 +632,12 @@ export default function ReleaseDetail() {
               <input ref={iacFileRef} type="file" accept=".zip" className="hidden" onChange={handleIacScan} disabled={locked || iacScanLoading} />
             </label>
 
+            {/* 原始碼可達性分析 */}
+            <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${sourceUploading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
+              {sourceUploading ? "分析中..." : "可達性分析 (zip)"}
+              <input ref={sourceFileRef} type="file" accept=".zip" className="hidden" onChange={handleSourceUpload} disabled={sourceUploading} />
+            </label>
+
             {/* 匯出 / 下載 dropdown */}
             <div className="relative" ref={exportMenuRef}>
               <button
@@ -792,6 +820,21 @@ export default function ReleaseDetail() {
             <p className="text-red-700">IaC 掃描失敗：{iacScanResult.msg}</p>
           )}
           <button onClick={() => setIacScanResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-600">關閉</button>
+        </div>
+      )}
+
+      {/* Source reachability result */}
+      {sourceUploadResult && (
+        <div className={`mb-3 rounded-lg p-4 text-sm ${sourceUploadResult.ok ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
+          {sourceUploadResult.ok ? (
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="font-medium text-emerald-800">{sourceUploadResult.message}</span>
+              <span className="text-emerald-700 text-xs">掃描套件數：{sourceUploadResult.imported_packages}</span>
+            </div>
+          ) : (
+            <p className="text-red-700">可達性分析失敗：{sourceUploadResult.msg}</p>
+          )}
+          <button onClick={() => setSourceUploadResult(null)} className="mt-1 text-xs text-gray-400 hover:text-gray-600">關閉</button>
         </div>
       )}
 
@@ -1148,6 +1191,7 @@ export default function ReleaseDetail() {
                     EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3 hidden lg:table-cell" scope="col">SLA</th>
+                  <th className="px-4 py-3 hidden xl:table-cell" scope="col">可達性</th>
                   <th className="px-4 py-3" scope="col">VEX 狀態</th>
                   <th className="px-4 py-3" scope="col">操作</th>
                 </tr>
@@ -1234,6 +1278,15 @@ export default function ReleaseDetail() {
                         <span className="text-xs text-gray-600">{v.sla_days} 天</span>
                       ) : (
                         <span className="text-gray-200">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {v.reachability === "imported" ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">已使用</span>
+                      ) : v.reachability === "not_found" ? (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">未發現</span>
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">

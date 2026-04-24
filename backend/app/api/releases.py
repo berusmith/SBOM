@@ -37,6 +37,7 @@ from app.services.license_classifier import classify_license
 from app.services.signature_verifier import verify_signature as _verify_sig, detect_algorithm, SUPPORTED_ALGORITHMS
 from app.services import trivy_scanner as _trivy
 from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
+from app.services.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
 
 # Use env-configured path in production; auto-detect from source tree in dev
 UPLOAD_DIR = (
@@ -1642,6 +1643,59 @@ def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_or
         "edges": edges[:600],
         "total_nodes": len(nodes),
         "total_edges": len(edges),
+    }
+
+
+@router.post("/{release_id}/upload-source")
+async def upload_source(
+    release_id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """
+    上傳專案原始碼 zip，掃描 import 語句，
+    更新所有漏洞的 reachability 欄位。
+    """
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
+
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔（含 .py / .js / .ts 原始碼）")
+
+    content = await file.read()
+    try:
+        imported_packages = _scan_zip(content)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    all_comps = db.query(Component).filter(Component.release_id == release_id).all()
+    all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+
+    if not all_vulns:
+        return {"imported_packages": len(imported_packages), "vulns_updated": 0, "message": "此版本尚無漏洞資料"}
+
+    # Build component_id → component map
+    comp_map = {c.id: c for c in all_comps}
+    classifications = _classify_vulns(all_vulns, imported_packages, comp_map)
+
+    for v in all_vulns:
+        v.reachability = classifications.get(v.id, "unknown")
+    db.commit()
+
+    imported_count  = sum(1 for r in classifications.values() if r == "imported")
+    not_found_count = sum(1 for r in classifications.values() if r == "not_found")
+
+    audit.record(db, "source_upload", user, resource_id=release_id, resource_label=file.filename)
+    return {
+        "imported_packages": len(imported_packages),
+        "vulns_updated": len(classifications),
+        "reachable": imported_count,
+        "not_found": not_found_count,
+        "message": f"分析完成：{imported_count} 個漏洞套件確認被使用，{not_found_count} 個未在原始碼中發現",
     }
 
 
