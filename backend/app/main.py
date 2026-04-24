@@ -144,6 +144,10 @@ with engine.connect() as conn:
         _add_column(conn, "releases", "notes", "TEXT")
     conn.commit()
 
+    if _table_exists(conn, "users"):
+        _add_column(conn, "users", "email", "TEXT")
+    conn.commit()
+
     # Performance indexes — safe to run repeatedly via IF NOT EXISTS
     for _idx in [
         "CREATE INDEX IF NOT EXISTS idx_vuln_cve_id   ON vulnerabilities(cve_id)",

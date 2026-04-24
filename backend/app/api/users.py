@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 class UserCreate(BaseModel):
     username: str
     password: str
+    email: str | None = None
     role: str = "viewer"
     organization_id: str | None = None
 
@@ -28,6 +29,7 @@ class UserCreate(BaseModel):
 class UserUpdate(BaseModel):
     role: str | None = None
     password: str | None = None
+    email: str | None = None
     is_active: bool | None = None
     organization_id: str | None = None
 
@@ -36,6 +38,7 @@ def _serialize(u: User) -> dict:
     return {
         "id": u.id,
         "username": u.username,
+        "email": u.email,
         "role": u.role,
         "is_active": u.is_active,
         "organization_id": u.organization_id,
@@ -62,6 +65,7 @@ def create_user(payload: UserCreate, admin: dict = Depends(require_admin), db: S
         raise HTTPException(status_code=409, detail="使用者名稱已存在")
     user = User(
         username=payload.username,
+        email=(payload.email or "").strip() or None,
         hashed_password=hash_password(payload.password),
         role=payload.role,
         organization_id=payload.organization_id,
@@ -94,6 +98,8 @@ def update_user(user_id: str, payload: UserUpdate, admin: dict = Depends(require
         user.is_active = payload.is_active
     if payload.organization_id is not None:
         user.organization_id = payload.organization_id or None
+    if payload.email is not None:
+        user.email = (payload.email or "").strip() or None
     db.commit()
     logger.info("USER_UPDATE admin=%s target=%s changes=%s", admin["username"], user.username, payload.model_dump(exclude_none=True, exclude={"password"}))
     return _serialize(user)

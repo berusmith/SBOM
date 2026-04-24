@@ -102,11 +102,27 @@ export default function AdminActivity() {
           <p className="text-xs text-gray-600 mt-0.5">所有重要操作的完整紀錄，供合規稽核使用</p>
         </div>
         <button
-          onClick={() => exportCsv(events)}
-          disabled={events.length === 0}
-          className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded disabled:opacity-40"
+          onClick={async () => {
+            const params = new URLSearchParams();
+            if (filterOrg)   params.set("org_id", filterOrg);
+            if (filterType)  params.set("event_type", filterType);
+            if (dateFrom)    params.set("date_from", dateFrom);
+            if (dateTo)      params.set("date_to", dateTo);
+            const token = localStorage.getItem("token");
+            const res = await fetch(`/api/admin/activity/export?${params}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = res.headers.get("content-disposition")?.match(/filename="(.+)"/)?.[1] || "audit.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded"
         >
-          匯出 CSV
+          匯出 CSV（最多 5000 筆）
         </button>
       </div>
 

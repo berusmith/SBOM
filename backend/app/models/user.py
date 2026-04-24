@@ -12,6 +12,7 @@ class User(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     username = Column(String, unique=True, nullable=False, index=True)
+    email = Column(String, nullable=True, index=True)  # optional contact email (separate from username)
     hashed_password = Column(String, nullable=True)   # nullable for SSO-only users
     role = Column(String, default="viewer", nullable=False)  # admin | viewer
     is_active = Column(Boolean, default=True, nullable=False)

@@ -296,13 +296,17 @@ def forgot_password(payload: ForgotPasswordPayload, request: Request, db: Sessio
     from app.services.alerts import send_email
     from datetime import datetime, timezone
 
-    user = db.query(UserModel).filter(
-        UserModel.username == payload.username.strip(),
-        UserModel.is_active == True,  # noqa: E712
-        UserModel.hashed_password.isnot(None),
-    ).first()
+    q = payload.username.strip()
+    user = (
+        db.query(UserModel).filter(
+            UserModel.is_active == True,  # noqa: E712
+            UserModel.hashed_password.isnot(None),
+        ).filter(
+            (UserModel.username == q) | (UserModel.email == q)
+        ).first()
+    )
     if not user:
-        return  # silent
+        return  # silent — don't reveal whether account exists
 
     # Invalidate existing unused tokens for this user
     db.query(PasswordResetToken).filter(
@@ -316,16 +320,17 @@ def forgot_password(payload: ForgotPasswordPayload, request: Request, db: Sessio
     db.add(PasswordResetToken(token_hash=token_hash, username=user.username, expires_at=expires_at))
     db.commit()
 
-    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
-    body = (
-        f"您好，\n\n"
-        f"請點擊以下連結重設密碼（30 分鐘內有效）：\n\n"
-        f"{reset_url}\n\n"
-        f"若您未提出此請求，請忽略此郵件。\n\n"
-        f"SBOM Platform"
-    )
-    to_addr = user.username if "@" in user.username else ""
+    # Use dedicated email field, fallback to username if it looks like email
+    to_addr = user.email or (user.username if "@" in user.username else "")
     if to_addr:
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+        body = (
+            f"您好，\n\n"
+            f"請點擊以下連結重設密碼（30 分鐘內有效）：\n\n"
+            f"{reset_url}\n\n"
+            f"若您未提出此請求，請忽略此郵件。\n\n"
+            f"SBOM Platform"
+        )
         send_email("SBOM Platform — 密碼重設", body, to_addr)
     logger.info("PASSWORD_RESET_SENT user=%s ip=%s", user.username, _client_ip(request))
 

@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import csv
+import io
+
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -55,6 +59,56 @@ def get_activity(
         except ValueError:
             pass
     return [_serialize_event(e) for e in q.limit(limit).all()]
+
+
+@router.get("/activity/export")
+def export_activity_csv(
+    _admin: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+    org_id: str | None = None,
+    event_type: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+):
+    """Export audit log as CSV (max 5000 rows)."""
+    from datetime import datetime, timezone
+    q = db.query(AuditEvent).order_by(AuditEvent.created_at.desc())
+    if org_id:
+        q = q.filter(AuditEvent.org_id == org_id)
+    if event_type:
+        q = q.filter(AuditEvent.event_type == event_type)
+    if date_from:
+        try:
+            q = q.filter(AuditEvent.created_at >= datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            q = q.filter(AuditEvent.created_at <= datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc))
+        except ValueError:
+            pass
+
+    rows = q.limit(5000).all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["時間(UTC)", "使用者", "組織", "事件類型", "資源ID", "資源說明", "IP"])
+    for e in rows:
+        writer.writerow([
+            e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+            e.username or "",
+            e.org_name or "",
+            e.event_type or "",
+            e.resource_id or "",
+            e.resource_label or "",
+            e.ip_address or "",
+        ])
+
+    filename = f"audit_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/activity/summary")

@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
@@ -24,6 +26,34 @@ def create_release(product_id: str, payload: ReleaseCreate, org_scope: str | Non
     db.commit()
     db.refresh(release)
     return release
+
+
+class ProductUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+@router.patch("/{product_id}", response_model=None)
+def update_product(product_id: str, payload: ProductUpdate,
+                   _admin: dict = Depends(require_admin),
+                   org_scope: str | None = Depends(get_org_scope),
+                   db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if org_scope and product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權修改此產品")
+    if payload.name is not None:
+        product.name = payload.name.strip()
+    if payload.description is not None:
+        product.description = payload.description.strip() or None
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="產品名稱已存在")
+    db.refresh(product)
+    return {"id": product.id, "name": product.name, "description": product.description}
 
 
 @router.delete("/{product_id}", status_code=204)
