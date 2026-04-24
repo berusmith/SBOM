@@ -230,15 +230,15 @@ export default function Users() {
           <div className="p-8 text-center text-gray-600">尚無帳號</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[520px]" role="table">
+            <table className="w-full text-sm min-w-[280px]" role="table">
               <caption className="sr-only">使用者清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
                   <th className="px-4 py-3" scope="col">帳號</th>
                   <th className="px-4 py-3" scope="col">角色</th>
-                  <th className="px-4 py-3" scope="col">綁定組織</th>
-                  <th className="px-4 py-3" scope="col">狀態</th>
-                  <th className="px-4 py-3" scope="col">建立時間</th>
+                  <th className="px-4 py-3 hidden sm:table-cell" scope="col">綁定組織</th>
+                  <th className="px-4 py-3 hidden sm:table-cell" scope="col">狀態</th>
+                  <th className="px-4 py-3 hidden md:table-cell" scope="col">建立時間</th>
                   <th className="px-4 py-3" scope="col">操作</th>
                 </tr>
               </thead>
@@ -251,20 +251,20 @@ export default function Users() {
                         {u.role === "admin" ? "管理員" : "客戶"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{orgName(u.organization_id)}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{orgName(u.organization_id)}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                         {u.is_active ? "啟用" : "停用"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">
+                    <td className="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right flex justify-end gap-2">
                       <button onClick={() => openEdit(u)}
-                        className="text-yellow-600 px-2 py-1 rounded hover:bg-gray-100 text-xs">編輯</button>
+                        className="text-yellow-600 px-3 py-2 rounded hover:bg-gray-100 text-xs">編輯</button>
                       <button onClick={() => setConfirmDelete(u)}
-                        className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs">刪除</button>
+                        className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs">刪除</button>
                     </td>
                   </tr>
                 ))}

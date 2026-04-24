@@ -103,7 +103,7 @@ export default function Layout({ children }) {
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <button
                 onClick={toggleLang}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2 py-1 rounded transition-colors"
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2.5 py-1.5 rounded transition-colors"
                 title="Switch language / 切換語言"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
@@ -126,13 +126,13 @@ export default function Layout({ children }) {
             <div className="md:hidden flex items-center gap-2 ml-auto">
               <button
                 onClick={toggleLang}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-2 py-1 rounded"
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-2.5 py-1.5 rounded"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
               </button>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="text-gray-300 hover:text-white p-2 rounded"
+                className="text-gray-300 hover:text-white p-2.5 rounded"
                 aria-label="選單"
               >
                 {menuOpen ? (

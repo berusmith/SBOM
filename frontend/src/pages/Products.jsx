@@ -147,13 +147,13 @@ export default function Products() {
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/products/${p.id}/releases`, { state: { orgId, orgName } })}
-                      className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                      className="text-blue-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("products.viewReleases")}
                     </button>
                     <button
                       onClick={() => setConfirmDelete(p)}
-                      className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                      className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("common.delete")}
                     </button>

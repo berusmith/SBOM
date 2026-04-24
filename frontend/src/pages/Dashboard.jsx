@@ -25,7 +25,7 @@ function TopVulns() {
       </h2>
       <div className="overflow-x-auto">
         <p className="sm:hidden text-xs text-gray-600 pb-1">{t("dashboard.scrollHint")}</p>
-        <table className="w-full text-sm min-w-[560px]">
+        <table className="w-full text-sm min-w-[320px]">
           <thead>
             <tr className="text-left text-xs text-gray-600 border-b">
               <th className="pb-2 pr-4">CVE</th>
@@ -47,7 +47,7 @@ function TopVulns() {
                 <td className="py-3 pr-4 font-mono text-xs text-blue-700">
                   {v.cve_id}
                   {v.is_kev && (
-                    <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold" style={{fontSize:"9px"}}>KEV</span>
+                    <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold text-xs">KEV</span>
                   )}
                 </td>
                 <td className="py-3 pr-4">
@@ -412,7 +412,7 @@ export default function Dashboard() {
             <>
               <p className="text-sm font-medium text-red-700 mb-2">{t("dashboard.cveAffected", { n: cveResult.affected_count })}</p>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[480px]">
+                <table className="w-full text-xs min-w-[320px]">
                   <thead className="text-left text-gray-500 border-b">
                     <tr>
                       <th className="pb-2 pr-3">{t("organizations.name")}</th>

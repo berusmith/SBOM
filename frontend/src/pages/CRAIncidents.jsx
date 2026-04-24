@@ -82,7 +82,7 @@ export default function CRAIncidents() {
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[600px]">
+          <table className="w-full text-sm min-w-[280px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">事件標題</th>
@@ -100,7 +100,7 @@ export default function CRAIncidents() {
                   className="border-t hover:bg-gray-50 cursor-pointer"
                   onClick={() => navigate(`/cra/${inc.id}`)}
                 >
-                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[150px] sm:max-w-xs truncate">{inc.title}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{inc.title}</td>
                   <td className="px-4 py-3 font-mono text-xs text-blue-700 hidden sm:table-cell">
                     {inc.trigger_cve_ids || "—"}
                   </td>
@@ -129,7 +129,7 @@ export default function CRAIncidents() {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmDelete(inc); }}
-                      className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                      className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       刪除
                     </button>

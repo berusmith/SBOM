@@ -740,7 +740,7 @@ export default function ReleaseDetail() {
                 匯出 / 下載 <span className="text-xs">▾</span>
               </button>
               {exportMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px] py-1">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px] py-1">
                   {[
                     { label: exportingCsv ? "匯出中..." : "匯出 CSV", disabled: exportingCsv, onClick: () => { handleExportCsv(); setExportMenuOpen(false); } },
                   ].map((item, i) => (
@@ -841,7 +841,7 @@ export default function ReleaseDetail() {
                 {t("releaseDetail.actions.advanced")} <span className="text-xs">▾</span>
               </button>
               {advancedMenuOpen && (
-                <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
                   <button disabled={enrichingNvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {enrichingNvd ? t("common.loading") : t("releaseDetail.actions.enrichNvd")}
@@ -1243,14 +1243,14 @@ export default function ReleaseDetail() {
             <div className="p-8 text-center text-gray-600">{t("releaseDetail.components.noSbom")}</div>
           ) : (
             <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[480px]" role="table">
+            <table className="w-full text-sm min-w-[360px]" role="table">
               <caption className="sr-only">元件清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
                   <th className="px-4 py-3" scope="col">{t("releaseDetail.components.name")}</th>
-                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.version")}</th>
-                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.license")}</th>
-                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.licenseRisk")}</th>
+                  <th className="px-4 py-3 hidden sm:table-cell" scope="col">{t("releaseDetail.components.version")}</th>
+                  <th className="px-4 py-3 hidden md:table-cell" scope="col">{t("releaseDetail.components.license")}</th>
+                  <th className="px-4 py-3 hidden md:table-cell" scope="col">{t("releaseDetail.components.licenseRisk")}</th>
                   <th className="px-4 py-3" scope="col">{t("releaseDetail.components.vulnCount")}</th>
                   <th className="px-4 py-3" scope="col">{t("releaseDetail.components.maxSeverity")}</th>
                 </tr>
@@ -1259,9 +1259,9 @@ export default function ReleaseDetail() {
                 {components.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{c.version || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{c.license || "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{c.version || "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{c.license || "—"}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
                       {c.license_risk && c.license_risk !== "unknown" ? (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                           c.license_risk === "permissive" ? "bg-green-100 text-green-800" :
@@ -1352,9 +1352,119 @@ export default function ReleaseDetail() {
                   {t("common.showing", { shown: displayedVulns.length, total: vulns.length })}
                 </span>
               </div>
-            <div className="overflow-x-auto relative">
-              <p className="sm:hidden text-xs text-gray-600 px-3 pb-1">← 左右滑動查看全部</p>
-            <table className="w-full text-sm min-w-[700px]" role="table">
+            {/* Mobile card view */}
+            <div className="md:hidden divide-y">
+              {displayedVulns.map((v) => (
+                <div key={v.id} className={`px-4 py-3 ${selected.has(v.id) ? "bg-blue-50" : ""} ${v.suppressed ? "opacity-50" : ""}`}>
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 shrink-0"
+                      checked={selected.has(v.id)}
+                      onChange={(e) => {
+                        const next = new Set(selected);
+                        if (e.target.checked) next.add(v.id); else next.delete(v.id);
+                        setSelected(next);
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 justify-between">
+                        <button
+                          onClick={() => {
+                            const next = expandedVuln === v.id ? null : v.id;
+                            setExpandedVuln(next);
+                            if (next && !vulnHistory[next]) {
+                              api.get(`/vulnerabilities/${next}/history`).then((r) =>
+                                setVulnHistory((h) => ({ ...h, [next]: r.data }))
+                              ).catch(() => {});
+                            }
+                          }}
+                          className="font-mono text-sm text-blue-700 hover:underline text-left"
+                        >
+                          {v.cve_id}
+                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {v.is_kev && <span className="px-1.5 py-0.5 rounded text-white bg-red-600 font-bold text-xs">KEV</span>}
+                          {v.severity && (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity]}`}>{v.severity}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
+                        <span className="text-xs text-gray-600 truncate">{v.component_name} {v.component_version}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${VEX_STATUS_COLOR[v.status] || DEFAULT_BADGE}`}>
+                          {STATUS_LABEL[v.status] || v.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {v.sla_status === "overdue" && (
+                            <span className="text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">
+                              {t("releaseDetail.vulns.overdue", { n: Math.abs(v.sla_days) })}
+                            </span>
+                          )}
+                          {v.sla_status === "warning" && (
+                            <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                              {t("releaseDetail.vulns.warningDays", { n: v.sla_days })}
+                            </span>
+                          )}
+                          {v.reachability === "function_reachable" && (
+                            <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-700 text-white">函式確認</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          {!v.suppressed && <VexEditButton vuln={v} onUpdate={fetchVulns} />}
+                          <SuppressButton vuln={v} onUpdate={fetchVulns} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {expandedVuln === v.id && (
+                    <div className="mt-3 ml-6 text-sm text-gray-700 space-y-2 border-t pt-2">
+                      {v.description
+                        ? <p className="leading-relaxed text-xs">{v.description}</p>
+                        : <p className="text-gray-600 italic text-xs">NVD 描述尚未補充，請點「更新 NVD」</p>
+                      }
+                      <div className="flex gap-4 flex-wrap text-xs text-gray-500">
+                        {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
+                        {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
+                        {v.cvss_v4_score != null && <span><span className="font-medium text-gray-700">CVSS v4：</span>{v.cvss_v4_score}</span>}
+                        {v.ghsa_id && (
+                          <span>
+                            <span className="font-medium text-gray-700">GHSA：</span>
+                            <a href={v.ghsa_url || `https://github.com/advisories/${v.ghsa_id}`}
+                              target="_blank" rel="noreferrer"
+                              className="text-purple-600 hover:underline font-mono">{v.ghsa_id}</a>
+                          </span>
+                        )}
+                      </div>
+                      {vulnHistory[v.id] && vulnHistory[v.id].length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-600 mb-1">狀態變更紀錄</p>
+                          <ol className="space-y-1">
+                            {vulnHistory[v.id].map((h) => (
+                              <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
+                                <span className="text-gray-300">▸</span>
+                                <span className="font-mono text-gray-600 shrink-0">{formatDateTime(h.changed_at)}</span>
+                                <span>
+                                  <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
+                                  <span className="mx-1 text-gray-600">→</span>
+                                  <span className="font-medium text-gray-700">{STATUS_LABEL[h.to_status] ?? h.to_status}</span>
+                                  {h.note && <span className="ml-2 italic text-gray-600">{h.note}</span>}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm" role="table">
               <caption className="sr-only">漏洞清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
@@ -1419,7 +1529,7 @@ export default function ReleaseDetail() {
                         {v.cve_id}
                       </button>
                       {v.is_kev && (
-                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide text-[10px]">KEV</span>
+                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-white bg-red-600 font-bold tracking-wide text-xs">KEV</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{v.component_name} {v.component_version}</td>
@@ -1427,12 +1537,12 @@ export default function ReleaseDetail() {
                       {v.cvss_v4_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v4_score}</span>
-                          <span className="px-1 rounded font-bold bg-purple-100 text-purple-700 text-[9px]">v4</span>
+                          <span className="px-1 rounded font-bold bg-purple-100 text-purple-700 text-xs">v4</span>
                         </span>
                       ) : v.cvss_v3_score != null ? (
                         <span className="flex items-center gap-1">
                           <span className="font-medium text-gray-700">{v.cvss_v3_score}</span>
-                          <span className="px-1 rounded font-bold bg-blue-100 text-blue-700 text-[9px]">v3</span>
+                          <span className="px-1 rounded font-bold bg-blue-100 text-blue-700 text-xs">v3</span>
                         </span>
                       ) : (
                         <span className="text-gray-600">{v.cvss_score ?? "—"}</span>

@@ -223,13 +223,13 @@ export default function Organizations() {
           <div className="p-8 text-center text-gray-600">{t("organizations.noData")}</div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[400px]">
+          <table className="w-full text-sm min-w-[280px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3">{t("organizations.name")}</th>
-                <th className="px-4 py-3">授權狀態</th>
+                <th className="px-4 py-3 hidden sm:table-cell">授權狀態</th>
                 <th className="px-4 py-3">方案</th>
-                <th className="px-4 py-3">建立時間</th>
+                <th className="px-4 py-3 hidden md:table-cell">建立時間</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -237,7 +237,7 @@ export default function Organizations() {
               {orgs.map((org) => (
                 <tr key={org.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{org.name}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                       org.license_status === "active" ? "bg-green-100 text-green-700" :
                       org.license_status === "trial"  ? "bg-yellow-100 text-yellow-700" :
@@ -267,13 +267,13 @@ export default function Organizations() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                     {formatDate(org.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/organizations/${org.id}/products`)}
-                      className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                      className="text-blue-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("organizations.viewProducts")}
                     </button>
@@ -281,13 +281,13 @@ export default function Organizations() {
                       <>
                         <button
                           onClick={() => { setEditOrg(org); setEditName(org.name); }}
-                          className="text-yellow-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                          className="text-yellow-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                         >
                           {t("common.edit")}
                         </button>
                         <button
                           onClick={() => setConfirmDelete(org)}
-                          className="text-red-500 px-2 py-1 rounded hover:bg-gray-100 text-xs"
+                          className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                         >
                           {t("common.delete")}
                         </button>

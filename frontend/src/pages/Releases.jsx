@@ -177,13 +177,13 @@ export default function Releases() {
           <div className="p-8 text-center text-gray-600">{t("releases.noData")}</div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[520px]" role="table">
+          <table className="w-full text-sm min-w-[280px]" role="table">
             <caption className="sr-only">版本列表</caption>
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-4 py-3" scope="col">{t("releases.version")}</th>
-                <th className="px-4 py-3" scope="col">{t("common.createdAt")}</th>
-                <th className="px-4 py-3" scope="col">SBOM</th>
+                <th className="px-4 py-3 hidden sm:table-cell" scope="col">{t("common.createdAt")}</th>
+                <th className="px-4 py-3 hidden sm:table-cell" scope="col">SBOM</th>
                 <th className="px-4 py-3" scope="col">漏洞</th>
                 <th className="px-4 py-3" scope="col">操作</th>
               </tr>
@@ -195,10 +195,10 @@ export default function Releases() {
                     {r.version}
                     {r.locked && <Lock size={14} className="inline ml-1.5 text-gray-600" />}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">
+                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                     {formatDate(r.created_at)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {r.has_sbom ? (
                       <span className="text-green-600 text-xs">已上傳</span>
                     ) : (
@@ -223,13 +223,13 @@ export default function Releases() {
                   <td className="px-4 py-3 text-right flex justify-end gap-3">
                     <button
                       onClick={() => navigate(`/releases/${r.id}`, { state: { orgId, orgName, productId, productName, version: r.version } })}
-                      className="text-blue-600 hover:underline text-xs"
+                      className="text-blue-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("common.detail")}
                     </button>
                     <button
                       onClick={() => setConfirmDelete(r)}
-                      className="text-red-500 hover:underline text-xs"
+                      className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("common.delete")}
                     </button>

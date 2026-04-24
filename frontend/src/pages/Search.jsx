@@ -80,14 +80,14 @@ export default function Search() {
           ) : (
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="w-full text-sm min-w-[320px]">
                 <thead className="bg-gray-50 text-gray-500 text-left">
                   <tr>
                     <th className="px-4 py-3">元件名稱</th>
-                    <th className="px-4 py-3">版本</th>
-                    <th className="px-4 py-3">客戶</th>
-                    <th className="px-4 py-3">產品</th>
-                    <th className="px-4 py-3">版本號</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">版本</th>
+                    <th className="px-4 py-3 hidden md:table-cell">客戶</th>
+                    <th className="px-4 py-3 hidden md:table-cell">產品</th>
+                    <th className="px-4 py-3 hidden sm:table-cell">版本號</th>
                     <th className="px-4 py-3">漏洞數</th>
                     <th className="px-4 py-3">最高風險</th>
                     <th className="px-4 py-3">KEV</th>
@@ -97,10 +97,10 @@ export default function Search() {
                   {results.results.map((r) => (
                     <tr key={r.component_id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-2 font-medium text-gray-800">{r.component_name}</td>
-                      <td className="px-4 py-2 text-gray-500 font-mono text-xs">{r.component_version || "—"}</td>
-                      <td className="px-4 py-2 text-gray-600">{r.org_name}</td>
-                      <td className="px-4 py-2 text-gray-600">{r.product_name}</td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2 text-gray-500 font-mono text-xs hidden sm:table-cell">{r.component_version || "—"}</td>
+                      <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{r.org_name}</td>
+                      <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{r.product_name}</td>
+                      <td className="px-4 py-2 hidden sm:table-cell">
                         <Link
                           to={`/releases/${r.release_id}`}
                           className="text-blue-600 hover:underline"
@@ -118,7 +118,7 @@ export default function Search() {
                       </td>
                       <td className="px-4 py-2">
                         {r.kev_count > 0 && (
-                          <span className="px-1.5 py-0.5 rounded text-white bg-red-600 font-bold text-[10px]">
+                          <span className="px-1.5 py-0.5 rounded text-white bg-red-600 font-bold text-xs">
                             {r.kev_count} KEV
                           </span>
                         )}
