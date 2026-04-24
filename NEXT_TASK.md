@@ -56,6 +56,9 @@
 | NIS2 Art.21 合規報告（5 控制項評估，GET /compliance/nis2，PDF）| `3fd8d8b` |
 | Slack / Teams 格式化通知（Block Kit / MessageCard 自動偵測）| `3fd8d8b` |
 | GitLab CI 範本（tools/sbom-gitlab-ci/，sbom-upload + sbom-gate）| `3fd8d8b` |
+| 使用者管理強化（編輯帳號/Email 欄位/列表）| `359bada` |
+| P1 安全修正（DELETE 守衛/品質快取/SQL聚合/CRA隔離/SSO審批）| `cbff5d0` |
+| P2 效能優化（busy合併/useMemo/AbortController/去重查詢/i18n）| `268390d` |
 
 ---
 

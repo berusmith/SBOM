@@ -15,6 +15,26 @@
 
 ## [2.0.0] — 2026-04
 
+### 安全性修正（P1）
+- **DELETE /releases 權限修正**：加入 `require_admin` 守衛，viewer 無法刪除 release
+- **SBOM 品質評分 DB 快取**：上傳時計算 score/grade 寫入 `releases` 表，`/stats/sbom-quality-summary` 不再每次讀全部 SBOM 檔案
+- **top-risky-components SQL 聚合**：改用 SQL `GROUP BY` + `SUM(CASE)`，不再載入全部 Component 到 Python
+- **CRA incident 多租戶隔離**：合規報告（IEC 62443-4-1/3-3、NIS2）的 CRA incident 查詢加入 `org_id` 過濾
+- **SSO 帳號需審批**：OIDC 自動建立的帳號預設 `is_active=False`，需管理員啟用
+
+### 效能與 UX 改善（P2）
+- **ReleaseDetail re-render 優化**：~15 個下載/匯出 useState 合併為 `busy` 物件
+- **useMemo 優化**：`displayedVulns`、`severityCounts` 加 `useMemo`，只在篩選條件變更時重算
+- **Dashboard AbortController**：5 個 API 請求加 AbortController，離開頁面自動取消
+- **合規報告去重複查詢**：移除 4 處重複的 Product/Org 查詢，直接使用 `_assert_release_org` 回傳值
+- **Dashboard i18n 補齊**：高風險元件表格 6 處硬編碼中文改用 `t()`
+
+### 其他改善
+- **使用者管理強化**：編輯帳號支援修改登入帳號（username）；新增帳號表單加入 Email 欄位；列表新增 Email 欄
+- **測試修正**：viewer 建立測試加 `organization_id`；測試數從 39 → 55 項
+- **移除重複 /health 端點**（死碼）
+- **React Router v7 future flag 警告消除**
+
 ### 修正（TISAX 功能補強）
 - **個資保護模組（Data Protection）**：新增 4 項 GDPR 相關控制項（DP-9.1 個資保護政策、DP-9.2 個資識別與分類、DP-9.3 資料主體權利管理、DP-9.4 個資洩漏事件 72h 通報）；建立評估時可選「個資保護（4 項，GDPR）」；VDA ISA 6.0 控制項從 65 → 69 項
 - **Plan 檢查補齊**：`GET /assessments/{id}`、`PATCH /controls/{id}`、`DELETE /assessments/{id}` 補加 `require_plan("tisax")`，所有端點一致要求 Professional plan
