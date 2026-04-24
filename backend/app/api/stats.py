@@ -291,3 +291,104 @@ def get_top_threats(org_scope: str | None = Depends(get_org_scope), db: Session 
             for r in top_epss
         ],
     }
+
+
+@router.get("/sbom-quality-summary")
+def sbom_quality_summary(
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """彙總所有版本的 SBOM 品質評分分布。"""
+    import json as _json
+    import os as _os
+    from app.services.sbom_parser import score_sbom as _score_sbom
+
+    q = db.query(Release).filter(Release.sbom_file_path.isnot(None))
+    if org_scope:
+        q = (
+            q.join(Product, Product.id == Release.product_id)
+             .filter(Product.organization_id == org_scope)
+        )
+    releases = q.all()
+
+    grade_dist: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
+    scores: list[int] = []
+
+    for rel in releases:
+        path = rel.sbom_file_path
+        if not path or not _os.path.exists(path):
+            continue
+        try:
+            with open(path, "rb") as f:
+                data = _json.loads(f.read())
+            result = _score_sbom(data)
+            grade_dist[result["grade"]] += 1
+            scores.append(result["score"])
+        except Exception:
+            continue
+
+    avg_score = round(sum(scores) / len(scores)) if scores else 0
+    return {
+        "total": len(releases),
+        "graded": len(scores),
+        "grade_dist": grade_dist,
+        "avg_score": avg_score,
+        "low_quality_count": grade_dist["C"] + grade_dist["D"],
+    }
+
+
+@router.get("/cve-impact")
+def cve_impact(
+    cve: str,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """查詢指定 CVE 影響哪些組織/產品/版本。"""
+    if not cve or not cve.strip():
+        return {"cve_id": cve, "affected": []}
+
+    cve = cve.strip().upper()
+    q = (
+        db.query(
+            Vulnerability.id.label("vuln_id"),
+            Vulnerability.severity,
+            Vulnerability.status,
+            Vulnerability.cvss_score,
+            Component.name.label("comp_name"),
+            Release.id.label("release_id"),
+            Release.version.label("release_version"),
+            Product.id.label("product_id"),
+            Product.name.label("product_name"),
+            Organization.id.label("org_id"),
+            Organization.name.label("org_name"),
+        )
+        .join(Component, Component.id == Vulnerability.component_id)
+        .join(Release, Release.id == Component.release_id)
+        .join(Product, Product.id == Release.product_id)
+        .join(Organization, Organization.id == Product.organization_id)
+        .filter(Vulnerability.cve_id == cve)
+        .filter(Vulnerability.status.notin_(["fixed", "not_affected"]))
+    )
+    if org_scope:
+        q = q.filter(Product.organization_id == org_scope)
+
+    rows = q.order_by(Vulnerability.cvss_score.desc().nulls_last()).limit(100).all()
+    return {
+        "cve_id": cve,
+        "affected_count": len(rows),
+        "affected": [
+            {
+                "org_id":          r.org_id,
+                "org_name":        r.org_name,
+                "product_id":      r.product_id,
+                "product_name":    r.product_name,
+                "release_id":      r.release_id,
+                "release_version": r.release_version,
+                "component":       r.comp_name,
+                "severity":        r.severity,
+                "cvss_score":      r.cvss_score,
+                "status":          r.status,
+            }
+            for r in rows
+        ],
+    }

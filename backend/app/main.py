@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses, firmware, tokens
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses, firmware, tokens, convert
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.models import license_rule as _license_rule_model  # noqa: F401
 from app.models import brand_config as _brand_config_model  # noqa: F401
@@ -163,6 +163,7 @@ app.include_router(tisax.router, dependencies=_auth)
 app.include_router(licenses.router, dependencies=_auth)
 app.include_router(firmware.router, dependencies=_auth)
 app.include_router(tokens.router, dependencies=_auth)
+app.include_router(convert.router, dependencies=_auth)
 
 
 @app.on_event("startup")

@@ -29,6 +29,7 @@ from app.models.release import Release
 from app.models.vulnerability import Vulnerability
 from app.models.brand_config import BrandConfig
 from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report
+from app.services.sbom_parser import check_ntia as _check_ntia_fn, score_sbom as _score_sbom
 from app.services.alerts import notify_new_vulns
 from app.services.nvd import enrich_vulns_nvd
 from app.services.epss import fetch_epss
@@ -1234,62 +1235,9 @@ def sbom_quality(release_id: str, org_scope: str | None = Depends(get_org_scope)
     with open(release.sbom_file_path, "rb") as f:
         data = json.loads(f.read())
 
-    is_spdx = "spdxVersion" in data
-    checks = _check_ntia(data, is_spdx)
-    passed = sum(1 for c in checks if c["passed"])
-    score = round(passed / len(checks) * 100)
-    grade = "A" if passed >= 6 else "B" if passed >= 4 else "C" if passed >= 2 else "D"
-    return {"score": score, "grade": grade, "passed": passed, "total": len(checks), "checks": checks}
+    return _score_sbom(data)
 
 
-def _pct(items: list, pred) -> float:
-    if not items:
-        return 0.0
-    return sum(1 for i in items if pred(i)) / len(items)
-
-
-def _check_ntia(data: dict, is_spdx: bool) -> list[dict]:
-    def ok(passed, detail=""):
-        return {"passed": passed, "detail": detail}
-
-    if is_spdx:
-        pkgs = [p for p in data.get("packages", []) if p.get("name")]
-        has_supplier = any(
-            p.get("supplier", "") not in ("", "NOASSERTION", "NONE")
-            for p in pkgs
-        )
-        version_pct = _pct(pkgs, lambda p: p.get("versionInfo", "") not in ("", "NOASSERTION", "NONE"))
-        purl_pct = _pct(pkgs, lambda p: any(
-            r.get("referenceType") == "purl" for r in p.get("externalRefs", [])
-        ))
-        has_deps = bool(data.get("relationships"))
-        has_author = bool(data.get("creationInfo", {}).get("creators"))
-        has_ts = bool(data.get("creationInfo", {}).get("created"))
-        fmt = "SPDX"
-    else:
-        comps = data.get("components", [])
-        has_supplier = any(
-            c.get("supplier", {}).get("name") or c.get("author")
-            for c in comps
-        )
-        version_pct = _pct(comps, lambda c: bool(c.get("version", "").strip()))
-        purl_pct = _pct(comps, lambda c: bool(c.get("purl") or c.get("cpe")))
-        has_deps = bool(data.get("dependencies"))
-        meta = data.get("metadata", {})
-        has_author = bool(meta.get("authors") or meta.get("component", {}).get("author"))
-        has_ts = bool(meta.get("timestamp"))
-        fmt = "CycloneDX"
-
-    threshold = 0.8
-    return [
-        {"id": "supplier",     "label": "供應商名稱",   **ok(has_supplier, f"{'有' if has_supplier else '無'}供應商欄位（{fmt}）")},
-        {"id": "name",         "label": "元件名稱",     **ok(True, "上傳驗證已確保所有元件有名稱")},
-        {"id": "version",      "label": "元件版本",     **ok(version_pct >= threshold, f"{version_pct*100:.0f}% 元件有版本（門檻 80%）")},
-        {"id": "unique_id",    "label": "唯一識別碼",   **ok(purl_pct >= threshold, f"{purl_pct*100:.0f}% 元件有 PURL/CPE（門檻 80%）")},
-        {"id": "dependencies", "label": "相依關係",     **ok(has_deps, f"{'有' if has_deps else '無'}相依關係區塊")},
-        {"id": "author",       "label": "SBOM 作者",    **ok(has_author, f"{'有' if has_author else '無'}作者 metadata")},
-        {"id": "timestamp",    "label": "時間戳記",     **ok(has_ts, f"{'有' if has_ts else '無'}時間戳記 metadata")},
-    ]
 
 
 @router.get("/{release_id}/integrity")
@@ -1546,7 +1494,7 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
             with open(release.sbom_file_path, "rb") as f:
                 sbom_data = json.loads(f.read())
             is_spdx = "spdxVersion" in sbom_data
-            q_checks = _check_ntia(sbom_data, is_spdx)
+            q_checks = _check_ntia_fn(sbom_data, is_spdx)
             quality_passed = sum(1 for c in q_checks if c["passed"])
             quality_grade = "A" if quality_passed >= 6 else "B" if quality_passed >= 4 else "C" if quality_passed >= 2 else "D"
         except Exception:

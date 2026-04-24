@@ -114,6 +114,8 @@ export default function ReleaseDetail() {
   const sourceFileRef = useRef();
   const [sourceUploadResult, setSourceUploadResult] = useState(null);
   const [sourceUploading, setSourceUploading] = useState(false);
+  const convertFileRef = useRef();
+  const [converting, setConverting] = useState(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
@@ -365,6 +367,27 @@ export default function ReleaseDetail() {
     } finally {
       setSourceUploading(false);
       if (sourceFileRef.current) sourceFileRef.current.value = "";
+    }
+  };
+
+  const handleConvert = async (e, targetFmt) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setConverting(true);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const resp = await api.post(`/convert?target=${targetFmt}`, form, { headers: { "Content-Type": "multipart/form-data" }, responseType: "blob" });
+      const ext = targetFmt === "cyclonedx-xml" ? "xml" : "json";
+      const url = URL.createObjectURL(new Blob([resp.data]));
+      const a = document.createElement("a"); a.href = url; a.download = `converted.${ext}`; a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const msg = err.response?.data ? await err.response.data.text?.() : err.message;
+      toast.error("格式轉換失敗：" + (msg || err.message));
+    } finally {
+      setConverting(false);
+      if (convertFileRef.current) convertFileRef.current.value = "";
     }
   };
 
@@ -680,6 +703,21 @@ export default function ReleaseDetail() {
                   }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {exportingSpdx ? "匯出中..." : "SPDX JSON"}
                   </button>
+                  <div className="border-t border-gray-100 my-1" />
+                  {/* 格式互轉 */}
+                  <div className="px-4 py-1 text-xs text-gray-400">格式互轉（上傳任意 SBOM）</div>
+                  {[
+                    { label: "→ SPDX JSON",       target: "spdx-json" },
+                    { label: "→ CycloneDX JSON",   target: "cyclonedx-json" },
+                    { label: "→ CycloneDX XML",    target: "cyclonedx-xml" },
+                  ].map(({ label, target }) => (
+                    <label key={target} className={`flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer ${converting ? "opacity-50 cursor-not-allowed" : ""}`}>
+                      {converting ? "轉換中..." : label}
+                      <input type="file" accept=".json,.xml" className="hidden" ref={convertFileRef}
+                        onChange={e => { setExportMenuOpen(false); handleConvert(e, target); }}
+                        disabled={converting} />
+                    </label>
+                  ))}
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={downloadingIec} onClick={() => { setExportMenuOpen(false); handleDownloadIec(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">

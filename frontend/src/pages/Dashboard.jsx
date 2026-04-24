@@ -176,6 +176,10 @@ export default function Dashboard() {
   const [topThreats, setTopThreats] = useState(null);
   const [riskyComponents, setRiskyComponents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [qualitySummary, setQualitySummary] = useState(null);
+  const [cveQuery, setCveQuery] = useState("");
+  const [cveResult, setCveResult] = useState(null);
+  const [cveLoading, setCveLoading] = useState(false);
   const role = localStorage.getItem("role") || "viewer";
   const orgId = localStorage.getItem("org_id") || "";
   const navigate = useNavigate();
@@ -187,13 +191,27 @@ export default function Dashboard() {
       api.get("/stats/risk-overview"),
       api.get("/stats/top-threats"),
       api.get("/stats/top-risky-components"),
-    ]).then(([s, r, t, rc]) => {
+      api.get("/stats/sbom-quality-summary"),
+    ]).then(([s, r, t, rc, q]) => {
       setStats(s.data);
       setRiskOverview(r.data);
       setTopThreats(t.data);
       setRiskyComponents(rc.data);
+      setQualitySummary(q.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const handleCveSearch = async (e) => {
+    e.preventDefault();
+    if (!cveQuery.trim()) return;
+    setCveLoading(true);
+    setCveResult(null);
+    try {
+      const res = await api.get(`/stats/cve-impact?cve=${encodeURIComponent(cveQuery.trim())}`);
+      setCveResult(res.data);
+    } catch { setCveResult({ cve_id: cveQuery, affected_count: 0, affected: [] }); }
+    finally { setCveLoading(false); }
+  };
 
   if (loading) return (
     <div className="p-6 space-y-6">
@@ -333,6 +351,94 @@ export default function Dashboard() {
       )}
 
       <TopVulns />
+
+      {/* SBOM Quality Summary */}
+      <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.sbomQuality")}</h2>
+        {qualitySummary && qualitySummary.graded > 0 ? (
+          <div className="flex flex-wrap gap-6 items-center">
+            {/* Grade distribution */}
+            <div className="flex gap-3">
+              {["A","B","C","D"].map(g => (
+                <div key={g} className="flex flex-col items-center">
+                  <span className={`text-2xl font-bold ${g==="A"?"text-green-600":g==="B"?"text-blue-600":g==="C"?"text-yellow-600":"text-red-600"}`}>
+                    {qualitySummary.grade_dist[g]}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-1 ${g==="A"?"bg-green-100 text-green-700":g==="B"?"bg-blue-100 text-blue-700":g==="C"?"bg-yellow-100 text-yellow-700":"bg-red-100 text-red-700"}`}>
+                    {g}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-6 text-sm text-gray-600">
+              <div><span className="font-semibold text-gray-800 text-lg">{qualitySummary.avg_score}</span><span className="ml-1 text-xs">分</span><br/><span className="text-xs">{t("dashboard.qualityAvg")}</span></div>
+              {qualitySummary.low_quality_count > 0 && (
+                <div><span className="font-semibold text-red-600 text-lg">{qualitySummary.low_quality_count}</span><br/><span className="text-xs text-red-600">{t("dashboard.qualityLow")}</span></div>
+              )}
+              <div><span className="text-xs text-gray-400">{qualitySummary.graded} / {qualitySummary.total} 版本已評分</span></div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">{t("dashboard.qualityNoData")}</p>
+        )}
+      </div>
+
+      {/* CVE Impact Lookup */}
+      <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <h2 className="font-semibold text-gray-700 mb-3">{t("dashboard.cveImpact")}</h2>
+        <form onSubmit={handleCveSearch} className="flex gap-2 mb-3">
+          <input
+            value={cveQuery}
+            onChange={e => setCveQuery(e.target.value)}
+            placeholder={t("dashboard.cveInputHint")}
+            className="border rounded px-3 py-1.5 text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+          <button
+            type="submit"
+            disabled={cveLoading}
+            className="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            {cveLoading ? "..." : t("dashboard.cveSearch")}
+          </button>
+        </form>
+        {cveResult && (
+          cveResult.affected_count === 0 ? (
+            <p className="text-sm text-gray-500">{t("dashboard.cveNoResult")}</p>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-red-700 mb-2">{t("dashboard.cveAffected", { n: cveResult.affected_count })}</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs min-w-[480px]">
+                  <thead className="text-left text-gray-500 border-b">
+                    <tr>
+                      <th className="pb-2 pr-3">{t("organizations.name")}</th>
+                      <th className="pb-2 pr-3">{t("products.name")}</th>
+                      <th className="pb-2 pr-3">{t("releases.version")}</th>
+                      <th className="pb-2 pr-3">{t("dashboard.component")}</th>
+                      <th className="pb-2">{t("releaseDetail.vulns.severity")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {cveResult.affected.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/releases/${r.release_id}`)}>
+                        <td className="py-2 pr-3 text-gray-700">{r.org_name}</td>
+                        <td className="py-2 pr-3 text-gray-700">{r.product_name}</td>
+                        <td className="py-2 pr-3 font-mono text-gray-600">{r.release_version}</td>
+                        <td className="py-2 pr-3 text-gray-600">{r.component}</td>
+                        <td className="py-2">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${r.severity==="critical"?"bg-red-100 text-red-700":r.severity==="high"?"bg-orange-100 text-orange-700":"bg-yellow-100 text-yellow-700"}`}>
+                            {r.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )
+        )}
+      </div>
 
       {/* Patch tracking summary */}
       {stats.patch_tracking && (
