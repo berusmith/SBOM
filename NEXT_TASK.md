@@ -12,7 +12,13 @@
 | TISAX 模組（VDA ISA 6.0，63 控制項，AL2/AL3 gap 分析） | — |
 | Container/IaC 掃描（Trivy，`POST /scan-image` + `/scan-iac`） | `9e0df10` |
 | GHSA 漏洞情資補強（GitHub Advisory Database，ghsa_id 欄位） | `5c6538b` |
-| Reachability Phase 1（import 層級，Python/Node，reachability 欄位） | `e3c6521` |
+| Reachability Phase 1（import 層級，Python/Node） | `e3c6521` |
+| Reachability Phase 2（模組層級，test/scripts 過濾） | `b842aeb` |
+| Reachability Phase 3（Python AST call graph，function_reachable） | `7016ca0` |
+| i18n 國際化（EN/中切換，react-i18next，297 key） | `665a50e` |
+| SBOM 格式互轉（`POST /api/convert`，CycloneDX ↔ SPDX ↔ XML） | `bbc786c` |
+| SBOM 品質評分 Dashboard 卡片（`/stats/sbom-quality-summary`） | `bbc786c` |
+| CVE 影響查詢（`/stats/cve-impact`，Dashboard 查詢框） | `bbc786c` |
 
 ---
 
@@ -20,30 +26,9 @@
 
 | # | 項目 | 預估 | 理由 |
 |---|------|------|------|
-| 1 | ~~**Reachability Phase 1**~~（import 層級，Python/Node） | ✅ 完成 | |
-| 2 | ~~**Reachability Phase 2**~~（模組層級，過濾 test/scripts） | ✅ 完成 | |
-| 3 | ~~**Reachability Phase 3**~~（Python AST call graph） | ✅ 完成 | |
-| 4 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關 |
-
-### Reachability 各期說明
-
-**Phase 1 — 依賴是否實際被 import（1–2 週）**
-- 使用者上傳原始碼 zip，後端掃描 import 語句
-- 支援 Python（`import X` / `from X import`）、Node（`require` / `import from`）
-- 每個漏洞新增欄位 `reachability: "imported" | "not_found" | "unknown"`
-- 純文字比對，不需 AST，不需新套件
-- 預估噪音削減 20–40%
-
-**Phase 2 — 模組層級追蹤（2–3 週）**
-- 追蹤哪些檔案 import 了問題套件
-- 過濾僅出現在 `tests/`、`test_*`、`scripts/` 的使用
-- 結果：`reachability: "reachable" | "test_only" | "not_imported"`
-- 額外削減 10–20% 噪音
-
-**Phase 3 — 函式層級 Call Graph（1–2 月）**
-- 真正的 AST 靜態分析，建 call graph
-- 確認漏洞函式是否在呼叫鏈上
-- 對標 Endor Labs / Snyk 等級
+| 1 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關；脫敏分享的前提 |
+| 2 | **SBOM 脫敏與供應鏈分享** | ~2 週 | 需 Postgres 先完成 |
+| 3 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
 
 ---
 
