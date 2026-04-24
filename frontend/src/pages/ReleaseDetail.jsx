@@ -86,6 +86,7 @@ export default function ReleaseDetail() {
   const [sortAsc, setSortAsc] = useState(false);
   const [filterEpss, setFilterEpss] = useState(false);
   const [filterKev, setFilterKev] = useState(false);
+  const [filterText, setFilterText] = useState("");
   const [showSuppressed, setShowSuppressed] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [batchStatus, setBatchStatus] = useState("in_triage");
@@ -577,7 +578,9 @@ export default function ReleaseDetail() {
       (!filterSeverity || v.severity === filterSeverity) &&
       (!filterStatus || v.status === filterStatus) &&
       (!filterEpss || (v.epss_score != null && v.epss_score >= 0.1)) &&
-      (!filterKev || v.is_kev)
+      (!filterKev || v.is_kev) &&
+      (!filterText || v.cve_id?.toLowerCase().includes(filterText.toLowerCase()) ||
+        v.component_name?.toLowerCase().includes(filterText.toLowerCase()))
     )
     .sort((a, b) => {
       let av, bv;
@@ -1392,6 +1395,13 @@ export default function ReleaseDetail() {
             <>
               {/* Filter bar */}
               <div className="flex gap-3 items-center px-4 py-3 border-b bg-gray-50 flex-wrap">
+                <input
+                  type="text"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder="搜尋 CVE ID / 元件名稱..."
+                  className="w-full sm:w-48 border rounded px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
                 <select
                   value={filterSeverity}
                   onChange={(e) => setFilterSeverity(e.target.value)}
@@ -1426,9 +1436,9 @@ export default function ReleaseDetail() {
                     {t("common.showSuppressed", { n: suppressedCount })}
                   </label>
                 )}
-                {(filterSeverity || filterStatus || filterEpss || filterKev) && (
+                {(filterSeverity || filterStatus || filterEpss || filterKev || filterText) && (
                   <button
-                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); }}
+                    onClick={() => { setFilterSeverity(""); setFilterStatus(""); setFilterEpss(false); setFilterKev(false); setFilterText(""); }}
                     className="text-xs text-gray-600 hover:text-gray-600 underline"
                   >
                     {t("common.clearFilter")}

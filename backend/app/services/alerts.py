@@ -117,25 +117,52 @@ def send_webhook(url: str, payload: dict, max_retries: int = 3) -> str:
 
 
 def send_email(subject: str, body: str, to: str) -> str:
-    """Send plain-text email via SMTP. Returns '' on success, error message on failure."""
+    """Send plain-text email via SMTP. `to` may be comma-separated addresses."""
     if not settings.SMTP_HOST or not settings.SMTP_USER:
         return "SMTP 未設定（請在 .env 設定 SMTP_HOST / SMTP_USER / SMTP_PASSWORD）"
+    recipients = [addr.strip() for addr in to.split(",") if addr.strip()]
+    if not recipients:
+        return "收件人地址為空"
     try:
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
         msg["From"] = settings.SMTP_FROM or settings.SMTP_USER
-        msg["To"] = to
+        msg["To"] = ", ".join(recipients)
         if settings.SMTP_TLS:
             server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
             server.starttls()
         else:
             server = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(msg["From"], [to], msg.as_bytes())
+        server.sendmail(msg["From"], recipients, msg.as_bytes())
         server.quit()
         return ""
     except Exception as e:
         return str(e)
+
+
+_SEV_ORDER = {"info": 1, "low": 2, "medium": 3, "high": 4, "critical": 5}
+
+
+def _passes_alert_rule(vuln: dict, cfg) -> bool:
+    """Return True if this vuln should trigger a notification based on alert rules."""
+    # KEV: always notify if kev_always is set
+    if getattr(cfg, "alert_kev_always", 1) and vuln.get("is_kev"):
+        return True
+    # Severity threshold
+    min_sev = getattr(cfg, "alert_min_severity", "") or ""
+    if min_sev:
+        vuln_rank = _SEV_ORDER.get(vuln.get("severity", "info"), 0)
+        min_rank  = _SEV_ORDER.get(min_sev, 0)
+        if vuln_rank < min_rank:
+            return False
+    # EPSS threshold
+    threshold = getattr(cfg, "alert_epss_threshold", 0.0) or 0.0
+    if threshold > 0:
+        epss = vuln.get("epss_score") or 0.0
+        if epss < threshold:
+            return False
+    return True
 
 
 def notify_new_vulns(db, release_info: dict, new_vulns: list) -> dict:
@@ -149,6 +176,13 @@ def notify_new_vulns(db, release_info: dict, new_vulns: list) -> dict:
         return {"webhook_sent": False, "email_sent": False, "errors": []}
 
     cfg = _get_config(db)
+
+    # Apply alert rules — filter which vulns trigger notifications
+    filtered_vulns = [v for v in new_vulns if _passes_alert_rule(v, cfg)]
+    if not filtered_vulns:
+        return {"webhook_sent": False, "email_sent": False, "errors": [], "filtered": True}
+    new_vulns = filtered_vulns
+
     kev_vulns = [v for v in new_vulns if v.get("is_kev")]
     critical   = [v for v in new_vulns if v.get("severity") == "critical"]
 

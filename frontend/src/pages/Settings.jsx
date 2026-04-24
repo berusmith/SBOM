@@ -12,6 +12,9 @@ export default function Settings() {
   const [webhook, setWebhook] = useState("");
   const [email, setEmail] = useState("");
   const [intervalHours, setIntervalHours] = useState(24);
+  const [alertMinSeverity, setAlertMinSeverity] = useState("");
+  const [alertKevAlways, setAlertKevAlways] = useState(true);
+  const [alertEpssThreshold, setAlertEpssThreshold] = useState(0);
   const [saving, setSaving] = useState(false);
   const [testingWh, setTestingWh] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
@@ -40,6 +43,9 @@ export default function Settings() {
       setWebhook(r.data.webhook_url || "");
       setEmail(r.data.alert_email_to || "");
       setIntervalHours(r.data.monitor_interval_hours ?? 24);
+      setAlertMinSeverity(r.data.alert_min_severity || "");
+      setAlertKevAlways(r.data.alert_kev_always !== false);
+      setAlertEpssThreshold(r.data.alert_epss_threshold || 0);
     }).catch(() => {});
   };
 
@@ -78,6 +84,9 @@ export default function Settings() {
         webhook_url: webhook,
         alert_email_to: email,
         monitor_interval_hours: intervalHours,
+        alert_min_severity: alertMinSeverity,
+        alert_kev_always: alertKevAlways,
+        alert_epss_threshold: alertEpssThreshold,
       });
       flash("ok", "通知設定已儲存");
       fetchCfg();
@@ -390,13 +399,12 @@ export default function Settings() {
       {/* ── Email ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
         <h3 className="font-semibold text-gray-700 mb-1">Email 通知</h3>
-        <p className="text-xs text-gray-600 mb-3">重新掃描發現新漏洞時寄送 Email 通知</p>
+        <p className="text-xs text-gray-600 mb-3">重新掃描發現新漏洞時寄送 Email 通知（多個地址用逗號分隔）</p>
         <div className="flex gap-2 mb-3">
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            type="email"
+            placeholder="a@example.com, b@example.com"
             className="flex-1 border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
           <button
@@ -415,6 +423,47 @@ export default function Settings() {
               : "SMTP 未設定 — 請在 .env 設定 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD / SMTP_FROM"}
           </div>
         )}
+      </div>
+
+      {/* ── Alert Rules ── */}
+      <div className="bg-white rounded-lg shadow p-5 mb-4">
+        <h3 className="font-semibold text-gray-700 mb-1">通知規則</h3>
+        <p className="text-xs text-gray-600 mb-4">設定觸發通知的最低條件，減少不必要的雜訊</p>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">最低嚴重度（低於此等級不通知）</label>
+            <select value={alertMinSeverity} onChange={(e) => setAlertMinSeverity(e.target.value)}
+              className="border rounded px-3 py-2 text-sm w-full sm:w-48 focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">全部（不限制）</option>
+              <option value="info">Info 以上</option>
+              <option value="low">Low 以上</option>
+              <option value="medium">Medium 以上</option>
+              <option value="high">High 以上</option>
+              <option value="critical">Critical 才通知</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              EPSS 最低門檻（0 = 不限制；0.5 = 僅通知 EPSS ≥ 50%）
+            </label>
+            <div className="flex items-center gap-3">
+              <input type="range" min="0" max="1" step="0.05"
+                value={alertEpssThreshold}
+                onChange={(e) => setAlertEpssThreshold(parseFloat(e.target.value))}
+                className="w-48" />
+              <span className="text-sm font-mono text-gray-700 w-12">
+                {alertEpssThreshold > 0 ? `≥${(alertEpssThreshold * 100).toFixed(0)}%` : "不限制"}
+              </span>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={alertKevAlways}
+              onChange={(e) => setAlertKevAlways(e.target.checked)} />
+            <span className="text-sm text-gray-700">
+              KEV（CISA 已知遭利用漏洞）一律通知，不受上述門檻限制
+            </span>
+          </label>
+        </div>
       </div>
 
       <button

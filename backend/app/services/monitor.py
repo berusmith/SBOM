@@ -125,6 +125,33 @@ def _do_scan_all() -> int:
                 logger.exception("Monitor: error scanning release %s", release.id)
                 db.rollback()
 
+        # Check for expired suppressions — auto-unsuppress and notify
+        try:
+            from app.models.vulnerability import Vulnerability as _Vuln
+            now_utc = datetime.now(timezone.utc)
+            expired = db.query(_Vuln).filter(
+                _Vuln.suppressed == True,   # noqa: E712
+                _Vuln.suppressed_until.isnot(None),
+                _Vuln.suppressed_until < now_utc,
+            ).all()
+            for v in expired:
+                v.suppressed = False
+                v.suppressed_until = None
+                logger.info("Monitor: suppression expired for %s", v.cve_id)
+            if expired:
+                db.commit()
+                from app.services.alerts import notify_new_vulns
+                expired_details = [{"cve_id": v.cve_id, "severity": v.severity,
+                                     "cvss_score": v.cvss_score, "epss_score": v.epss_score,
+                                     "is_kev": bool(v.is_kev), "component": ""} for v in expired]
+                notify_new_vulns(db, {
+                    "org": "", "product": "多個產品", "version": "",
+                    "release_id": "",
+                }, expired_details)
+                logger.info("Monitor: %d suppression(s) expired and re-activated", len(expired))
+        except Exception:
+            logger.exception("Monitor: error checking expired suppressions")
+
         now = datetime.now(timezone.utc)
         _last_run_dt    = now
         _last_run_count = total_new

@@ -135,6 +135,9 @@ with engine.connect() as conn:
     if _table_exists(conn, "alert_config"):
         _add_column(conn, "alert_config", "monitor_interval_hours", "INTEGER DEFAULT 24")
         _add_column(conn, "alert_config", "monitor_last_run", "DATETIME")
+        _add_column(conn, "alert_config", "alert_min_severity", "TEXT DEFAULT ''")
+        _add_column(conn, "alert_config", "alert_kev_always", "INTEGER DEFAULT 1")
+        _add_column(conn, "alert_config", "alert_epss_threshold", "REAL DEFAULT 0.0")
     conn.commit()
 
     if _table_exists(conn, "api_tokens"):

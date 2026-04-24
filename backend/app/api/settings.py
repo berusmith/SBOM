@@ -53,6 +53,10 @@ def get_alert_settings(db: Session = Depends(get_db)):
         "smtp_port":              settings.SMTP_PORT,
         "smtp_user":              settings.SMTP_USER,
         "smtp_from":              settings.SMTP_FROM or settings.SMTP_USER,
+        # Alert rules
+        "alert_min_severity":     cfg.alert_min_severity or "",
+        "alert_kev_always":       bool(cfg.alert_kev_always if cfg.alert_kev_always is not None else 1),
+        "alert_epss_threshold":   cfg.alert_epss_threshold or 0.0,
     }
 
 
@@ -71,9 +75,12 @@ def trigger_monitor():
 
 
 class AlertSettingsUpdate(BaseModel):
-    webhook_url:            Optional[str] = None
-    alert_email_to:         Optional[str] = None
-    monitor_interval_hours: Optional[int] = None
+    webhook_url:            Optional[str]   = None
+    alert_email_to:         Optional[str]   = None
+    monitor_interval_hours: Optional[int]   = None
+    alert_min_severity:     Optional[str]   = None   # ""|info|low|medium|high|critical
+    alert_kev_always:       Optional[bool]  = None
+    alert_epss_threshold:   Optional[float] = None   # 0.0–1.0
 
 
 @router.patch("/alerts")
@@ -87,6 +94,17 @@ def update_alert_settings(payload: AlertSettingsUpdate, db: Session = Depends(ge
         if payload.monitor_interval_hours not in (0, 6, 12, 24, 48, 72):
             raise HTTPException(status_code=400, detail="interval_hours 必須為 0/6/12/24/48/72")
         cfg.monitor_interval_hours = payload.monitor_interval_hours
+    if payload.alert_min_severity is not None:
+        valid_sev = ("", "info", "low", "medium", "high", "critical")
+        if payload.alert_min_severity not in valid_sev:
+            raise HTTPException(status_code=400, detail="alert_min_severity 必須為 info/low/medium/high/critical 或空字串")
+        cfg.alert_min_severity = payload.alert_min_severity
+    if payload.alert_kev_always is not None:
+        cfg.alert_kev_always = int(payload.alert_kev_always)
+    if payload.alert_epss_threshold is not None:
+        if not (0.0 <= payload.alert_epss_threshold <= 1.0):
+            raise HTTPException(status_code=400, detail="alert_epss_threshold 必須介於 0.0 和 1.0 之間")
+        cfg.alert_epss_threshold = payload.alert_epss_threshold
     db.commit()
     db.refresh(cfg)
     return {"webhook_url": cfg.webhook_url or "", "alert_email_to": cfg.alert_email_to or ""}
@@ -109,7 +127,7 @@ def test_webhook(db: Session = Depends(get_db)):
 @router.post("/alerts/test-email")
 def test_email(db: Session = Depends(get_db)):
     cfg = _get_or_create_alert(db)
-    if not cfg.alert_email_to:
+    if not cfg.alert_email_to or not cfg.alert_email_to.strip():
         raise HTTPException(status_code=400, detail="尚未設定收件信箱")
     if not settings.SMTP_HOST or not settings.SMTP_USER:
         raise HTTPException(status_code=400, detail="SMTP 未設定（請在 .env 設定 SMTP_HOST / SMTP_USER / SMTP_PASSWORD）")
