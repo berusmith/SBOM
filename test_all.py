@@ -116,7 +116,7 @@ chk("CRA: delete (204)", s == 204, "status=" + str(s))
 # --- Users + RBAC ---
 s, d = req("GET", "/api/users", tok=token)
 chk("Users: list admin (200)", s == 200 and isinstance(d, list))
-s, d = req("POST", "/api/users", {"username": "qaview" + TS, "password": "Qatest1234", "role": "viewer"}, tok=token)
+s, d = req("POST", "/api/users", {"username": "qaview" + TS, "password": "Qatest1234", "role": "viewer", "organization_id": org_id}, tok=token)
 chk("Users: create viewer (201)", s == 201 and "id" in d, "status=" + str(s) + " " + str(d.get("detail", "")))
 uid = d.get("id")
 if uid:

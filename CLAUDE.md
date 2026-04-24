@@ -87,7 +87,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `search.py` | `/api/search` | GET `/components?q=` |
 | `settings.py` | `/api/settings` | GET/POST `/brand` `/alerts`, POST `/brand/logo` |
 | `policies.py` | `/api/policies` | CRUD |
-| `users.py` | `/api/users` | CRUD (admin only) |
+| `users.py` | `/api/users` | CRUD (admin only); PATCH supports `username` / `password` / `role` / `email` / `organization_id` / `is_active` |
 | `admin.py` | `/api/admin` | GET `/activity?date_from=&date_to=` |
 | `firmware.py` | `/api/firmware` | POST `/upload`, GET `/scans`, GET `/scans/{id}` |
 | `tokens.py` | `/api/tokens` | GET/POST/DELETE — long-lived API keys for CI/CD (prefix `sbom_`); `scope` = `read`/`write`/`admin` enforced by HTTP verb in `deps.get_current_user`; token/user management uses `require_admin_scope` (admin scope only) |

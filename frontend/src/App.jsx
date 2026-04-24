@@ -56,7 +56,7 @@ function PageLoading() {
 export default function App() {
   return (
     <ToastProvider>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />

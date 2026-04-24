@@ -10,8 +10,8 @@ export default function Users() {
   const [orgs, setOrgs] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editUser, setEditUser] = useState(null);
-  const [form, setForm] = useState({ username: "", password: "", role: "viewer", organization_id: "" });
-  const [editForm, setEditForm] = useState({ password: "", role: "viewer", is_active: true, organization_id: "" });
+  const [form, setForm] = useState({ username: "", password: "", role: "viewer", organization_id: "", email: "" });
+  const [editForm, setEditForm] = useState({ username: "", password: "", role: "viewer", is_active: true, organization_id: "", email: "" });
   const [errors, setErrors] = useState({});
   const [editErrors, setEditErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -48,7 +48,7 @@ export default function Users() {
     try {
       await api.post("/users", form);
       setShowForm(false);
-      setForm({ username: "", password: "", role: "viewer", organization_id: "" });
+      setForm({ username: "", password: "", role: "viewer", organization_id: "", email: "" });
       flash("success", `帳號 ${form.username} 已建立`);
       fetchAll();
     } catch (err) {
@@ -73,7 +73,7 @@ export default function Users() {
 
     setEditErrors({});
     try {
-      const payload = { role: editForm.role, is_active: editForm.is_active, organization_id: editForm.organization_id || null, email: editForm.email || null };
+      const payload = { username: editForm.username, role: editForm.role, is_active: editForm.is_active, organization_id: editForm.organization_id || null, email: editForm.email || null };
       if (editForm.password) payload.password = editForm.password;
       await api.patch(`/users/${editUser.id}`, payload);
       setEditUser(null);
@@ -100,7 +100,7 @@ export default function Users() {
 
   const openEdit = (u) => {
     setEditUser(u);
-    setEditForm({ password: "", role: u.role, is_active: u.is_active, organization_id: u.organization_id || "", email: u.email || "" });
+    setEditForm({ username: u.username, password: "", role: u.role, is_active: u.is_active, organization_id: u.organization_id || "", email: u.email || "" });
   };
 
   return (
@@ -151,6 +151,13 @@ export default function Users() {
               />
             </div>
             <div>
+              <label className="text-xs text-gray-500 block mb-1">Email（選填，密碼重設用）</label>
+              <input type="email" value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                placeholder="user@example.com"
+                className="border border-gray-300 rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div>
               <label className="text-xs text-gray-500 block mb-1">角色</label>
               <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
                 className="border rounded px-3 py-2 w-full text-sm">
@@ -183,9 +190,15 @@ export default function Users() {
       {editUser && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 space-y-3">
-            <h2 className="text-lg font-semibold">編輯帳號：{editUser.username}</h2>
+            <h2 className="text-lg font-semibold">編輯帳號</h2>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">新密碼（留空則不修改，至少 6 字元）</label>
+              <label className="text-xs text-gray-500 block mb-1">登入帳號</label>
+              <input value={editForm.username}
+                onChange={e => setEditForm({ ...editForm, username: e.target.value })}
+                className="border border-gray-300 rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">密碼（留空則不修改）</label>
               <PasswordInput
                 value={editForm.password}
                 onChange={e => {
@@ -242,6 +255,7 @@ export default function Users() {
                 <tr>
                   <th className="px-4 py-3" scope="col">帳號</th>
                   <th className="px-4 py-3" scope="col">角色</th>
+                  <th className="px-4 py-3 hidden md:table-cell" scope="col">Email</th>
                   <th className="px-4 py-3 hidden sm:table-cell" scope="col">綁定組織</th>
                   <th className="px-4 py-3 hidden sm:table-cell" scope="col">狀態</th>
                   <th className="px-4 py-3 hidden md:table-cell" scope="col">建立時間</th>
@@ -251,15 +265,13 @@ export default function Users() {
               <tbody>
                 {users.map(u => (
                   <tr key={u.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      <div>{u.username}</div>
-                      {u.email && <div className="text-xs text-gray-400">{u.email}</div>}
-                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{u.username}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
                         {u.role === "admin" ? "管理員" : "客戶"}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{u.email || "—"}</td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{orgName(u.organization_id)}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>

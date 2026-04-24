@@ -27,6 +27,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    username: str | None = None
     role: str | None = None
     password: str | None = None
     email: str | None = None
@@ -82,6 +83,13 @@ def update_user(user_id: str, payload: UserUpdate, admin: dict = Depends(require
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="使用者不存在")
+    if payload.username is not None:
+        new_name = payload.username.strip()
+        if not new_name:
+            raise HTTPException(status_code=400, detail="使用者名稱不能為空")
+        if new_name != user.username and db.query(User).filter(User.username == new_name).first():
+            raise HTTPException(status_code=409, detail="使用者名稱已存在")
+        user.username = new_name
     if payload.role is not None:
         if payload.role not in ("admin", "viewer"):
             raise HTTPException(status_code=400, detail="role 必須是 admin 或 viewer")
