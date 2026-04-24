@@ -13,6 +13,15 @@
 
 ## [2.0.0] — 2026-04
 
+### 修正（安全 / 效能 / 併發）
+- **OIDC CSRF 修補**：`/oidc/callback` 加入 state cookie 驗證，防止 authorization code 注入攻擊
+- **Migration SQL Injection 防護**：`_list_columns` / `_add_column` 加入 `_ALLOWED_TABLES` 白名單，table 名稱不在清單時 raise ValueError
+- **IDOR 修補**：`/rescan` endpoint 補加 `_assert_release_org()` org scope 檢查
+- **併發安全**：`_active_enrichments` 的 check-then-add 改以 `threading.Lock` 保護原子性，防止雙重執行
+- **資料完整性**：`vulnerabilities` 加 `UniqueConstraint("component_id","cve_id")`，migration 同步建立 `UNIQUE INDEX`，防止並發 rescan 產生重複 CVE
+- **N+1 查詢消除**：`list_components`、PDF report、CSV export、compliance report 共 6 處 component 查詢加 `selectinload(vulnerabilities)`，多元件 release 從 N+1 次降為 2 次 SQL
+- **啟動安全警告**：`SECRET_KEY` 使用預設值或短於 32 bytes 時記錄 WARNING
+
 ### 新增
 - **IEC 62443 PDF CJK 字型支援**：`font_manager.py` 自動偵測字型（Windows `msyh.ttc`、Linux NotoSansSC、自動下載 fallback）；`CjkPDF` 基礎類別供三份報告（4-1/4-2/3-3）繼承；組織名稱、產品名稱等中文欄位可正確渲染至 PDF
 - **SBOM 脫敏分享連結**：Professional plan；`POST /api/releases/{id}/share-link` 建立時效 token；`GET /api/share/{token}` 無需登入公開下載；`mask_internal` 過濾 `internal://` / `private://` 元件；記錄下載次數；ReleaseDetail 面板含複製、撤銷

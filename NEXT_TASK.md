@@ -26,6 +26,7 @@
 | UI/UX 全面修正（19 項：High×3 / Medium×8 / Low×4） | `4de512b` |
 | IEC 62443 PDF CJK 字型支援（font_manager + CjkPDF，Windows/Linux/下載） | `ec33a75` |
 | 行動版 UI/UX 全面優化（漏洞卡片、觸控目標、表格欄位隱藏、下拉定位） | `c94b022` |
+| 安全/效能/併發修正（OIDC CSRF、IDOR、N+1、UniqueConstraint、Lock） | `17a12b3` |
 
 ---
 
@@ -55,3 +56,13 @@
 ## 已知問題
 
 - CRA `start-clock` 狀態機在已 `clock_running` 時回 409（設計如此，非 bug）
+
+## 低優先待改（已記錄，暫不修）
+
+| 項目 | 說明 |
+|------|------|
+| API token timing attack | SQL hash 比對可改 `hmac.compare_digest`；實際風險極低 |
+| OIDC 自動建立新使用者 | 可加 email domain 白名單；需 OIDC 設定者授權才能觸發 |
+| 無限 share link 建立 | 可加每 release 上限；屬資料 bloat，非安全漏洞 |
+| monitor.py 靜默跳過 | 與手動 rescan 衝突時回傳 0 但無使用者通知；可加狀態端點 |
+| 非同步 endpoint 阻塞 I/O | Trivy / AST 掃描在 async route 中同步執行；可改 `asyncio.to_thread` |
