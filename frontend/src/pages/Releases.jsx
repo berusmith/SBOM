@@ -29,6 +29,9 @@ export default function Releases() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [showTrend, setShowTrend] = useState(false);
+  const [editRelease, setEditRelease] = useState(null);
+  const [editVersion, setEditVersion] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   const fetchData = () => {
     api.get(`/products/${productId}/releases`).then((res) => {
@@ -66,6 +69,22 @@ export default function Releases() {
       toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleEditVersion = async (e) => {
+    e.preventDefault();
+    if (!editVersion.trim()) return;
+    setEditSaving(true);
+    try {
+      await api.patch(`/releases/${editRelease.id}/version`, { version: editVersion.trim() });
+      setEditRelease(null);
+      toast.success("版本號已更新");
+      fetchData();
+    } catch (err) {
+      toast.error("更新失敗：" + (err.response?.data?.detail || err.message));
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -220,13 +239,21 @@ export default function Releases() {
                       <span className="text-xs text-gray-300">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right flex justify-end gap-3">
+                  <td className="px-4 py-3 text-right flex justify-end gap-2">
                     <button
                       onClick={() => navigate(`/releases/${r.id}`, { state: { orgId, orgName, productId, productName, version: r.version } })}
                       className="text-blue-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
                     >
                       {t("common.detail")}
                     </button>
+                    {!r.locked && (
+                      <button
+                        onClick={() => { setEditRelease(r); setEditVersion(r.version); }}
+                        className="text-yellow-600 px-3 py-2 rounded hover:bg-gray-100 text-xs"
+                      >
+                        {t("common.edit")}
+                      </button>
+                    )}
                     <button
                       onClick={() => setConfirmDelete(r)}
                       className="text-red-500 px-3 py-2 rounded hover:bg-gray-100 text-xs"
@@ -241,6 +268,28 @@ export default function Releases() {
           </div>
         )}
       </div>
+
+      {/* Edit version modal */}
+      {editRelease && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <form onSubmit={handleEditVersion} className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-semibold text-gray-800">修改版本號</h3>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">版本號</label>
+              <input value={editVersion} onChange={(e) => setEditVersion(e.target.value)} required autoFocus
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setEditRelease(null)}
+                className="px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-100">{t("common.cancel")}</button>
+              <button type="submit" disabled={editSaving}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
+                {editSaving ? "儲存中..." : "儲存"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <ConfirmModal
         isOpen={!!confirmDelete}

@@ -19,6 +19,7 @@ from app.models import firmware_scan as _firmware_scan_model  # noqa: F401
 from app.models import api_token as _api_token_model  # noqa: F401
 from app.models import share_link as _share_link_model  # noqa: F401
 from app.models import password_reset_token as _pw_reset_model  # noqa: F401
+from app.models import revoked_token as _revoked_token_model  # noqa: F401
 from app.core.database import Base, engine, SessionLocal
 from app.core.deps import get_current_user
 
@@ -279,6 +280,21 @@ def health_check():
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.on_event("startup")
+def _purge_expired_tokens():
+    """Remove expired revoked tokens — they're no longer valid anyway."""
+    from datetime import datetime, timezone
+    from app.models.revoked_token import RevokedToken
+    _db = SessionLocal()
+    try:
+        _db.query(RevokedToken).filter(
+            RevokedToken.expires_at < datetime.now(timezone.utc)
+        ).delete()
+        _db.commit()
+    finally:
+        _db.close()
 
 
 @app.on_event("startup")

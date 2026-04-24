@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
@@ -18,7 +19,12 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(username: str, role: str = "admin", org_id: str | None = None, user_id: str | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRE_HOURS)
-    payload: dict = {"sub": username, "role": role, "exp": expire}
+    payload: dict = {
+        "sub": username,
+        "role": role,
+        "exp": expire,
+        "jti": str(uuid.uuid4()),   # unique token ID — used for revocation
+    }
     if org_id:
         payload["org_id"] = org_id
     if user_id:
@@ -36,4 +42,6 @@ def decode_token(token: str) -> dict:
         "role": payload.get("role", "admin"),
         "org_id": payload.get("org_id"),
         "user_id": payload.get("user_id"),
+        "jti": payload.get("jti"),
+        "exp": payload.get("exp"),
     }

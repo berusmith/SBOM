@@ -45,7 +45,8 @@ export default function Layout({ children }) {
 
   const username = localStorage.getItem("username") || "";
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await import("../api/client").then(m => m.default.post("/auth/logout")); } catch { /* ignore */ }
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     localStorage.removeItem("org_id");

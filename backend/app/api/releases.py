@@ -523,6 +523,24 @@ def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope),
     }
 
 
+@router.patch("/{release_id}/version")
+def update_version(release_id: str, body: dict, _admin: dict = Depends(require_admin),
+                   org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+    """Rename a release version string (admin only)."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法修改版本號")
+    _assert_release_org(release, org_scope, db)
+    new_version = (body.get("version") or "").strip()
+    if not new_version:
+        raise HTTPException(status_code=400, detail="版本號不可為空")
+    release.version = new_version
+    db.commit()
+    return {"id": release_id, "version": release.version}
+
+
 @router.delete("/{release_id}", status_code=204)
 def delete_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     release = db.query(Release).filter(Release.id == release_id).first()

@@ -3,6 +3,7 @@ Send webhook and email alerts when new vulnerabilities are found.
 """
 import logging
 import smtplib
+import time
 from email.mime.text import MIMEText
 
 import httpx
@@ -22,14 +23,19 @@ def _get_config(db):
     return cfg
 
 
-def send_webhook(url: str, payload: dict) -> str:
-    """POST payload to webhook URL. Returns '' on success, error message on failure."""
-    try:
-        resp = httpx.post(url, json=payload, timeout=10)
-        resp.raise_for_status()
-        return ""
-    except Exception as e:
-        return str(e)
+def send_webhook(url: str, payload: dict, max_retries: int = 3) -> str:
+    """POST payload to webhook URL with exponential backoff. Returns '' on success."""
+    last_err = ""
+    for attempt in range(max_retries):
+        try:
+            resp = httpx.post(url, json=payload, timeout=10)
+            resp.raise_for_status()
+            return ""
+        except Exception as e:
+            last_err = str(e)
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)   # 1s, 2s before retry 2 and 3
+    return last_err
 
 
 def send_email(subject: str, body: str, to: str) -> str:

@@ -44,9 +44,16 @@ def get_current_user(
             "api_token_scope": scope,
         }
     try:
-        return decode_token(token)
+        payload = decode_token(token)
     except JWTError:
         raise HTTPException(status_code=401, detail="無效或過期的 token，請重新登入")
+    # Check revocation blacklist
+    jti = payload.get("jti")
+    if jti:
+        from app.models.revoked_token import RevokedToken
+        if db.query(RevokedToken).filter(RevokedToken.jti == jti).first():
+            raise HTTPException(status_code=401, detail="Token 已登出，請重新登入")
+    return payload
 
 
 def require_admin(user: dict = Depends(get_current_user)) -> dict:

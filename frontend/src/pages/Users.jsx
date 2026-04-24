@@ -73,7 +73,7 @@ export default function Users() {
 
     setEditErrors({});
     try {
-      const payload = { role: editForm.role, is_active: editForm.is_active, organization_id: editForm.organization_id || null };
+      const payload = { role: editForm.role, is_active: editForm.is_active, organization_id: editForm.organization_id || null, email: editForm.email || null };
       if (editForm.password) payload.password = editForm.password;
       await api.patch(`/users/${editUser.id}`, payload);
       setEditUser(null);
@@ -100,7 +100,7 @@ export default function Users() {
 
   const openEdit = (u) => {
     setEditUser(u);
-    setEditForm({ password: "", role: u.role, is_active: u.is_active, organization_id: u.organization_id || "" });
+    setEditForm({ password: "", role: u.role, is_active: u.is_active, organization_id: u.organization_id || "", email: u.email || "" });
   };
 
   return (
@@ -211,6 +211,12 @@ export default function Users() {
                 {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
               </select>
             </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Email（密碼重設用，選填）</label>
+              <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="user@example.com"
+                className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
             <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
               <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm({ ...editForm, is_active: e.target.checked })} />
               帳號啟用中
@@ -245,7 +251,10 @@ export default function Users() {
               <tbody>
                 {users.map(u => (
                   <tr key={u.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{u.username}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      <div>{u.username}</div>
+                      {u.email && <div className="text-xs text-gray-400">{u.email}</div>}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
                         {u.role === "admin" ? "管理員" : "客戶"}

@@ -58,6 +58,7 @@ export default function ReleaseDetail() {
   const [components, setComponents] = useState([]);
   const [vulns, setVulns] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadingCsaf, setDownloadingCsaf] = useState(false);
@@ -259,12 +260,16 @@ export default function ReleaseDetail() {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
+    setUploadProgress(0);
     setUploadResult(null);
     const form = new FormData();
     form.append("file", file);
     try {
       const res = await api.post(`/releases/${releaseId}/sbom`, form, {
         headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (e) => {
+          if (e.total) setUploadProgress(Math.round(e.loaded / e.total * 100));
+        },
       });
       setUploadResult({ ok: true, ...res.data });
       vulnsLoadedRef.current = true;
@@ -284,6 +289,7 @@ export default function ReleaseDetail() {
       setUploadResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       fileRef.current.value = "";
     }
   };
@@ -637,10 +643,22 @@ export default function ReleaseDetail() {
           <p className="text-sm font-medium text-gray-700 mb-1">{t("releaseDetail.upload.label")}</p>
           <p className="text-xs text-gray-600">{t("releaseDetail.upload.hint")}</p>
         </div>
-        <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
-          {uploading ? t("common.uploading") : t("releaseDetail.upload.selectFile")}
-          <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white text-center ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+            {uploading
+              ? (uploadProgress < 100 ? `上傳中 ${uploadProgress}%` : "解析中...")
+              : t("releaseDetail.upload.selectFile")}
+            <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
+          </label>
+          {uploading && (
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div
+                className="bg-blue-500 h-1.5 rounded-full transition-all duration-200"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
+        </div>
         {uploadResult && (
           <span className={`text-sm ${uploadResult.ok ? "text-green-600" : "text-red-500"}`}>
             {uploadResult.ok ? (

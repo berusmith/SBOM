@@ -22,6 +22,7 @@ from app.core.rate_limit import check_login_rate_limit, login_limiter, _client_i
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.organization import Organization
 from app.models.password_reset_token import PasswordResetToken
+from app.models.revoked_token import RevokedToken
 from app.models.user import User as UserModel
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -80,14 +81,16 @@ def login(payload: LoginPayload, request: Request, db: Session = Depends(get_db)
 
 @router.get("/me")
 def me(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    from app.core.plan import get_org_plan, _org_plan
+    from app.core.plan import _org_plan
     org_id = user.get("org_id")
     plan = _org_plan(db, org_id) if user.get("role") != "admin" else "professional"
+    db_user = db.query(UserModel).filter(UserModel.username == user["username"]).first()
     return {
         "username": user["username"],
         "role":     user["role"],
         "org_id":   org_id,
         "plan":     plan,
+        "email":    db_user.email if db_user else None,
     }
 
 
@@ -252,6 +255,38 @@ def oidc_callback(
     # Redirect to /login?sso_token=xxx — Login.jsx reads it, stores in localStorage, then navigates
     frontend_url = settings.ALLOWED_ORIGIN.rstrip("/")
     return RedirectResponse(url=f"{frontend_url}/login?sso_token={jwt_token}")
+
+
+# ── Logout (token revocation) ─────────────────────────────────────────────────
+
+@router.post("/logout", status_code=204)
+def logout(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Add current JWT to revocation blacklist. Frontend must also clear localStorage."""
+    from datetime import datetime, timezone
+    jti = user.get("jti")
+    exp = user.get("exp")
+    if jti and exp:
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+        db.merge(RevokedToken(jti=jti, expires_at=expires_at))
+        db.commit()
+
+
+# ── Profile self-service ───────────────────────────────────────────────────────
+
+class ProfileUpdate(BaseModel):
+    email: str | None = None
+
+
+@router.patch("/profile", status_code=200)
+def update_profile(payload: ProfileUpdate, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Allow any user to update their own email."""
+    db_user = db.query(UserModel).filter(UserModel.username == user["username"]).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="帳號不存在")
+    if payload.email is not None:
+        db_user.email = (payload.email or "").strip() or None
+    db.commit()
+    return {"email": db_user.email}
 
 
 # ── Password endpoints ─────────────────────────────────────────────────────────
