@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
@@ -7,6 +8,7 @@ import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
 function TopVulns() {
   const [items, setItems] = useState(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     api.get("/stats/top-vulns").then((r) => setItems(r.data)).catch(() => setItems([]));
@@ -18,21 +20,20 @@ function TopVulns() {
   return (
     <div className="mt-4 bg-white rounded-lg shadow p-5">
       <h2 className="font-semibold text-gray-700 mb-3">
-        需處理的高風險漏洞
-        <span className="ml-2 text-xs font-normal text-gray-600">Critical / High 未修補，前 10 筆</span>
+        {t("dashboard.topThreats")}
       </h2>
       <div className="overflow-x-auto">
-        <p className="sm:hidden text-xs text-gray-600 pb-1">← 左右滑動查看全部</p>
+        <p className="sm:hidden text-xs text-gray-600 pb-1">{t("dashboard.scrollHint")}</p>
         <table className="w-full text-sm min-w-[560px]">
           <thead>
             <tr className="text-left text-xs text-gray-600 border-b">
               <th className="pb-2 pr-4">CVE</th>
-              <th className="pb-2 pr-4">嚴重度</th>
+              <th className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
               <th className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
-              <th className="pb-2 pr-4">元件</th>
-              <th className="pb-2 pr-4 hidden sm:table-cell">產品 / 版本</th>
-              <th className="pb-2 pr-4 hidden lg:table-cell">客戶</th>
-              <th className="pb-2">狀態</th>
+              <th className="pb-2 pr-4">{t("dashboard.component")}</th>
+              <th className="pb-2 pr-4 hidden sm:table-cell">{t("dashboard.product")}</th>
+              <th className="pb-2 pr-4 hidden lg:table-cell">{t("dashboard.customer")}</th>
+              <th className="pb-2">{t("common.status")}</th>
             </tr>
           </thead>
           <tbody>
@@ -73,6 +74,7 @@ const CRA_DEADLINE = new Date("2026-09-11T00:00:00Z");
 
 function CRACountdown() {
   const [days, setDays] = useState(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const calc = () => {
@@ -92,19 +94,19 @@ function CRACountdown() {
   const bg = urgent ? "bg-red-50 border-red-300" : warning ? "bg-orange-50 border-orange-300" : "bg-blue-50 border-blue-300";
   const textColor = urgent ? "text-red-700" : warning ? "text-orange-700" : "text-blue-700";
   const numColor = urgent ? "text-red-600" : warning ? "text-orange-600" : "text-blue-600";
-  const label = urgent ? "緊急" : warning ? "注意" : "提醒";
+  const label = urgent ? t("craCountdown.urgent") : warning ? t("craCountdown.warning") : t("craCountdown.reminder");
 
   return (
     <div className={`border rounded-lg px-5 py-4 mb-6 flex items-center justify-between flex-wrap gap-3 ${bg}`}>
       <div className="flex items-center gap-3">
         <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${textColor} border-current`}>{label}</span>
         <span className={`text-sm font-medium ${textColor}`}>
-          EU CRA Article 14 強制執行日：<span className="font-bold">2026 年 9 月 11 日</span>
+          {t("craCountdown.deadline")}<span className="font-bold">{t("craCountdown.deadlineDate")}</span>
         </span>
       </div>
       <div className="text-right">
         <span className={`text-3xl font-bold ${numColor}`}>{days}</span>
-        <span className={`text-sm ml-1 ${textColor}`}>天</span>
+        <span className={`text-sm ml-1 ${textColor}`}>{t("craCountdown.days")}</span>
       </div>
     </div>
   );
@@ -176,6 +178,7 @@ export default function Dashboard() {
   const role = localStorage.getItem("role") || "viewer";
   const orgId = localStorage.getItem("org_id") || "";
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     Promise.all([
@@ -197,7 +200,7 @@ export default function Dashboard() {
       <SkeletonTable rows={5} cols={5} />
     </div>
   );
-  if (!stats) return <div className="text-red-400 mt-8 text-center">無法取得統計資料</div>;
+  if (!stats) return <div className="text-red-400 mt-8 text-center">{t("dashboard.noStats")}</div>;
 
   const totalVulns = stats.vulnerabilities.total;
   const bySev = stats.vulnerabilities.by_severity;
@@ -207,19 +210,19 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">儀表板</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t("dashboard.title")}</h1>
 
       <CRACountdown />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
         {[
-          { label: "客戶數",      value: stats.organizations,                     color: "bg-blue-500",   link: "/organizations" },
-          { label: "產品數",      value: stats.products,                          color: "bg-indigo-500", link: "/organizations" },
-          { label: "版本數",      value: stats.releases,                          color: "bg-purple-500", link: "/organizations" },
-          { label: "元件數",      value: stats.components,                        color: "bg-teal-500",   link: null },
-          { label: "CRA 進行中", value: stats.cra_incidents?.active ?? 0,        color: stats.cra_incidents?.active > 0 ? "bg-red-500" : "bg-gray-400", link: "/cra" },
-          { label: "SLA 逾期",   value: stats.overdue_vulns ?? 0,               color: (stats.overdue_vulns ?? 0) > 0 ? "bg-red-600" : "bg-gray-400", link: "/risk-overview" },
+          { label: t("dashboard.customers"),   value: stats.organizations,              color: "bg-blue-500",   link: "/organizations" },
+          { label: t("dashboard.products"),    value: stats.products,                   color: "bg-indigo-500", link: "/organizations" },
+          { label: t("dashboard.releases"),    value: stats.releases,                   color: "bg-purple-500", link: "/organizations" },
+          { label: t("dashboard.components"),  value: stats.components,                 color: "bg-teal-500",   link: null },
+          { label: t("dashboard.craActive"),   value: stats.cra_incidents?.active ?? 0, color: stats.cra_incidents?.active > 0 ? "bg-red-500" : "bg-gray-400", link: "/cra" },
+          { label: t("dashboard.slaOverdue"),  value: stats.overdue_vulns ?? 0,        color: (stats.overdue_vulns ?? 0) > 0 ? "bg-red-600" : "bg-gray-400", link: "/risk-overview" },
         ].map((c) => (
           <div
             key={c.label}
@@ -237,12 +240,12 @@ export default function Dashboard() {
       {/* Viewer quick-access banner */}
       {role === "viewer" && orgId && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-5 py-3 mb-6 flex items-center justify-between gap-3">
-          <p className="text-sm text-blue-700">您的漏洞資料已依您的組織範圍顯示。</p>
+          <p className="text-sm text-blue-700">{t("dashboard.viewerHint")}</p>
           <button
             onClick={() => navigate(`/organizations/${orgId}/products`)}
             className="text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap shrink-0"
           >
-            前往產品列表 →
+            {t("dashboard.viewerGoToProducts")}
           </button>
         </div>
       )}
@@ -252,7 +255,7 @@ export default function Dashboard() {
           <ViewerOnboarding orgId={orgId} />
         ) : (
           <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
-            尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。
+            {t("dashboard.noVulns")}
           </div>
         )
       ) : (
@@ -260,8 +263,8 @@ export default function Dashboard() {
 
           {/* Severity breakdown */}
           <div className="bg-white rounded-lg shadow p-5">
-            <h2 className="font-semibold text-gray-700 mb-4">漏洞嚴重度分布
-              <span className="ml-2 text-sm font-normal text-gray-600">共 {totalVulns} 筆</span>
+            <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.vulnSeverityDist")}
+              <span className="ml-2 text-sm font-normal text-gray-600">{t("common.total", { count: totalVulns })}</span>
             </h2>
             <div className="space-y-3">
               {SEVERITY.map(({ key, label, color, text, bg }) => {
@@ -287,7 +290,7 @@ export default function Dashboard() {
 
           {/* Status breakdown */}
           <div className="bg-white rounded-lg shadow p-5">
-            <h2 className="font-semibold text-gray-700 mb-4">漏洞處理狀態</h2>
+            <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.vulnStatus")}</h2>
             <div className="space-y-3">
               {STATUS.map(({ key, label, color }) => {
                 const count = byStatus[key] || 0;
@@ -333,7 +336,7 @@ export default function Dashboard() {
       {/* Patch tracking summary */}
       {stats.patch_tracking && (
         <div className="mt-4 bg-white rounded-lg shadow p-5">
-          <h2 className="font-semibold text-gray-700 mb-4">修補追蹤</h2>
+          <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.patchTracking")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Patch rate gauge */}
             <div className="flex flex-col items-center">
@@ -352,19 +355,19 @@ export default function Dashboard() {
                   <span className="text-lg font-bold text-gray-800">{stats.patch_tracking.patch_rate}%</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">修補率</p>
+              <p className="text-sm text-gray-500">{t("dashboard.patchRate")}</p>
             </div>
             {/* Fixed count */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-green-600">{stats.patch_tracking.fixed}</span>
-              <p className="text-sm text-gray-500 mt-1">已修補漏洞</p>
+              <p className="text-sm text-gray-500 mt-1">{t("dashboard.fixedVulns")}</p>
             </div>
             {/* Avg days to fix */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-blue-600">
                 {stats.patch_tracking.avg_days_to_fix != null ? stats.patch_tracking.avg_days_to_fix : "—"}
               </span>
-              <p className="text-sm text-gray-500 mt-1">平均修補天數</p>
+              <p className="text-sm text-gray-500 mt-1">{t("dashboard.avgDaysToFix")}</p>
             </div>
           </div>
         </div>
@@ -374,15 +377,15 @@ export default function Dashboard() {
       {topThreats && (
         <div className="mt-4 bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-700">威脅速報</h2>
+            <h2 className="font-semibold text-gray-700">{t("dashboard.threatHighlights")}</h2>
             {topThreats.active_kev_count > 0 && (
               <span className="flex items-center gap-1.5 bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
-                KEV {topThreats.active_kev_count} 筆未修補
+                {t("dashboard.kevUnresolved", { n: topThreats.active_kev_count })}
               </span>
             )}
           </div>
           {topThreats.top_epss.length === 0 ? (
-            <p className="text-sm text-gray-600">無高 EPSS 漏洞</p>
+            <p className="text-sm text-gray-600">{t("dashboard.noHighEpss")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -390,8 +393,8 @@ export default function Dashboard() {
                   <tr className="text-left text-xs text-gray-600 border-b">
                     <th className="pb-2 pr-4">CVE</th>
                     <th className="pb-2 pr-4">EPSS</th>
-                    <th className="pb-2 pr-4">嚴重度</th>
-                    <th className="pb-2 pr-4">元件</th>
+                    <th className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
+                    <th className="pb-2 pr-4">{t("dashboard.component")}</th>
                     <th className="pb-2">KEV</th>
                   </tr>
                 </thead>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
@@ -9,6 +10,7 @@ import { formatDate } from "../utils/date";
 import { validate, validators } from "../utils/validate";
 
 export default function Organizations() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [orgs, setOrgs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -96,13 +98,13 @@ export default function Organizations() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">客戶管理</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("organizations.title")}</h1>
         {isAdmin && (
           <button
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
           >
-            + 新增客戶
+            + {t("organizations.add")}
           </button>
         )}
       </div>
@@ -124,7 +126,7 @@ export default function Organizations() {
 
       {showForm && (
         <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 space-y-3">
-          <div className="font-medium text-sm text-gray-700">新增客戶</div>
+          <div className="font-medium text-sm text-gray-700">{t("organizations.add")}</div>
           <div>
             <input
               value={name}
@@ -210,13 +212,13 @@ export default function Organizations() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {orgs.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">尚無客戶，點擊「新增客戶」開始</div>
+          <div className="p-8 text-center text-gray-600">{t("organizations.noData")}</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[400px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3">客戶名稱</th>
+                <th className="px-4 py-3">{t("organizations.name")}</th>
                 <th className="px-4 py-3">授權狀態</th>
                 <th className="px-4 py-3">建立時間</th>
                 <th className="px-4 py-3"></th>
@@ -243,7 +245,7 @@ export default function Organizations() {
                       onClick={() => navigate(`/organizations/${org.id}/products`)}
                       className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
-                      查看產品
+                      {t("organizations.viewProducts")}
                     </button>
                     {isAdmin && (
                       <>

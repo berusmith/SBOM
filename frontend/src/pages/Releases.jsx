@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
@@ -10,6 +11,7 @@ import { SkeletonInline } from "../components/Skeleton";
 const TrendChart = lazy(() => import("../components/TrendChart"));
 
 export default function Releases() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -100,7 +102,7 @@ export default function Releases() {
             onClick={() => setShowForm(!showForm)}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
           >
-            + 新增版本
+            + {t("releases.add")}
           </button>
         </div>
       </div>
@@ -172,15 +174,15 @@ export default function Releases() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {releases.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">尚無版本，點擊「新增版本」開始</div>
+          <div className="p-8 text-center text-gray-600">{t("releases.noData")}</div>
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[520px]" role="table">
             <caption className="sr-only">版本列表</caption>
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3" scope="col">版本號</th>
-                <th className="px-4 py-3" scope="col">建立時間</th>
+                <th className="px-4 py-3" scope="col">{t("releases.version")}</th>
+                <th className="px-4 py-3" scope="col">{t("common.createdAt")}</th>
                 <th className="px-4 py-3" scope="col">SBOM</th>
                 <th className="px-4 py-3" scope="col">漏洞</th>
                 <th className="px-4 py-3" scope="col">操作</th>

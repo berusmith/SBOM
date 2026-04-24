@@ -1,0 +1,375 @@
+const zh = {
+  // ── 導航 ──────────────────────────────────────────────────────────────────
+  nav: {
+    dashboard:    "儀表板",
+    customers:    "客戶管理",
+    riskOverview: "風險總覽",
+    policy:       "Policy",
+    cra:          "CRA 事件",
+    tisax:        "TISAX",
+    firmware:     "韌體掃描",
+    users:        "帳號管理",
+    auditLog:     "稽核日誌",
+    settings:     "通知設定",
+    help:         "說明",
+    search:       "搜尋元件...",
+    account:      "帳號",
+    logout:       "登出",
+  },
+
+  // ── 通用 ──────────────────────────────────────────────────────────────────
+  common: {
+    save:        "儲存",
+    cancel:      "取消",
+    delete:      "刪除",
+    edit:        "編輯",
+    add:         "新增",
+    confirm:     "確認",
+    close:       "關閉",
+    loading:     "載入中...",
+    uploading:   "上傳中...",
+    scanning:    "掃描中...",
+    analyzing:   "分析中...",
+    generating:  "產生中...",
+    submitting:  "送出中...",
+    saving:      "儲存中...",
+    success:     "成功",
+    failed:      "失敗",
+    unknown:     "未知",
+    noData:      "無資料",
+    total:       "共 {{count}} 筆",
+    back:        "返回",
+    actions:     "操作",
+    status:      "狀態",
+    name:        "名稱",
+    version:     "版本",
+    description: "描述",
+    createdAt:   "建立時間",
+    updatedAt:   "更新時間",
+    download:    "下載",
+    export:      "匯出",
+    search:      "搜尋",
+    filter:      "篩選",
+    all:         "全部",
+    yes:         "是",
+    no:          "否",
+    na:          "N/A",
+    copy:        "複製",
+    refresh:     "重新整理",
+  },
+
+  // ── 嚴重度 ────────────────────────────────────────────────────────────────
+  severity: {
+    critical: "嚴重",
+    high:     "高",
+    medium:   "中",
+    low:      "低",
+    info:     "資訊",
+    unknown:  "未知",
+  },
+
+  // ── VEX 狀態 ──────────────────────────────────────────────────────────────
+  vexStatus: {
+    open:         "待處理",
+    in_triage:    "分析中",
+    not_affected: "不受影響",
+    affected:     "受影響",
+    fixed:        "已修補",
+  },
+
+  // ── 可達性 ────────────────────────────────────────────────────────────────
+  reachability: {
+    function_reachable: "函式確認",
+    reachable:          "已使用",
+    test_only:          "僅測試",
+    not_found:          "未發現",
+    unknown:            "未分析",
+  },
+
+  // ── 登入 ──────────────────────────────────────────────────────────────────
+  login: {
+    title:       "SBOM 管理平台",
+    username:    "帳號",
+    password:    "密碼",
+    submit:      "登入",
+    loggingIn:   "登入中...",
+    error:       "帳號或密碼錯誤",
+  },
+
+  // ── 儀表板 ────────────────────────────────────────────────────────────────
+  dashboard: {
+    title:              "儀表板",
+    welcome:            "歡迎使用 SBOM 平台",
+    craCountdown:       "CRA 執法倒數",
+    craDeadline:        "2026 年 9 月 11 日",
+    craDeadlineLabel:   "EU CRA 漏洞通報義務強制日",
+    topThreats:         "Critical / High 未修補，前 10 筆",
+    scrollHint:         "← 左右滑動查看全部",
+    noStats:            "無法取得統計資料",
+    severityDist:       "嚴重度分布",
+    slaOverdue:         "SLA 逾期",
+    patchStats:         "修補統計",
+    component:          "元件",
+    product:            "產品 / 版本",
+    customer:           "客戶",
+    days:               "天",
+    customers:          "客戶數",
+    products:           "產品數",
+    releases:           "版本數",
+    components:         "元件數",
+    craActive:          "CRA 進行中",
+    slaOverdue:         "SLA 逾期",
+    vulnSeverityDist:   "漏洞嚴重度分布",
+    vulnStatus:         "漏洞處理狀態",
+    patchTracking:      "修補追蹤",
+    patchRate:          "修補率",
+    fixedVulns:         "已修補漏洞",
+    avgDaysToFix:       "平均修補天數",
+    threatHighlights:   "威脅速報",
+    kevUnresolved:      "KEV {{n}} 筆未修補",
+    noHighEpss:         "無高 EPSS 漏洞",
+    viewerHint:         "您的漏洞資料已依您的組織範圍顯示。",
+    viewerGoToProducts: "前往產品列表 →",
+    noVulns:            "尚未掃描任何漏洞。請上傳 SBOM 檔案以開始分析。",
+  },
+
+  // ── 組織 ──────────────────────────────────────────────────────────────────
+  organizations: {
+    title:       "客戶管理",
+    add:         "新增客戶",
+    name:        "客戶名稱",
+    contact:     "聯絡人",
+    email:       "Email",
+    noData:      "尚無客戶，請新增",
+    deleteConfirm: "確定要刪除此客戶？相關資料將一併刪除。",
+    viewProducts: "查看產品",
+  },
+
+  // ── 產品 ──────────────────────────────────────────────────────────────────
+  products: {
+    title:        "產品管理",
+    add:          "新增產品",
+    name:         "產品名稱",
+    noData:       "尚無產品",
+    viewReleases: "查看版本",
+    vulnTrend:    "漏洞趨勢",
+    showTrend:    "顯示趨勢圖",
+  },
+
+  // ── 版本 ──────────────────────────────────────────────────────────────────
+  releases: {
+    title:     "版本管理",
+    add:       "新增版本",
+    version:   "版本號",
+    noData:    "尚無版本",
+    locked:    "已鎖定",
+    unlocked:  "未鎖定",
+  },
+
+  // ── ReleaseDetail ─────────────────────────────────────────────────────────
+  releaseDetail: {
+    tabs: {
+      components:    "元件",
+      vulns:         "漏洞",
+      depGraph:      "依賴關係圖",
+    },
+    upload: {
+      label:      "上傳 SBOM 檔案",
+      hint:       "支援 CycloneDX JSON、SPDX JSON",
+      selectFile: "選擇檔案",
+      uploading:  "上傳中...",
+      success:    "完成：{{components}} 個元件，{{vulns}} 個漏洞",
+      failed:     "失敗：{{msg}}",
+      diff: {
+        prev:      "相較",
+        compAdded: "+{{n}} 元件",
+        compRemoved: "-{{n}} 元件",
+        vulnAdded: "+{{n}} 漏洞",
+        vulnRemoved: "-{{n}} 漏洞",
+        noChange:  "無差異",
+      },
+    },
+    actions: {
+      rescan:          "重新掃描 CVE",
+      rescanning:      "掃描中...",
+      downloadReport:  "下載 PDF 報告",
+      lockVersion:     "鎖定版本",
+      unlockVersion:   "解鎖版本",
+      exportCsv:       "匯出 CSV",
+      exportCdx:       "匯出 CycloneDX XML",
+      exportSpdx:      "匯出 SPDX JSON",
+      scanImage:       "掃描 Container Image",
+      scanIac:         "掃描 IaC (zip)",
+      reachability:    "可達性分析 (zip)",
+      enrichGhsa:      "補充 GHSA 情資",
+      enrichNvd:       "更新 NVD 資料",
+      enrichEpss:      "更新 EPSS 分數",
+      checkIntegrity:  "完整性驗證",
+      advanced:        "進階操作",
+    },
+    components: {
+      name:        "元件名稱",
+      version:     "版本",
+      license:     "授權",
+      licenseRisk: "授權風險",
+      vulnCount:   "漏洞數",
+      maxSeverity: "最高風險",
+      noSbom:      "尚未上傳 SBOM 檔案",
+    },
+    vulns: {
+      cveId:        "CVE ID",
+      component:    "元件",
+      cvss:         "CVSS",
+      severity:     "嚴重度",
+      epss:         "EPSS",
+      sla:          "SLA",
+      reachability: "可達性",
+      vexStatus:    "VEX 狀態",
+      actions:      "操作",
+      noVulns:      "未發現漏洞",
+      overdue:      "逾 {{n}} 天",
+      warningDays:  "剩 {{n}} 天",
+      okDays:       "{{n}} 天",
+      suppress:     "抑制",
+      unsuppress:   "取消抑制",
+      showSuppressed: "顯示已抑制",
+      hideSuppressed: "隱藏已抑制",
+    },
+    gate: {
+      title:  "Policy Gate",
+      passed: "通過",
+      failed: "未通過",
+    },
+    locked: "此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。",
+    lockConfirm: "鎖定後將無法上傳 SBOM、重新掃描或修改 VEX 狀態，確定鎖定？",
+  },
+
+  // ── 漏洞 ──────────────────────────────────────────────────────────────────
+  vulns: {
+    batchUpdate:   "批次更新",
+    setStatus:     "設定狀態",
+    selected:      "已選 {{n}} 筆",
+    history:       "歷程",
+    noHistory:     "尚無歷程記錄",
+    description:   "NVD 描述尚未補充，請點「更新 NVD」",
+    references:    "參考連結",
+    cwe:           "CWE",
+    cvssV3:        "CVSS v3",
+    cvssV4:        "CVSS v4",
+    ghsa:          "GHSA",
+  },
+
+  // ── SLA ───────────────────────────────────────────────────────────────────
+  sla: {
+    overdue: "逾期",
+    warning: "即將逾期",
+    ok:      "正常",
+    na:      "N/A",
+  },
+
+  // ── CRA 倒數 ──────────────────────────────────────────────────────────────
+  craCountdown: {
+    urgent:    "緊急",
+    warning:   "注意",
+    reminder:  "提醒",
+    deadline:  "EU CRA Article 14 強制執行日：",
+    deadlineDate: "2026 年 9 月 11 日",
+    days:      "天",
+  },
+
+  // ── CRA ───────────────────────────────────────────────────────────────────
+  cra: {
+    title:       "CRA 事件管理",
+    add:         "新增事件",
+    incident:    "事件",
+    status:      "狀態",
+    startClock:  "啟動時鐘",
+    advance:     "推進",
+    close:       "關閉",
+    noData:      "尚無事件",
+  },
+
+  // ── TISAX ─────────────────────────────────────────────────────────────────
+  tisax: {
+    title:      "TISAX 自評",
+    add:        "新增評估",
+    maturity:   "成熟度",
+    controls:   "控制項",
+    gap:        "差距分析",
+    noData:     "尚無評估",
+  },
+
+  // ── 設定 ──────────────────────────────────────────────────────────────────
+  settings: {
+    title:       "通知設定",
+    brand:       "品牌設定",
+    alerts:      "告警設定",
+    webhook:     "Webhook URL",
+    email:       "Email 通知",
+    test:        "測試",
+    save:        "儲存設定",
+  },
+
+  // ── 使用者 ────────────────────────────────────────────────────────────────
+  users: {
+    title:    "帳號管理",
+    add:      "新增帳號",
+    username: "帳號",
+    role:     "角色",
+    admin:    "管理員",
+    viewer:   "檢視者",
+    noData:   "尚無帳號",
+  },
+
+  // ── 搜尋 ──────────────────────────────────────────────────────────────────
+  search: {
+    title:       "全域元件搜尋",
+    placeholder: "輸入元件名稱或 CVE ID...",
+    noResults:   "無符合結果",
+    component:   "元件",
+    product:     "產品",
+    release:     "版本",
+    vulnCount:   "漏洞數",
+  },
+
+  // ── 韌體 ──────────────────────────────────────────────────────────────────
+  firmware: {
+    title:      "韌體掃描",
+    upload:     "上傳韌體",
+    scanning:   "掃描中",
+    completed:  "已完成",
+    failed:     "失敗",
+    components: "元件數",
+    noScans:    "尚無掃描記錄",
+  },
+
+  // ── 說明 ──────────────────────────────────────────────────────────────────
+  help: {
+    title:       "說明中心",
+    search:      "搜尋文章...",
+    noResults:   "找不到相關文章",
+  },
+
+  // ── 稽核日誌 ──────────────────────────────────────────────────────────────
+  activity: {
+    title:     "稽核日誌",
+    dateFrom:  "開始日期",
+    dateTo:    "結束日期",
+    export:    "匯出 CSV",
+    noData:    "無記錄",
+    action:    "動作",
+    user:      "使用者",
+    resource:  "資源",
+    timestamp: "時間",
+  },
+
+  // ── 授權風險 ──────────────────────────────────────────────────────────────
+  licenseRisk: {
+    permissive:  "寬鬆",
+    copyleft:    "著作傳",
+    commercial:  "商業",
+    unknown:     "未知",
+  },
+};
+
+export default zh;

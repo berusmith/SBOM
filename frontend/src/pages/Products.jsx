@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Package } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
@@ -8,6 +9,7 @@ import { SkeletonTable } from "../components/Skeleton";
 import { formatDate } from "../utils/date";
 
 export default function Products() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { orgId } = useParams();
   const navigate = useNavigate();
@@ -72,12 +74,12 @@ export default function Products() {
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">產品列表</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("products.title")}</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
         >
-          + 新增產品
+          + {t("products.add")}
         </button>
       </div>
 
@@ -115,13 +117,12 @@ export default function Products() {
         {products.length === 0 ? (
           <div className="p-8 text-center">
             <div className="text-gray-300 mb-3"><Package size={64} /></div>
-            <p className="text-gray-600 font-medium mb-1">尚無產品</p>
-            <p className="text-sm text-gray-600 mb-4">點擊右上角「+ 新增產品」新增您的第一個產品，<br />然後在版本頁面上傳 SBOM 檔案進行漏洞掃描。</p>
+            <p className="text-gray-600 font-medium mb-1">{t("products.noData")}</p>
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
             >
-              + 新增第一個產品
+              + {t("products.add")}
             </button>
           </div>
         ) : (
@@ -129,8 +130,8 @@ export default function Products() {
           <table className="w-full text-sm min-w-[360px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3">產品名稱</th>
-                <th className="px-4 py-3">描述</th>
+                <th className="px-4 py-3">{t("products.name")}</th>
+                <th className="px-4 py-3">{t("common.description")}</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -144,7 +145,7 @@ export default function Products() {
                       onClick={() => navigate(`/products/${p.id}/releases`, { state: { orgId, orgName } })}
                       className="text-blue-600 px-2 py-1 rounded hover:bg-gray-100 text-xs"
                     >
-                      查看版本
+                      {t("products.viewReleases")}
                     </button>
                     <button
                       onClick={() => setConfirmDelete(p)}

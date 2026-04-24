@@ -1,23 +1,25 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const ALL_NAV = [
-  { path: "/",                label: "儀表板",   adminOnly: false },
-  { path: "/organizations",   label: "客戶管理", adminOnly: true  },
-  { path: "/risk-overview",   label: "風險總覽", adminOnly: false },
-  { path: "/policies",        label: "Policy",   adminOnly: false },
-  { path: "/cra",             label: "CRA 事件", adminOnly: false },
-  { path: "/tisax",           label: "TISAX",    adminOnly: false },
-  { path: "/firmware",        label: "韌體掃描", adminOnly: false },
-  { path: "/admin/users",     label: "帳號管理", adminOnly: true  },
-  { path: "/admin/activity",  label: "稽核日誌", adminOnly: true  },
-  { path: "/settings",        label: "通知設定", adminOnly: true  },
-  { path: "/help",            label: "說明",     adminOnly: false },
+  { path: "/",               key: "dashboard",    adminOnly: false },
+  { path: "/organizations",  key: "customers",    adminOnly: true  },
+  { path: "/risk-overview",  key: "riskOverview", adminOnly: false },
+  { path: "/policies",       key: "policy",       adminOnly: false },
+  { path: "/cra",            key: "cra",          adminOnly: false },
+  { path: "/tisax",          key: "tisax",        adminOnly: false },
+  { path: "/firmware",       key: "firmware",     adminOnly: false },
+  { path: "/admin/users",    key: "users",        adminOnly: true  },
+  { path: "/admin/activity", key: "auditLog",     adminOnly: true  },
+  { path: "/settings",       key: "settings",     adminOnly: true  },
+  { path: "/help",           key: "help",         adminOnly: false },
 ];
 
 export default function Layout({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [searchQ, setSearchQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const role = localStorage.getItem("role") || "viewer";
@@ -29,6 +31,12 @@ export default function Layout({ children }) {
     navigate(`/search?q=${encodeURIComponent(searchQ.trim())}`);
     setSearchQ("");
     setMenuOpen(false);
+  };
+
+  const toggleLang = () => {
+    const next = i18n.language === "zh" ? "en" : "zh";
+    i18n.changeLanguage(next);
+    localStorage.setItem("lang", next);
   };
 
   const username = localStorage.getItem("username") || "";
@@ -64,35 +72,48 @@ export default function Layout({ children }) {
                       : "text-gray-300 hover:text-white hover:bg-gray-700"
                   }`}
                 >
-                  {item.label}
+                  {t(`nav.${item.key}`)}
                 </Link>
               ))}
             </div>
 
-            {/* Desktop search */}
+            {/* Desktop search + lang toggle + user */}
             <form onSubmit={handleSearch} className="hidden md:flex items-center gap-1 ml-auto">
               <input
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="搜尋元件..."
+                placeholder={t("nav.search")}
                 className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button type="submit" className="text-gray-600 hover:text-white px-1 text-sm">⌕</button>
             </form>
             <div className="hidden md:flex items-center gap-3 shrink-0">
+              <button
+                onClick={toggleLang}
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2 py-1 rounded transition-colors"
+                title="Switch language / 切換語言"
+              >
+                {i18n.language === "zh" ? "EN" : "中"}
+              </button>
               <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
-                {username || "帳號"}
+                {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
                 className="text-sm text-gray-600 hover:text-white transition-colors"
               >
-                登出
+                {t("nav.logout")}
               </button>
             </div>
 
-            {/* Mobile: search icon + hamburger */}
+            {/* Mobile hamburger */}
             <div className="md:hidden flex items-center gap-2 ml-auto">
+              <button
+                onClick={toggleLang}
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-2 py-1 rounded"
+              >
+                {i18n.language === "zh" ? "EN" : "中"}
+              </button>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="text-gray-300 hover:text-white p-2 rounded"
@@ -125,30 +146,32 @@ export default function Layout({ children }) {
                       : "text-gray-300 hover:text-white hover:bg-gray-700"
                   }`}
                 >
-                  {item.label}
+                  {t(`nav.${item.key}`)}
                 </Link>
               ))}
               <form onSubmit={handleSearch} className="flex gap-2 px-3 pt-2">
                 <input
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
-                  placeholder="搜尋元件..."
+                  placeholder={t("nav.search")}
                   className="bg-gray-700 text-white text-sm rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
-                <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">搜尋</button>
+                <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">
+                  {t("common.search")}
+                </button>
               </form>
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
                 className="block px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded"
               >
-                {username || "帳號設定"}
+                {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
                 className="block w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:text-white hover:bg-gray-700 rounded"
               >
-                登出
+                {t("nav.logout")}
               </button>
             </div>
           )}

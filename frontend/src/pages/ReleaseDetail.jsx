@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Lock, Unlock, AlertTriangle, CheckCircle2, XCircle, Info } from "lucide-react";
 import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
@@ -42,6 +43,7 @@ const RESPONSE_OPTIONS = [
 ];
 
 export default function ReleaseDetail() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { releaseId } = useParams();
   const navigate = useNavigate();
@@ -551,11 +553,11 @@ export default function ReleaseDetail() {
       {/* Upload + Download area */}
       <div className="bg-white rounded-lg shadow p-4 mb-4 flex items-center gap-4 flex-wrap">
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-1">上傳 SBOM 檔案</p>
-          <p className="text-xs text-gray-600">支援 CycloneDX JSON、SPDX JSON</p>
+          <p className="text-sm font-medium text-gray-700 mb-1">{t("releaseDetail.upload.label")}</p>
+          <p className="text-xs text-gray-600">{t("releaseDetail.upload.hint")}</p>
         </div>
         <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white ${uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}>
-          {uploading ? "上傳中..." : "選擇檔案"}
+          {uploading ? t("common.uploading") : t("releaseDetail.upload.selectFile")}
           <input ref={fileRef} type="file" accept=".json" className="hidden" onChange={handleUpload} disabled={uploading} />
         </label>
         {uploadResult && (
@@ -601,20 +603,20 @@ export default function ReleaseDetail() {
               disabled={rescanning}
               className={`px-4 py-2 rounded text-sm text-white font-medium ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {rescanning ? "掃描中..." : "重新掃描 CVE"}
+              {rescanning ? t("common.scanning") : t("releaseDetail.actions.rescan")}
             </button>
             <button
               onClick={handleDownloadReport}
               disabled={downloading}
               className={`px-4 py-2 rounded text-sm text-white font-medium ${downloading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {downloading ? "產生中..." : "下載 PDF 報告"}
+              {downloading ? t("common.generating") : t("releaseDetail.actions.downloadReport")}
             </button>
             <button
               onClick={() => locked ? handleLockToggle() : setConfirmLock(true)}
               className={`px-4 py-2 rounded text-sm text-white font-medium ${locked ? "bg-gray-500 hover:bg-gray-600" : "bg-gray-700 hover:bg-gray-800"}`}
             >
-              {locked ? <><Unlock size={16} className="inline mr-1" /> 解鎖版本</> : <><Lock size={16} className="inline mr-1" /> 鎖定版本</>}
+              {locked ? <><Unlock size={16} className="inline mr-1" />{t("releaseDetail.actions.unlockVersion")}</> : <><Lock size={16} className="inline mr-1" />{t("releaseDetail.actions.lockVersion")}</>}
             </button>
 
             {/* Container Image 掃描 */}
@@ -623,18 +625,18 @@ export default function ReleaseDetail() {
               disabled={locked}
               className="px-4 py-2 rounded text-sm text-white font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              掃描 Container Image
+              {t("releaseDetail.actions.scanImage")}
             </button>
 
             {/* IaC 掃描 */}
             <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${locked || iacScanLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}>
-              {iacScanLoading ? "掃描中..." : "掃描 IaC (zip)"}
+              {iacScanLoading ? t("common.scanning") : t("releaseDetail.actions.scanIac")}
               <input ref={iacFileRef} type="file" accept=".zip" className="hidden" onChange={handleIacScan} disabled={locked || iacScanLoading} />
             </label>
 
             {/* 原始碼可達性分析 */}
             <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${sourceUploading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
-              {sourceUploading ? "分析中..." : "可達性分析 (zip)"}
+              {sourceUploading ? t("common.analyzing") : t("releaseDetail.actions.reachability")}
               <input ref={sourceFileRef} type="file" accept=".zip" className="hidden" onChange={handleSourceUpload} disabled={sourceUploading} />
             </label>
 
@@ -726,26 +728,26 @@ export default function ReleaseDetail() {
                 onClick={() => { setAdvancedMenuOpen(o => !o); setExportMenuOpen(false); }}
                 className="px-4 py-2 rounded text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1"
               >
-                進階操作 <span className="text-xs">▾</span>
+                {t("releaseDetail.actions.advanced")} <span className="text-xs">▾</span>
               </button>
               {advancedMenuOpen && (
                 <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
                   <button disabled={enrichingNvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enrichingNvd ? "啟動中..." : "更新 NVD 資料"}
+                    {enrichingNvd ? t("common.loading") : t("releaseDetail.actions.enrichNvd")}
                   </button>
                   <button disabled={enriching} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enriching ? "更新中..." : "更新 EPSS 分數"}
+                    {enriching ? t("common.loading") : t("releaseDetail.actions.enrichEpss")}
                   </button>
                   <button disabled={enrichingGhsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enrichingGhsa ? "啟動中..." : "補充 GHSA 情資"}
+                    {enrichingGhsa ? t("common.loading") : t("releaseDetail.actions.enrichGhsa")}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   <button disabled={checkingIntegrity} onClick={() => { setAdvancedMenuOpen(false); handleCheckIntegrity(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {checkingIntegrity ? "驗證中..." : "完整性驗證"}
+                    {checkingIntegrity ? t("common.loading") : t("releaseDetail.actions.checkIntegrity")}
                   </button>
                 </div>
               )}
@@ -1032,9 +1034,9 @@ export default function ReleaseDetail() {
       {/* Tabs */}
       <div className="flex gap-1 mb-3">
         {[
-          { key: "components",    label: `元件 (${components.length})` },
-          { key: "vulnerabilities", label: vulnsLoadedRef.current ? `漏洞 (${vulns.length})` : "漏洞" },
-          { key: "dependency",    label: "依賴關係圖" },
+          { key: "components",      label: `${t("releaseDetail.tabs.components")} (${components.length})` },
+          { key: "vulnerabilities", label: vulnsLoadedRef.current ? `${t("releaseDetail.tabs.vulns")} (${vulns.length})` : t("releaseDetail.tabs.vulns") },
+          { key: "dependency",      label: t("releaseDetail.tabs.depGraph") },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -1052,19 +1054,19 @@ export default function ReleaseDetail() {
       {tab === "components" && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {components.length === 0 ? (
-            <div className="p-8 text-center text-gray-600">尚未上傳 SBOM 檔案</div>
+            <div className="p-8 text-center text-gray-600">{t("releaseDetail.components.noSbom")}</div>
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[480px]" role="table">
               <caption className="sr-only">元件清單</caption>
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
-                  <th className="px-4 py-3" scope="col">元件名稱</th>
-                  <th className="px-4 py-3" scope="col">版本</th>
-                  <th className="px-4 py-3" scope="col">授權</th>
-                  <th className="px-4 py-3" scope="col">授權風險</th>
-                  <th className="px-4 py-3" scope="col">漏洞數</th>
-                  <th className="px-4 py-3" scope="col">最高風險</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.name")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.version")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.license")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.licenseRisk")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.vulnCount")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.components.maxSeverity")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1115,7 +1117,7 @@ export default function ReleaseDetail() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {vulns.length === 0 ? (
             <div className="p-8 text-center text-gray-600">
-              {components.length === 0 ? "尚未上傳 SBOM 檔案" : "未發現漏洞"}
+              {components.length === 0 ? t("releaseDetail.components.noSbom") : t("releaseDetail.vulns.noVulns")}
             </div>
           ) : (
             <>
@@ -1186,20 +1188,20 @@ export default function ReleaseDetail() {
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" scope="col" onClick={() => { setSortField("cve_id"); setSortAsc(sortField === "cve_id" ? !sortAsc : true); }}>
                     CVE ID {sortField === "cve_id" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3" scope="col">元件</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.vulns.component")}</th>
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden md:table-cell" scope="col" onClick={() => { setSortField("cvss_score"); setSortAsc(sortField === "cvss_score" ? !sortAsc : false); }}>
                     CVSS {sortField === "cvss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700" scope="col" onClick={() => { setSortField("severity"); setSortAsc(sortField === "severity" ? !sortAsc : false); }}>
-                    嚴重度 {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
+                    {t("releaseDetail.vulns.severity")} {sortField === "severity" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
                   <th className="px-4 py-3 cursor-pointer select-none hover:text-gray-700 hidden sm:table-cell" scope="col" onClick={() => { setSortField("epss_score"); setSortAsc(sortField === "epss_score" ? !sortAsc : false); }}>
                     EPSS {sortField === "epss_score" ? (sortAsc ? "↑" : "↓") : ""}
                   </th>
-                  <th className="px-4 py-3 hidden lg:table-cell" scope="col">SLA</th>
-                  <th className="px-4 py-3 hidden xl:table-cell" scope="col">可達性</th>
-                  <th className="px-4 py-3" scope="col">VEX 狀態</th>
-                  <th className="px-4 py-3" scope="col">操作</th>
+                  <th className="px-4 py-3 hidden lg:table-cell" scope="col">{t("releaseDetail.vulns.sla")}</th>
+                  <th className="px-4 py-3 hidden xl:table-cell" scope="col">{t("releaseDetail.vulns.reachability")}</th>
+                  <th className="px-4 py-3" scope="col">{t("releaseDetail.vulns.vexStatus")}</th>
+                  <th className="px-4 py-3" scope="col">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
