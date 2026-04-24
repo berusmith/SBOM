@@ -7,7 +7,9 @@
 ## [Unreleased]
 
 ### 計畫中
-- Postgres 後端選項
+- 部署 Oracle Cloud 生產環境（所有功能已完成）
+- Binary SBOM 生成（Syft，等客戶需求）
+- FDA Pre-market 合規報告（等醫材客戶）
 
 ---
 
