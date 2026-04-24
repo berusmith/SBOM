@@ -1,7 +1,7 @@
 # 競品落差分析
 
 **日期**：2026-04-24（更新）
-**對照競品**：Anchore、Snyk、Dependency-Track (OWASP)、Black Duck、FOSSA、Cybellum、Finite State、NetRise、Endor Labs、Socket、Phylum、**Cybeats SBOM Studio**、**Keysight SBOM Manager**、**FOSSLight**、**Microsoft SBOM Tool**
+**對照競品**：Anchore Enterprise、Snyk、Dependency-Track (OWASP)、Black Duck、FOSSA、Cybellum、Finite State、NetRise、Endor Labs、Socket、Phylum、**Cybeats SBOM Studio**、**Keysight SBOM Manager**、**FOSSLight**、**Microsoft SBOM Tool**
 
 ---
 
@@ -10,7 +10,7 @@
 | 競品 | 分類 | 主要客群 | 對你的威脅程度 |
 |------|------|---------|--------------|
 | Dependency-Track | SBOM 管理（免費） | 一般軟體廠商 | 中（免費但功能弱） |
-| Anchore Enterprise | SBOM 管理 + 容器 | DevSecOps 團隊 | 低（不做合規） |
+| **Anchore Enterprise** | SBOM 管理 + 容器 + 政府合規 | 美國聯邦政府、DoD、Fortune 500 | 低（客群不重疊；無 CRA/IEC/TISAX）|
 | Snyk | SCA + 漏洞管理 | 開發者 | 低（不做 ICS/OT 合規） |
 | Black Duck | SCA + License | 大企業 | 低（昂貴，無 CRA） |
 | Cybellum | 韌體/Binary SCA | 汽車 OEM | 中（汽車市場重疊） |
@@ -84,6 +84,12 @@
 - 有 CRA + FDA 合規聲稱，有 VEX
 - **你的優勢**：IEC 62443 三份子標準（Keysight 未提）、TISAX、CRA 時程鐘深度、Reachability、離線 + 低成本
 - **你的缺口**：Binary-only SBOM 生成（不需原始碼），這對無原始碼的舊 OT 設備很關鍵
+
+### Anchore Enterprise（客群不重疊，參考用）
+- 開源 Syft + Grype 的商業版，主打美國聯邦政府、DoD、Fortune 500
+- 強項：Malware/Secret 偵測、Policy-as-code（JSON）、Air-gapped（IL4-6）、K8s 原生（EKS/ECS/GKE）
+- 合規標準：NIST / FedRAMP / DISA —— **完全沒有 CRA / IEC 62443 / TISAX**
+- **你的差異化說詞**：「Anchore 是美國政府合規工具，你是歐盟製造業合規，客戶重疊機率很低；若同場競爭，強調三份 IEC 62443 報告和 CRA 時程鐘。」
 
 ### FOSSLight（非直接競品）
 - LG 開源，免費
