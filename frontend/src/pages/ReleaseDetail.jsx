@@ -100,6 +100,13 @@ export default function ReleaseDetail() {
   const [confirmLock, setConfirmLock] = useState(false);
   const [toggling, setToggling] = useState(false);
   const vulnsLoadedRef = useRef(false);
+  const [imageScanOpen, setImageScanOpen] = useState(false);
+  const [imageRef, setImageRef] = useState("");
+  const [imageScanResult, setImageScanResult] = useState(null);
+  const [imageScanLoading, setImageScanLoading] = useState(false);
+  const iacFileRef = useRef();
+  const [iacScanResult, setIacScanResult] = useState(null);
+  const [iacScanLoading, setIacScanLoading] = useState(false);
 
   const fetchComponents = () => {
     api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data)).catch(() => toast.error("元件清單載入失敗"));
@@ -319,6 +326,40 @@ export default function ReleaseDetail() {
     }
   };
 
+  const handleImageScan = async () => {
+    if (!imageRef.trim()) return;
+    setImageScanLoading(true);
+    setImageScanResult(null);
+    try {
+      const res = await api.post(`/releases/${releaseId}/scan-image`, { image: imageRef.trim() });
+      setImageScanResult({ ok: true, ...res.data });
+      fetchComponents();
+      fetchVulns();
+    } catch (err) {
+      setImageScanResult({ ok: false, msg: err.response?.data?.detail || err.message });
+    } finally {
+      setImageScanLoading(false);
+    }
+  };
+
+  const handleIacScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIacScanLoading(true);
+    setIacScanResult(null);
+    const form = new FormData();
+    form.append("file", file);
+    try {
+      const res = await api.post(`/releases/${releaseId}/scan-iac`, form, { headers: { "Content-Type": "multipart/form-data" } });
+      setIacScanResult({ ok: true, ...res.data });
+    } catch (err) {
+      setIacScanResult({ ok: false, msg: err.response?.data?.detail || err.message });
+    } finally {
+      setIacScanLoading(false);
+      if (iacFileRef.current) iacFileRef.current.value = "";
+    }
+  };
+
   const handleExportCsv = async () => {
     setExportingCsv(true);
     try {
@@ -535,6 +576,21 @@ export default function ReleaseDetail() {
               {locked ? <><Unlock size={16} className="inline mr-1" /> 解鎖版本</> : <><Lock size={16} className="inline mr-1" /> 鎖定版本</>}
             </button>
 
+            {/* Container Image 掃描 */}
+            <button
+              onClick={() => { setImageScanOpen(o => !o); setImageScanResult(null); }}
+              disabled={locked}
+              className="px-4 py-2 rounded text-sm text-white font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              掃描 Container Image
+            </button>
+
+            {/* IaC 掃描 */}
+            <label className={`cursor-pointer px-4 py-2 rounded text-sm text-white font-medium ${locked || iacScanLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}>
+              {iacScanLoading ? "掃描中..." : "掃描 IaC (zip)"}
+              <input ref={iacFileRef} type="file" accept=".zip" className="hidden" onChange={handleIacScan} disabled={locked || iacScanLoading} />
+            </label>
+
             {/* 匯出 / 下載 dropdown */}
             <div className="relative" ref={exportMenuRef}>
               <button
@@ -647,6 +703,74 @@ export default function ReleaseDetail() {
           </div>
         )}
       </div>
+
+      {/* Container Image scan inline form */}
+      {imageScanOpen && (
+        <div className="mb-3 bg-teal-50 border border-teal-200 rounded-lg p-4">
+          <p className="text-sm font-medium text-teal-800 mb-2">掃描 Container Image</p>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              type="text"
+              value={imageRef}
+              onChange={e => setImageRef(e.target.value)}
+              placeholder="例：nginx:1.25 或 myrepo/app:latest"
+              className="border border-gray-300 rounded px-3 py-1.5 text-sm flex-1 min-w-[240px]"
+              onKeyDown={e => e.key === "Enter" && handleImageScan()}
+            />
+            <button
+              onClick={handleImageScan}
+              disabled={imageScanLoading || !imageRef.trim()}
+              className="px-4 py-1.5 rounded text-sm text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {imageScanLoading ? "掃描中..." : "開始掃描"}
+            </button>
+            <button onClick={() => { setImageScanOpen(false); setImageScanResult(null); }} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          </div>
+          {imageScanResult && (
+            <p className={`mt-2 text-sm ${imageScanResult.ok ? "text-teal-700" : "text-red-600"}`}>
+              {imageScanResult.ok
+                ? `完成：${imageScanResult.components_found} 個元件，${imageScanResult.vulnerabilities_found} 個漏洞（${imageScanResult.image}）`
+                : `掃描失敗：${imageScanResult.msg}`}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* IaC scan result */}
+      {iacScanResult && (
+        <div className={`mb-3 rounded-lg p-4 text-sm ${iacScanResult.ok ? "bg-indigo-50 border border-indigo-200" : "bg-red-50 border border-red-200"}`}>
+          {iacScanResult.ok ? (
+            <>
+              <p className="font-medium text-indigo-800 mb-2">IaC 掃描完成：{iacScanResult.filename} — {iacScanResult.misconfigs_found} 個 misconfiguration</p>
+              {iacScanResult.misconfigs?.length > 0 && (
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="text-left text-indigo-700 border-b border-indigo-200">
+                      <th className="py-1 pr-3 font-medium">ID</th>
+                      <th className="py-1 pr-3 font-medium">嚴重度</th>
+                      <th className="py-1 pr-3 font-medium">描述</th>
+                      <th className="py-1 font-medium">建議</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {iacScanResult.misconfigs.map((m, i) => (
+                      <tr key={i} className="border-b border-indigo-100">
+                        <td className="py-1 pr-3 font-mono text-indigo-700">{m.id}</td>
+                        <td className={`py-1 pr-3 font-medium ${m.severity === "critical" ? "text-red-600" : m.severity === "high" ? "text-orange-600" : m.severity === "medium" ? "text-yellow-700" : "text-gray-600"}`}>{m.severity}</td>
+                        <td className="py-1 pr-3 text-gray-700">{m.title}</td>
+                        <td className="py-1 text-gray-600">{m.resolution}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          ) : (
+            <p className="text-red-700">IaC 掃描失敗：{iacScanResult.msg}</p>
+          )}
+          <button onClick={() => setIacScanResult(null)} className="mt-2 text-xs text-gray-400 hover:text-gray-600">關閉</button>
+        </div>
+      )}
 
       {/* Integrity result */}
       {integrity && (

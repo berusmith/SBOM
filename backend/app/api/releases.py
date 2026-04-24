@@ -35,6 +35,7 @@ from app.services.epss import fetch_epss
 from app.services.kev import fetch_kev_cve_ids
 from app.services.license_classifier import classify_license
 from app.services.signature_verifier import verify_signature as _verify_sig, detect_algorithm, SUPPORTED_ALGORITHMS
+from app.services import trivy_scanner as _trivy
 
 # Use env-configured path in production; auto-detect from source tree in dev
 UPLOAD_DIR = (
@@ -1537,6 +1538,133 @@ def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_or
         "edges": edges[:600],
         "total_nodes": len(nodes),
         "total_edges": len(edges),
+    }
+
+
+@router.post("/{release_id}/scan-image")
+def scan_container_image(
+    release_id: str,
+    body: dict,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """掃描 Container Image，結果合併進現有元件/漏洞流程。"""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法掃描")
+    _assert_release_org(release, org_scope, db)
+
+    image_ref = (body.get("image") or "").strip()
+    if not image_ref:
+        raise HTTPException(status_code=400, detail="請提供 image 欄位，例如 nginx:1.25")
+
+    if not _trivy.is_trivy_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Trivy 未安裝。安裝指令：curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh",
+        )
+
+    try:
+        cdx = _trivy.scan_image(image_ref)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    parsed = sbom_parser.parse(json.dumps(cdx).encode(), "trivy-image.json")
+
+    # Upsert components (don't wipe existing — merge by purl)
+    existing_purls = {c.purl: c for c in db.query(Component).filter(Component.release_id == release_id).all() if c.purl}
+    new_comps: list[tuple] = []
+    for c in parsed:
+        purl = c.get("purl") or ""
+        if purl and purl in existing_purls:
+            comp = existing_purls[purl]
+        else:
+            comp = Component(release_id=release_id, name=c["name"], version=c["version"], purl=purl, license=c.get("license", ""))
+            db.add(comp)
+            new_comps.append((comp, purl))
+    db.commit()
+    for comp, _ in new_comps:
+        db.refresh(comp)
+
+    all_comp_tuples = [(existing_purls[c["purl"]], c["purl"]) if c.get("purl") and c["purl"] in existing_purls else next(((co, p) for co, p in new_comps if p == c.get("purl")), (None, "")) for c in parsed]
+    all_comp_tuples = [(co, p) for co, p in all_comp_tuples if co is not None]
+
+    vuln_results = vuln_scanner.scan_components(parsed)
+    vuln_count = 0
+    for comp, purl in all_comp_tuples:
+        seen = {v.cve_id for v in comp.vulnerabilities}
+        for v in vuln_results.get(purl, []):
+            if v["cve_id"] in seen:
+                continue
+            seen.add(v["cve_id"])
+            db.add(Vulnerability(
+                component_id=comp.id,
+                cve_id=v["cve_id"],
+                description=v.get("description", ""),
+                cvss_score=v["cvss_score"],
+                severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
+                status="open",
+            ))
+            vuln_count += 1
+    db.commit()
+
+    all_vulns = db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
+    _enrich_epss(all_vulns, db)
+    _enrich_kev(all_vulns, db)
+
+    audit.record(db, "trivy_image_scan", user, resource_id=release_id, resource_label=image_ref)
+    return {"image": image_ref, "components_found": len(parsed), "vulnerabilities_found": vuln_count}
+
+
+@router.post("/{release_id}/scan-iac")
+async def scan_iac_archive(
+    release_id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """上傳 zip（Terraform/K8s yaml/Dockerfile），掃描 misconfiguration + 元件漏洞。"""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定，無法掃描")
+    _assert_release_org(release, org_scope, db)
+
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔（內含 Terraform/K8s/Dockerfile）")
+
+    if not _trivy.is_trivy_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Trivy 未安裝。安裝指令：curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh",
+        )
+
+    MAX_SIZE = 20 * 1024 * 1024
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="壓縮檔超過 20MB 上限")
+
+    try:
+        cdx = _trivy.scan_iac(content)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    misconfigs = _trivy.extract_misconfigs(cdx)
+    parsed = sbom_parser.parse(json.dumps(cdx).encode(), "trivy-iac.json")
+
+    audit.record(db, "trivy_iac_scan", user, resource_id=release_id, resource_label=file.filename)
+    return {
+        "filename": file.filename,
+        "components_found": len(parsed),
+        "misconfigs_found": len(misconfigs),
+        "misconfigs": misconfigs[:50],
     }
 
 

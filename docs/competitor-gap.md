@@ -1,6 +1,6 @@
 # 競品落差分析
 
-**日期**：2026-04-23
+**日期**：2026-04-24（更新）
 **對照競品**：Anchore、Snyk、Dependency-Track (OWASP)、Black Duck、FOSSA、Cybellum、Finite State、NetRise、Endor Labs、Socket、Phylum
 
 ---
@@ -17,15 +17,15 @@
 ## 2. 資料與情資
 
 - ✅ 已有：EPSS、KEV、NVD enrichment
-- ❌ 缺：exploit maturity、commercial threat intel
-- ❌ 缺：reachability analysis（呼叫鏈是否真的會碰到漏洞函式）——Snyk / Endor Labs 的主打
-- ❌ 缺：SBOM 來源真實性（Sigstore / in-toto attestation）
+- ✅ 已有：SBOM 來源真實性（Sigstore/cosign ECDSA、RSA-PSS 簽章驗證）
+- ❌ 缺：exploit maturity、commercial threat intel（Snyk 私有 DB 比 NVD 早 47 天）
+- ❌ 缺：reachability analysis（呼叫鏈是否真的會碰到漏洞函式）——Snyk / Endor Labs 的主打，Endor 號稱噪音砍 90%
 
 ## 3. DevSecOps 整合
 
-- 現況：只有 API Token（read/write/admin scope）
-- 競品：現成 GitHub Action、GitLab CI、Jenkins plugin、IDE 外掛、OPA/Rego policy as code、Splunk/Elastic/Slack 原生整合
-- **這塊是最大落差，但也最便宜補上** ← 下一項工作
+- ✅ 已有：API Token（read/write/admin scope）、GitHub Action（`tools/sbom-action/`）、CLI（`tools/sbom-cli/sbom.py`）
+- ✅ 已有：Container Image 掃描（`POST /scan-image`，Trivy 後端）、IaC/Terraform/K8s misconfiguration 掃描（`POST /scan-iac`）
+- ❌ 缺：GitLab CI 原生範本、Jenkins plugin、IDE 外掛、OPA/Rego policy as code、Splunk/Elastic/Slack 原生整合
 
 ## 4. 規模與多租戶
 
@@ -65,8 +65,9 @@
 
 | # | 項目 | 工時 | 理由 |
 |---|------|------|------|
-| 1 | **GitHub Action + CLI** | 2–3 天 | 立刻打開 CI/CD 客戶；已有 API Token 基礎 |
-| 2 | **Reachability**（Python/Node 先行） | 2 月 | 差異化關鍵 |
-| 3 | **SBOM Sigstore 簽章驗證** | 1 週 | CRA 稽核會被問 |
-| 4 | **TISAX 模組** | 2 週 | 補汽車供應鏈 |
-| 5 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |
+| 1 | ~~**GitHub Action + CLI**~~ | ✅ 完成 | |
+| 2 | ~~**SBOM Sigstore 簽章驗證**~~ | ✅ 完成 | |
+| 3 | ~~**Container / IaC 掃描（Trivy）**~~ | ✅ 完成 | |
+| 4 | **Reachability**（Python/Node 先行） | 2 月 | 2026 年 SCA 最熱賣點；Endor 號稱噪音砍 90% |
+| 5 | **TISAX 模組** | 2 週 | 補汽車供應鏈 |
+| 6 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |

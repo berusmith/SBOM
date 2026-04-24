@@ -78,7 +78,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
 | `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
 | `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock` `/signature`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
 | `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` |
@@ -122,6 +122,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `alerts.py` | Webhook POST + SMTP email on new vulnerability events |
 | `firmware_service.py` | EMBA firmware analysis: auto-detect EMBA, run background scans, parse EMBA JSON → component list, demo mode for Windows dev |
 | `signature_verifier.py` | SBOM signature verification: ECDSA (cosign/Sigstore default), RSA-PSS, RSA-PKCS1; auto-detect algorithm from public key; extract signer identity from X.509 certs |
+| `trivy_scanner.py` | Trivy wrapper: `scan_image(image_ref)` → CycloneDX, `scan_iac(zip_bytes)` → CycloneDX + misconfigs, `extract_misconfigs()` pulls AVD-/DS- findings; 503 if Trivy not installed (no demo mode needed — Trivy is free) |
 
 **`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
 

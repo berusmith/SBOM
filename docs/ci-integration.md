@@ -295,3 +295,54 @@ A: 目前不支持，但計劃在未來的版本中添加本地驗證功能。
 - [API 參考](api-reference.md)
 - [CLI 使用指南](../tools/sbom-cli/README.md)
 - [GitHub Action 使用](../tools/sbom-action/README.md)
+
+---
+
+## 直接掃描 Container Image（不需先產 SBOM）
+
+如果你的 CI pipeline 是從 image tag 開始，可以跳過 SBOM 產生步驟，直接讓平台呼叫 Trivy 掃描：
+
+```bash
+# 取得 token
+TOKEN=$(curl -sX POST $SBOM_API_URL/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"sbom@2024"}' | jq -r .access_token)
+
+# 掃描 Container Image，結果合併進指定 Release
+curl -X POST $SBOM_API_URL/api/releases/$RELEASE_ID/scan-image \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"image": "myrepo/myapp:1.2.3"}'
+```
+
+回應範例：
+```json
+{ "image": "myrepo/myapp:1.2.3", "components_found": 87, "vulnerabilities_found": 12 }
+```
+
+### 前置條件
+
+Trivy 必須安裝在後端伺服器上：
+```bash
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+# 初次拉 DB（約 500MB，離線環境請預先下載）
+trivy image --download-db-only
+```
+
+若 Trivy 未安裝，API 回傳 HTTP 503 並附帶安裝指令提示。
+
+---
+
+## 掃描 IaC / Terraform / K8s YAML
+
+```bash
+# 壓縮你的 infra 目錄
+zip -r infra.zip terraform/ k8s/ Dockerfile
+
+# 上傳掃描
+curl -X POST $SBOM_API_URL/api/releases/$RELEASE_ID/scan-iac \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@infra.zip"
+```
+
+回應會包含 `misconfigs` 陣列，每項含 `id`、`severity`、`title`、`resolution`。
