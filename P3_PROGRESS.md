@@ -1,7 +1,7 @@
 # Phase 3+ 功能開發進度
 
-**最後更新**: 2026-04-23  
-**狀態**: ✅ P3-1~P3-5 + Phase 2.4a + License 分類 + CI/CD 整合 完成
+**最後更新**: 2026-04-24  
+**狀態**: ✅ P3-1~P3-5 + Phase 2.4a + License 分類 + CI/CD 整合 + TISAX + Sigstore + Trivy 完成
 
 ---
 
@@ -155,8 +155,19 @@
 
 ---
 
+### ✅ Container / IaC 掃描 — Trivy 整合（2026-04-24）
+- `backend/app/services/trivy_scanner.py`：wrap `trivy image` / `trivy fs`，Trivy 未裝回 503
+- `releases.py` 新增 `POST /{id}/scan-image`（Container Image，合併元件+漏洞進現有流程）
+- `releases.py` 新增 `POST /{id}/scan-iac`（zip 上傳，回傳 misconfiguration 列表）
+- `ReleaseDetail.jsx`：「掃描 Container Image」inline 輸入框 + 「掃描 IaC (zip)」上傳按鈕
+- `docs/ci-integration.md` 補 curl 範例
+- **Commit**: `9e0df10`
+
+---
+
 ## 下一步待做
 
+- **漏洞情資補強**（GHSA + Debian/RHEL advisory，3–5 天）
 - **Reachability 分析**（~2 月）— 差異化關鍵
 - **Postgres 後端選項**（~1 週）— 進企業客戶前必過
 - **IEC 62443-4-2/3-3 PDF 修復** — Windows CJK 字型問題

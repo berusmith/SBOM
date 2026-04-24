@@ -11,7 +11,7 @@
 |------|------|---------|------|
 | 韌體/二進位分析 | EMBA 包一層 | Cybellum / Finite State / NetRise 有 binary SCA、加密金鑰偵測、韌體 diff、Yocto/Buildroot 解析 | 大 |
 | 漏洞資料來源 | OSV.dev 單一來源 | Snyk / Black Duck 自有 DB + 私有 advisory（比 NVD 早 2–4 週）| 中 |
-| 容器 / IaC 掃描 | 無 | Snyk、Anchore、Trivy 標配 | 大 |
+| 容器 / IaC 掃描 | ✅ Trivy 整合（`POST /scan-image` + `/scan-iac`）| Snyk、Anchore、Trivy 標配 | 補平 |
 | 惡意套件偵測 | 無 | Snyk / Socket / Phylum 有行為分析 | 中 |
 
 ## 2. 資料與情資
@@ -43,7 +43,6 @@
 - CSAF 匯出
 
 ### 缺
-- TISAX（汽車供應鏈，計畫中見 `docs/TISAX_MODULE_PLAN.md`）
 - ISO/SAE 21434（汽車）
 - UNECE R155 / R156
 - FDA Pre-market Cybersecurity（醫材）
@@ -55,9 +54,10 @@
 
 1. CRA 時程鐘 + 事故生命週期
 2. IEC 62443 三份子標準自動化報告
-3. 中文化 + 本地顧問 SOP
-4. 離線部署（Oracle Cloud 1GB RAM 可跑）
-5. 價格差距 10–100 倍
+3. TISAX VDA ISA 6.0 自評（63 個控制項、AL2/AL3 gap 分析）
+4. 中文化 + 本地顧問 SOP
+5. 離線部署（Oracle Cloud 1GB RAM 可跑）
+6. 價格差距 10–100 倍
 
 ---
 
@@ -68,6 +68,7 @@
 | 1 | ~~**GitHub Action + CLI**~~ | ✅ 完成 | |
 | 2 | ~~**SBOM Sigstore 簽章驗證**~~ | ✅ 完成 | |
 | 3 | ~~**Container / IaC 掃描（Trivy）**~~ | ✅ 完成 | |
-| 4 | **Reachability**（Python/Node 先行） | 2 月 | 2026 年 SCA 最熱賣點；Endor 號稱噪音砍 90% |
-| 5 | **TISAX 模組** | 2 週 | 補汽車供應鏈 |
-| 6 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |
+| 4 | ~~**TISAX 模組**~~ | ✅ 完成 | |
+| 5 | **漏洞情資補強**（GHSA + Debian/RHEL advisory） | 3–5 天 | 縮短比 NVD 早 47 天的情資落差 |
+| 6 | **Reachability**（Python/Node 先行） | 2 月 | 2026 年 SCA 最熱賣點；Endor 號稱噪音砍 90% |
+| 7 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |
