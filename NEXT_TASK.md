@@ -32,7 +32,7 @@
 | 1 | ~~**Postgres 後端選項**~~ | ✅ 完成 | |
 | 2 | ~~**持續監控**~~（新 CVE 自動重評全組合） | ✅ 完成 | monitor.py + scheduler + Settings UI 均已存在 |
 | 3 | ~~**SSO / LDAP 整合**~~ | ✅ 完成 | OIDC（Azure AD/Google/Keycloak），`oidc_sub` 欄位，Login SSO 按鈕 |
-| 4 | **SBOM 脫敏與供應鏈分享** | ~2 週 | 對外分享 SBOM 需細粒度過濾 |
+| 4 | ~~**SBOM 脫敏與供應鏈分享**~~ | ✅ 完成 | 分享連結 + 脫敏過濾 + 下載計數，`a251c68` |
 | 5 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
 
 ### 持續監控說明
