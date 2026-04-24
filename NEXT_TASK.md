@@ -12,6 +12,7 @@
 | TISAX 模組（VDA ISA 6.0，63 控制項，AL2/AL3 gap 分析） | — |
 | Container/IaC 掃描（Trivy，`POST /scan-image` + `/scan-iac`） | `9e0df10` |
 | GHSA 漏洞情資補強（GitHub Advisory Database，ghsa_id 欄位） | `5c6538b` |
+| Reachability Phase 1（import 層級，Python/Node，reachability 欄位） | `e3c6521` |
 
 ---
 
@@ -19,7 +20,7 @@
 
 | # | 項目 | 預估 | 理由 |
 |---|------|------|------|
-| 1 | **Reachability Phase 1**（import 層級，Python/Node） | 1–2 週 | 最快可交付的降噪；不需 call graph |
+| 1 | ~~**Reachability Phase 1**~~（import 層級，Python/Node） | ✅ 完成 | |
 | 2 | **Reachability Phase 2**（模組層級，過濾 test/scripts） | 2–3 週 | Phase 1 完成後接續 |
 | 3 | **Reachability Phase 3**（函式層級 call graph） | 1–2 月 | 真正的 Endor Labs 等級 |
 | 4 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關 |
