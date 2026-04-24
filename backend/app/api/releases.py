@@ -837,10 +837,6 @@ def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     product, org = _assert_release_org(release, org_scope, db)
-    if not product:
-        product = db.query(Product).filter(Product.id == release.product_id).first()
-    if not org and product:
-        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
     components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
@@ -870,10 +866,6 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     product, org = _assert_release_org(release, org_scope, db)
-    if not product:
-        product = db.query(Product).filter(Product.id == release.product_id).first()
-    if not org and product:
-        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
     components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")
@@ -909,10 +901,6 @@ def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_or
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     product, org = _assert_release_org(release, org_scope, db)
-    if not product:
-        product = db.query(Product).filter(Product.id == release.product_id).first()
-    if not org and product:
-        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
     components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities)).filter(Component.release_id == release_id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail="尚未上傳 SBOM，無法產生合規報告")

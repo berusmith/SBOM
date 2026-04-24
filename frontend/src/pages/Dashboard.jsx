@@ -188,21 +188,24 @@ export default function Dashboard() {
   const toast = useToast();
 
   useEffect(() => {
+    const ac = new AbortController();
+    const sig = { signal: ac.signal };
     Promise.all([
-      api.get("/stats"),
-      api.get("/stats/risk-overview"),
-      api.get("/stats/top-threats"),
-      api.get("/stats/top-risky-components"),
-      api.get("/stats/sbom-quality-summary"),
+      api.get("/stats", sig),
+      api.get("/stats/risk-overview", sig),
+      api.get("/stats/top-threats", sig),
+      api.get("/stats/top-risky-components", sig),
+      api.get("/stats/sbom-quality-summary", sig),
     ]).then(([s, r, th, rc, q]) => {
       setStats(s.data);
       setRiskOverview(r.data);
       setTopThreats(th.data);
       setRiskyComponents(rc.data);
       setQualitySummary(q.data);
-    }).catch(() => {
-      toast.error("儀表板資料載入失敗，請重新整理頁面");
-    }).finally(() => setLoading(false));
+    }).catch((err) => {
+      if (!ac.signal.aborted) toast.error(t("dashboard.loadError", "儀表板資料載入失敗，請重新整理頁面"));
+    }).finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    return () => ac.abort();
   }, []);
 
   const handleCveSearch = async (e) => {
@@ -542,16 +545,16 @@ export default function Dashboard() {
         <div className="mt-4 bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-700">{t("dashboard.riskyComponents")}</h2>
-            <span className="text-xs text-gray-600">跨版本 Critical/High 未處理漏洞最多</span>
+            <span className="text-xs text-gray-600">{t("dashboard.riskySubtitle")}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
-                  <th className="pb-2 pr-4">元件</th>
-                  <th className="pb-2 pr-4 text-center">版本數</th>
-                  <th className="pb-2 pr-4 text-center">未處理 C/H</th>
-                  <th className="pb-2 text-center">最高 EPSS</th>
+                  <th className="pb-2 pr-4">{t("dashboard.riskyCol")}</th>
+                  <th className="pb-2 pr-4 text-center">{t("dashboard.riskyColVersions")}</th>
+                  <th className="pb-2 pr-4 text-center">{t("dashboard.riskyColUnpatched")}</th>
+                  <th className="pb-2 text-center">{t("dashboard.riskyColEpss")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -591,7 +594,7 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-gray-600">點擊元件名稱可在全域搜尋中查看所有受影響版本</p>
+          <p className="mt-3 text-xs text-gray-600">{t("dashboard.riskyHint")}</p>
         </div>
       )}
 

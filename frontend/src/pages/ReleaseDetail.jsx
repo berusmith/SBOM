@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Lock, Unlock, AlertTriangle, CheckCircle2, XCircle, Info } from "lucide-react";
@@ -60,23 +60,11 @@ export default function ReleaseDetail() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadingCsaf, setDownloadingCsaf] = useState(false);
-  const [downloadingEvidence, setDownloadingEvidence] = useState(false);
-  const [downloadingIec, setDownloadingIec] = useState(false);
-  const [downloadingIec42, setDownloadingIec42] = useState(false);
-  const [downloadingIec33, setDownloadingIec33] = useState(false);
-  const [downloadingNis2, setDownloadingNis2] = useState(false);
+  const [busy, setBusy] = useState({});
+  const setBusyKey = (key, val) => setBusy(prev => ({ ...prev, [key]: val }));
   const [loading, setLoading] = useState(false);
-  const [rescanning, setRescanning] = useState(false);
   const [rescanResult, setRescanResult] = useState(null);
-  const [enriching, setEnriching] = useState(false);
-  const [exportingCsv, setExportingCsv] = useState(false);
-  const [exportingCdx, setExportingCdx] = useState(false);
-  const [exportingSpdx, setExportingSpdx] = useState(false);
-  const [enrichingNvd, setEnrichingNvd] = useState(false);
   const [nvdMsg, setNvdMsg] = useState(null);
-  const [enrichingGhsa, setEnrichingGhsa] = useState(false);
   const [ghsaMsg, setGhsaMsg] = useState(null);
   const [expandedVuln, setExpandedVuln] = useState(null);
   const [vulnHistory, setVulnHistory] = useState({});
@@ -297,7 +285,7 @@ export default function ReleaseDetail() {
   };
 
   const handleDownloadReport = async () => {
-    setDownloading(true);
+    setBusyKey("pdf", true);
     try {
       const resp = await api.get(`/releases/${releaseId}/report`, { responseType: "blob" });
       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
@@ -309,12 +297,12 @@ export default function ReleaseDetail() {
     } catch (err) {
       toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setDownloading(false);
+      setBusyKey("pdf", false);
     }
   };
 
   const handleDownloadIec = async () => {
-    setDownloadingIec(true);
+    setBusyKey("iec", true);
     try {
       const resp = await api.get(`/releases/${releaseId}/compliance/iec62443`, { responseType: "blob" });
       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
@@ -326,12 +314,12 @@ export default function ReleaseDetail() {
     } catch (err) {
       toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setDownloadingIec(false);
+      setBusyKey("iec", false);
     }
   };
 
   const handleDownloadEvidence = async () => {
-    setDownloadingEvidence(true);
+    setBusyKey("evidence", true);
     try {
       const resp = await api.get(`/releases/${releaseId}/evidence-package`, { responseType: "blob" });
       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/zip" }));
@@ -343,12 +331,12 @@ export default function ReleaseDetail() {
     } catch (err) {
       toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setDownloadingEvidence(false);
+      setBusyKey("evidence", false);
     }
   };
 
   const handleRescan = async () => {
-    setRescanning(true);
+    setBusyKey("rescan", true);
     setRescanResult(null);
     try {
       const res = await api.post(`/releases/${releaseId}/rescan`);
@@ -360,7 +348,7 @@ export default function ReleaseDetail() {
     } catch (err) {
       setRescanResult({ ok: false, msg: err.response?.data?.detail || err.message });
     } finally {
-      setRescanning(false);
+      setBusyKey("rescan", false);
     }
   };
 
@@ -474,7 +462,7 @@ export default function ReleaseDetail() {
   };
 
   const handleExportCsv = async () => {
-    setExportingCsv(true);
+    setBusyKey("csv", true);
     try {
       const resp = await api.get(`/releases/${releaseId}/vulnerabilities/export`, { responseType: "blob" });
       const url = URL.createObjectURL(new Blob([resp.data], { type: "text/csv" }));
@@ -486,12 +474,12 @@ export default function ReleaseDetail() {
     } catch (err) {
       toast.error("匯出失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setExportingCsv(false);
+      setBusyKey("csv", false);
     }
   };
 
   const handleEnrichGhsa = async () => {
-    setEnrichingGhsa(true);
+    setBusyKey("ghsa", true);
     setGhsaMsg(null);
     try {
       const res = await api.post(`/releases/${releaseId}/enrich-ghsa`);
@@ -500,12 +488,12 @@ export default function ReleaseDetail() {
     } catch (err) {
       setGhsaMsg("GHSA 補充失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setEnrichingGhsa(false);
+      setBusyKey("ghsa", false);
     }
   };
 
   const handleEnrichNvd = async () => {
-    setEnrichingNvd(true);
+    setBusyKey("nvd", true);
     setNvdMsg(null);
     try {
       const res = await api.post(`/releases/${releaseId}/enrich-nvd`);
@@ -513,19 +501,19 @@ export default function ReleaseDetail() {
     } catch (err) {
       setNvdMsg("NVD 補充失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setEnrichingNvd(false);
+      setBusyKey("nvd", false);
     }
   };
 
   const handleEnrichEpss = async () => {
-    setEnriching(true);
+    setBusyKey("epss", true);
     try {
       await api.post(`/releases/${releaseId}/enrich-epss`);
       fetchVulns();
     } catch (err) {
       toast.error("EPSS 更新失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setEnriching(false);
+      setBusyKey("epss", false);
     }
   };
 
@@ -549,7 +537,7 @@ export default function ReleaseDetail() {
   };
 
   const handleDownloadCsaf = async () => {
-    setDownloadingCsaf(true);
+    setBusyKey("csaf", true);
     try {
       const resp = await api.get(`/releases/${releaseId}/csaf`, { responseType: "blob" });
       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
@@ -561,18 +549,18 @@ export default function ReleaseDetail() {
     } catch (err) {
       toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
     } finally {
-      setDownloadingCsaf(false);
+      setBusyKey("csaf", false);
     }
   };
 
-  const severityCounts = vulns.filter(v => !v.suppressed).reduce((acc, v) => {
+  const severityCounts = useMemo(() => vulns.filter(v => !v.suppressed).reduce((acc, v) => {
     acc[v.severity] = (acc[v.severity] || 0) + 1;
     return acc;
-  }, {});
-  const suppressedCount = vulns.filter(v => v.suppressed).length;
+  }, {}), [vulns]);
+  const suppressedCount = useMemo(() => vulns.filter(v => v.suppressed).length, [vulns]);
 
   const SEVERITY_ORDER = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
-  const displayedVulns = [...vulns]
+  const displayedVulns = useMemo(() => [...vulns]
     .filter((v) =>
       (showSuppressed ? v.suppressed : !v.suppressed) &&
       (!filterSeverity || v.severity === filterSeverity) &&
@@ -591,7 +579,7 @@ export default function ReleaseDetail() {
       if (av < bv) return sortAsc ? -1 : 1;
       if (av > bv) return sortAsc ? 1 : -1;
       return 0;
-    });
+    }), [vulns, filterSeverity, filterStatus, filterEpss, filterKev, filterText, sortField, sortAsc, showSuppressed]);
 
   return (
     <div>
@@ -703,17 +691,17 @@ export default function ReleaseDetail() {
             {/* 主要操作 */}
             <button
               onClick={handleRescan}
-              disabled={rescanning}
-              className={`px-4 py-2 rounded text-sm text-white font-medium ${rescanning ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={busy.rescan}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${busy.rescan ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {rescanning ? t("common.scanning") : t("releaseDetail.actions.rescan")}
+              {busy.rescan ? t("common.scanning") : t("releaseDetail.actions.rescan")}
             </button>
             <button
               onClick={handleDownloadReport}
-              disabled={downloading}
-              className={`px-4 py-2 rounded text-sm text-white font-medium ${downloading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={busy.pdf}
+              className={`px-4 py-2 rounded text-sm text-white font-medium ${busy.pdf ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {downloading ? t("common.generating") : t("releaseDetail.actions.downloadReport")}
+              {busy.pdf ? t("common.generating") : t("releaseDetail.actions.downloadReport")}
             </button>
             <button
               onClick={() => locked ? handleLockToggle() : setConfirmLock(true)}
@@ -770,34 +758,34 @@ export default function ReleaseDetail() {
               {exportMenuOpen && (
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px] py-1">
                   {[
-                    { label: exportingCsv ? "匯出中..." : "匯出 CSV", disabled: exportingCsv, onClick: () => { handleExportCsv(); setExportMenuOpen(false); } },
+                    { label: busy.csv ? "匯出中..." : "匯出 CSV", disabled: busy.csv, onClick: () => { handleExportCsv(); setExportMenuOpen(false); } },
                   ].map((item, i) => (
                     <button key={i} onClick={item.onClick} disabled={item.disabled}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                       {item.label}
                     </button>
                   ))}
-                  <button disabled={exportingCdx} onClick={async () => {
-                    setExportMenuOpen(false); setExportingCdx(true);
+                  <button disabled={busy.cdx} onClick={async () => {
+                    setExportMenuOpen(false); setBusyKey("cdx", true);
                     try {
                       const resp = await api.get(`/releases/${releaseId}/export/cyclonedx-xml`, { responseType: "blob" });
                       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
                       const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
                       URL.revokeObjectURL(url);
-                    } catch { toast.error("匯出失敗"); } finally { setExportingCdx(false); }
+                    } catch { toast.error("匯出失敗"); } finally { setBusyKey("cdx", false); }
                   }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {exportingCdx ? "匯出中..." : "CycloneDX XML"}
+                    {busy.cdx ? "匯出中..." : "CycloneDX XML"}
                   </button>
-                  <button disabled={exportingSpdx} onClick={async () => {
-                    setExportMenuOpen(false); setExportingSpdx(true);
+                  <button disabled={busy.spdx} onClick={async () => {
+                    setExportMenuOpen(false); setBusyKey("spdx", true);
                     try {
                       const resp = await api.get(`/releases/${releaseId}/export/spdx-json`, { responseType: "blob" });
                       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
                       const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
                       URL.revokeObjectURL(url);
-                    } catch { toast.error("匯出失敗"); } finally { setExportingSpdx(false); }
+                    } catch { toast.error("匯出失敗"); } finally { setBusyKey("spdx", false); }
                   }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {exportingSpdx ? "匯出中..." : "SPDX JSON"}
+                    {busy.spdx ? "匯出中..." : "SPDX JSON"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
                   {/* 格式互轉 */}
@@ -815,58 +803,58 @@ export default function ReleaseDetail() {
                     </label>
                   ))}
                   <div className="border-t border-gray-100 my-1" />
-                  <button disabled={downloadingIec} onClick={() => { setExportMenuOpen(false); handleDownloadIec(); }}
+                  <button disabled={busy.iec} onClick={() => { setExportMenuOpen(false); handleDownloadIec(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingIec ? "產生中..." : "IEC 62443-4-1 報告"}
+                    {busy.iec ? "產生中..." : "IEC 62443-4-1 報告"}
                   </button>
                   {isProPlan && (
-                    <button disabled={downloadingIec42} onClick={async () => {
-                      setExportMenuOpen(false); setDownloadingIec42(true);
+                    <button disabled={busy.iec42} onClick={async () => {
+                      setExportMenuOpen(false); setBusyKey("iec42", true);
                       try {
                         const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-4-2`, { responseType: "blob" });
                         const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
                         const a = document.createElement("a"); a.href = url; a.download = `IEC62443_4-2_${releaseId}.pdf`; a.click();
                         URL.revokeObjectURL(url);
                       } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                      finally { setDownloadingIec42(false); }
+                      finally { setBusyKey("iec42", false); }
                     }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {downloadingIec42 ? "產生中..." : "IEC 62443-4-2 報告"}
+                      {busy.iec42 ? "產生中..." : "IEC 62443-4-2 報告"}
                     </button>
                   )}
                   {isProPlan && (
-                    <button disabled={downloadingIec33} onClick={async () => {
-                      setExportMenuOpen(false); setDownloadingIec33(true);
+                    <button disabled={busy.iec33} onClick={async () => {
+                      setExportMenuOpen(false); setBusyKey("iec33", true);
                       try {
                         const resp = await api.get(`/releases/${releaseId}/compliance/iec62443-3-3`, { responseType: "blob" });
                         const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
                         const a = document.createElement("a"); a.href = url; a.download = `IEC62443_3-3_${releaseId}.pdf`; a.click();
                         URL.revokeObjectURL(url);
                       } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                      finally { setDownloadingIec33(false); }
+                      finally { setBusyKey("iec33", false); }
                     }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {downloadingIec33 ? "產生中..." : "IEC 62443-3-3 報告"}
+                      {busy.iec33 ? "產生中..." : "IEC 62443-3-3 報告"}
                     </button>
                   )}
-                  <button disabled={downloadingNis2} onClick={async () => {
-                      setExportMenuOpen(false); setDownloadingNis2(true);
+                  <button disabled={busy.nis2} onClick={async () => {
+                      setExportMenuOpen(false); setBusyKey("nis2", true);
                       try {
                         const resp = await api.get(`/releases/${releaseId}/compliance/nis2`, { responseType: "blob" });
                         const url = URL.createObjectURL(new Blob([resp.data], { type: "application/pdf" }));
                         const a = document.createElement("a"); a.href = url; a.download = `NIS2_${releaseId}.pdf`; a.click();
                         URL.revokeObjectURL(url);
                       } catch (err) { toast.error("下載失敗：" + (err.response?.data?.detail || err.message)); }
-                      finally { setDownloadingNis2(false); }
+                      finally { setBusyKey("nis2", false); }
                     }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingNis2 ? "產生中..." : "NIS2 Art. 21 報告"}
+                    {busy.nis2 ? "產生中..." : "NIS2 Art. 21 報告"}
                   </button>
                   <div className="border-t border-gray-100 my-1" />
-                  <button disabled={downloadingEvidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
+                  <button disabled={busy.evidence} onClick={() => { setExportMenuOpen(false); handleDownloadEvidence(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingEvidence ? "打包中..." : "證據包 ZIP"}
+                    {busy.evidence ? "打包中..." : "證據包 ZIP"}
                   </button>
-                  <button disabled={downloadingCsaf} onClick={() => { setExportMenuOpen(false); handleDownloadCsaf(); }}
+                  <button disabled={busy.csaf} onClick={() => { setExportMenuOpen(false); handleDownloadCsaf(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {downloadingCsaf ? "產生中..." : "CSAF VEX"}
+                    {busy.csaf ? "產生中..." : "CSAF VEX"}
                   </button>
                 </div>
               )}
@@ -882,18 +870,18 @@ export default function ReleaseDetail() {
               </button>
               {advancedMenuOpen && (
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[160px] py-1">
-                  <button disabled={enrichingNvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
+                  <button disabled={busy.nvd} onClick={() => { setAdvancedMenuOpen(false); handleEnrichNvd(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enrichingNvd ? t("common.loading") : t("releaseDetail.actions.enrichNvd")}
+                    {busy.nvd ? t("common.loading") : t("releaseDetail.actions.enrichNvd")}
                   </button>
-                  <button disabled={enriching} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
+                  <button disabled={busy.epss} onClick={() => { setAdvancedMenuOpen(false); handleEnrichEpss(); }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    {enriching ? t("common.loading") : t("releaseDetail.actions.enrichEpss")}
+                    {busy.epss ? t("common.loading") : t("releaseDetail.actions.enrichEpss")}
                   </button>
                   {isStdPlan && (
-                    <button disabled={enrichingGhsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
+                    <button disabled={busy.ghsa} onClick={() => { setAdvancedMenuOpen(false); handleEnrichGhsa(); }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                      {enrichingGhsa ? t("common.loading") : t("releaseDetail.actions.enrichGhsa")}
+                      {busy.ghsa ? t("common.loading") : t("releaseDetail.actions.enrichGhsa")}
                     </button>
                   )}
                   <div className="border-t border-gray-100 my-1" />
