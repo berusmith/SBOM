@@ -9,7 +9,7 @@
 
 | 競品 | 分類 | 主要客群 | 對你的威脅程度 |
 |------|------|---------|--------------|
-| Dependency-Track | SBOM 管理（免費） | 一般軟體廠商 | 中（免費但功能弱） |
+| **Dependency-Track** | SBOM 管理（免費開源） | 一般軟體廠商、DevSecOps | **中高**（免費 + SSO + 持續監控，功能差距縮小中）|
 | **Anchore Enterprise** | SBOM 管理 + 容器 + 政府合規 | 美國聯邦政府、DoD、Fortune 500 | 低（客群不重疊；無 CRA/IEC/TISAX）|
 | Snyk | SCA + 漏洞管理 | 開發者 | 低（不做 ICS/OT 合規） |
 | Black Duck | SCA + License | 大企業 | 低（昂貴，無 CRA） |
@@ -50,8 +50,10 @@
 
 | 面向 | 現況 | 競品 |
 |------|------|------|
-| DB | SQLite 單機 | Postgres + k8s |
+| DB | ✅ SQLite / Postgres 可選 | Postgres + k8s |
 | RBAC | admin / viewer + 單層 org scope | 細粒度 RBAC + SSO/SAML/SCIM |
+| SSO / LDAP | ❌ 僅帳密 JWT | DT：OIDC + LDAP + AD；Anchore：SAML |
+| 持續監控 | ❌ 需手動 rescan | DT：新 CVE 自動重評全組合 |
 | 稽核不可竄改 | AuditEvent append-only（同 DB） | hash chain / WORM storage |
 
 ## 5. 合規輸出
@@ -84,6 +86,17 @@
 - 有 CRA + FDA 合規聲稱，有 VEX
 - **你的優勢**：IEC 62443 三份子標準（Keysight 未提）、TISAX、CRA 時程鐘深度、Reachability、離線 + 低成本
 - **你的缺口**：Binary-only SBOM 生成（不需原始碼），這對無原始碼的舊 OT 設備很關鍵
+
+### Dependency-Track（最直接的開源競品，威脅程度中高）
+- 免費、Apache 2.0、社群成熟、Docker 部署、Postgres 原生
+- 漏洞來源：NVD + GHSA + OSS Index + Snyk + OSV + **VulnDB（商業）**
+- **DT 有但你沒有**：
+  1. 持續監控（新 CVE 公布後自動重評全組合，不需手動 rescan）
+  2. SSO：OIDC + LDAP + Active Directory
+  3. Slack / Teams / WebEx 原生通知
+  4. CPE 誤配問題（你的優勢：PURL-first 更精確）
+- **你有但 DT 沒有**：CRA 時程鐘、IEC 62443、TISAX、Reachability、格式互轉、品質評分、中文化、離線低成本
+- **你的差異化說詞**：「DT 是找漏洞的工具，我是管合規的平台；DT 告訴你有漏洞，我告訴你 CRA 還剩幾天、IEC 62443 哪裡沒過。」
 
 ### Anchore Enterprise（客群不重疊，參考用）
 - 開源 Syft + Grype 的商業版，主打美國聯邦政府、DoD、Fortune 500
@@ -126,6 +139,8 @@
 | 4 | ~~**TISAX 模組**~~ | ✅ 完成 | |
 | 5 | ~~**漏洞情資補強（GHSA）**~~ | ✅ 完成 | |
 | 6 | ~~**Reachability（Python AST 三階段）**~~ | ✅ 完成 | |
-| 7 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關；Keysight/Cybeats 都是企業級 |
-| 8 | **FDA Pre-market Cybersecurity 報告** | 2 週 | 有醫材客戶詢問時再做 |
-| 9 | **Binary SBOM 生成（無原始碼）** | 待評估 | Keysight 的核心賣點；對舊 OT 設備客戶有吸引力 |
+| 7 | ~~**Postgres 後端選項**~~ | ✅ 完成 | |
+| 8 | **持續監控**（新 CVE 自動重評） | 1 週 | DT 的核心優勢；客戶問最多 |
+| 9 | **SSO / LDAP 整合** | 1–2 週 | DT 有 OIDC+LDAP+AD；企業 IT 必問 |
+| 10 | **FDA Pre-market Cybersecurity 報告** | 2 週 | 有醫材客戶詢問時再做 |
+| 11 | **Binary SBOM 生成（無原始碼）** | 待評估 | Keysight 的核心賣點；對舊 OT 設備客戶有吸引力 |

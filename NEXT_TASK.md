@@ -26,9 +26,20 @@
 
 | # | 項目 | 預估 | 理由 |
 |---|------|------|------|
-| 1 | **Postgres 後端選項** | ~1 週 | 進企業客戶前必過關；脫敏分享的前提 |
-| 2 | **SBOM 脫敏與供應鏈分享** | ~2 週 | 需 Postgres 先完成 |
-| 3 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
+| 1 | ~~**Postgres 後端選項**~~ | ✅ 完成 | |
+| 2 | **持續監控**（新 CVE 自動重評全組合） | 1 週 | DT 有、你沒有；客戶問最多的功能 |
+| 3 | **SSO / LDAP 整合** | 1–2 週 | DT 有 OIDC + LDAP + AD；企業 IT 必問 |
+| 4 | **SBOM 脫敏與供應鏈分享** | ~2 週 | 對外分享 SBOM 需細粒度過濾 |
+| 5 | **Binary/PDF 盤點引導** | 待評估 | OT 舊設備無原始碼場景，對標 Keysight |
+
+### 持續監控說明
+- 現況：漏洞資料需手動觸發 rescan / enrich-nvd
+- 目標：新 CVE 進 NVD/GHSA 後，背景自動重評所有受影響元件，有新漏洞時發通知
+- 實作方向：排程任務（APScheduler）每日跑 OSV batch query，比對現有元件 PURL
+
+### SSO / LDAP 說明
+- 企業客戶常要求「用公司帳號登入」（AD / Azure AD / Okta）
+- 實作方向：加 OIDC provider 設定（`OIDC_ISSUER` / `OIDC_CLIENT_ID`）+ passlib 驗證流程旁路
 
 ---
 
