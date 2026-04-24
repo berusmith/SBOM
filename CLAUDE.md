@@ -78,7 +78,7 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me` |
 | `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` |
 | `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/enrich-ghsa` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac` `/upload-source`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
 | `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` |
@@ -96,7 +96,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 
 | File | Table | Key notes |
 |------|-------|-----------|
-| `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` + `suppressed`/`suppressed_until`/`suppressed_reason` |
+| `vulnerability.py` | `vulnerabilities` | VEX status/justification/response/detail + EPSS + KEV + NVD enrichment + `scanned_at`/`fixed_at` + `suppressed`/`suppressed_until`/`suppressed_reason` + `ghsa_id`/`ghsa_url` + `reachability` (`function_reachable`/`reachable`/`test_only`/`not_found`/`unknown`) |
 | `release.py` | `releases` | `sbom_hash` (SHA-256 of uploaded file), `locked` bool, `sbom_signature` / `signature_public_key` / `signature_algorithm` / `signer_identity` / `signed_at` for Sigstore/cosign verification |
 | `cra_incident.py` | `cra_incidents` | SLA timestamps (`awareness_timestamp`, `t24/72/14d_deadline`), append-only `audit_log` string. **No FK to Organization** — incidents are global, not org-scoped |
 | `vex.py` | `vex_statements` | Release-level VEX, separate from per-vulnerability status; used by CSAF export |
@@ -123,6 +123,8 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `firmware_service.py` | EMBA firmware analysis: auto-detect EMBA, run background scans, parse EMBA JSON → component list, demo mode for Windows dev |
 | `signature_verifier.py` | SBOM signature verification: ECDSA (cosign/Sigstore default), RSA-PSS, RSA-PKCS1; auto-detect algorithm from public key; extract signer identity from X.509 certs |
 | `trivy_scanner.py` | Trivy wrapper: `scan_image(image_ref)` → CycloneDX, `scan_iac(zip_bytes)` → CycloneDX + misconfigs, `extract_misconfigs()` pulls AVD-/DS- findings; 503 if Trivy not installed (no demo mode needed — Trivy is free) |
+| `ghsa.py` | GitHub Advisory Database REST API: `fetch_ghsa_for_components(components)` → per-purl advisory list; supports npm/pypi/maven/nuget/cargo/gem/go; optional `GITHUB_TOKEN` (60 req/h without, 5000/h with) |
+| `reachability.py` | Three-phase source reachability: `scan_zip(zip_bytes)` → `ScanResult(presence, ast_reachable)`; Phase 1 regex import scan, Phase 2 test-path filtering, Phase 3 Python AST call graph (`_FileAnalyser` — alias tracking, route decorator detection, 1-hop call graph); `classify_vulns()` → `function_reachable`/`reachable`/`test_only`/`not_found` |
 
 **`core/config.py`** — Pydantic Settings loaded from `backend/.env`. `DTRACK_URL` / `DTRACK_API_KEY` are legacy fields (Dependency-Track integration was replaced by direct OSV.dev calls); ignore them.
 

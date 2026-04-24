@@ -7,7 +7,6 @@
 ## [Unreleased]
 
 ### 計畫中
-- Reachability 分析（Python/Node call graph）
 - Postgres 後端選項
 
 ---
@@ -15,6 +14,7 @@
 ## [2.0.0] — 2026-04
 
 ### 新增
+- **Reachability 分析（三階段）**：上傳原始碼 zip → Phase 1 import 掃描、Phase 2 測試目錄過濾、Phase 3 Python AST call graph（alias 追蹤、route decorator 進入點、1-hop call graph）；`function_reachable` / `reachable` / `test_only` / `not_found`
 - **GHSA 漏洞情資補強**：GitHub Security Advisories REST API，支援 npm/pypi/maven/nuget/cargo/gem/go；ghsa_id 欄位；上傳自動觸發 + 手動補充端點
 - **Container / IaC 掃描（Trivy）**：`POST /scan-image`（Container Image）、`POST /scan-iac`（Terraform/K8s zip，回傳 misconfiguration 列表）
 - **SBOM 簽章驗證（Sigstore/cosign）**：ECDSA / RSA-PSS / RSA-PKCS1；自動偵測演算法；Policy Gate 第 6 項

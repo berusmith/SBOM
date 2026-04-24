@@ -19,7 +19,7 @@
 - ✅ 已有：EPSS、KEV、NVD enrichment
 - ✅ 已有：SBOM 來源真實性（Sigstore/cosign ECDSA、RSA-PSS 簽章驗證）
 - ❌ 缺：exploit maturity、commercial threat intel（Snyk 私有 DB 比 NVD 早 47 天）
-- ❌ 缺：reachability analysis（呼叫鏈是否真的會碰到漏洞函式）——Snyk / Endor Labs 的主打，Endor 號稱噪音砍 90%
+- ✅ 已有：reachability analysis（三階段：import 層級 → 模組層級 → Python AST 函式層級 call graph）`function_reachable` / `reachable` / `test_only` / `not_found`
 
 ## 3. DevSecOps 整合
 
@@ -70,5 +70,5 @@
 | 3 | ~~**Container / IaC 掃描（Trivy）**~~ | ✅ 完成 | |
 | 4 | ~~**TISAX 模組**~~ | ✅ 完成 | |
 | 5 | ~~**漏洞情資補強（GHSA）**~~ | ✅ 完成 | |
-| 6 | **Reachability**（Python/Node 先行） | 2 月 | 2026 年 SCA 最熱賣點；Endor 號稱噪音砍 90% |
+| 6 | ~~**Reachability**~~（Python AST 三階段） | ✅ 完成 | |
 | 7 | **Postgres 後端選項** | 1 週 | 進企業客戶必過關 |
