@@ -309,6 +309,7 @@ export default function Organizations() {
         confirmText={t("common.confirmDelete")}
         cancelText={t("common.cancel")}
         isDangerous
+        requireTypeName={confirmDelete?.name}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />

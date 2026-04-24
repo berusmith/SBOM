@@ -32,6 +32,20 @@
 | 列表端點分頁保護（components skip/limit，硬上限 5000） | `cbc681e` |
 | Health Check endpoint（GET /health，DB 連通性 + monitor 狀態） | `d0ed38f` |
 | Async I/O 修正（upload_source + scan_iac 改 asyncio.to_thread） | `d0ed38f` |
+| 忘記密碼流程（PasswordResetToken / SMTP 寄信 / 30 分鐘時效） | `4723feb` |
+| SQLite 自動備份腳本（deploy/backup.sh，保留 14 天，sqlite3 .backup） | `4723feb` |
+| Share link 上限（同一 release 最多 20 條） | `4723feb` |
+| Monitor 跳過通知（_last_skip_dt，Settings 頁橘色警示） | `4723feb` |
+| Release 備註欄位（releases.notes，PATCH /notes，ReleaseDetail 編輯區） | `4723feb` |
+| User email 欄位（users.email，Profile/Users UI，forgot-password 支援） | `20d0a5c` |
+| Product 編輯（PATCH /products/{id}，名稱/描述 modal） | `20d0a5c` |
+| 稽核紀錄 CSV 匯出（GET /admin/activity/export，帶入篩選條件） | `20d0a5c` |
+| ReleaseDiff UI 改善（不變數卡片、嚴重度分布、匯出 CSV、KEV badge 修正） | `20d0a5c` |
+| JWT 登出即失效（RevokedToken 黑名單，jti claim，啟動清除過期） | `d6c9c63` |
+| Release 版本號編輯（PATCH /releases/{id}/version，Releases 頁 modal） | `d6c9c63` |
+| Webhook 失敗重試（指數退避 3 次，1s / 2s 間隔） | `d6c9c63` |
+| SBOM 上傳進度條（Axios onUploadProgress，百分比顯示） | `d6c9c63` |
+| 組織刪除二次確認（ConfirmModal requireTypeName，必須輸入名稱才能確認） | `HEAD` |
 
 ---
 
@@ -68,6 +82,6 @@
 |------|------|
 | API token timing attack | SQL hash 比對可改 `hmac.compare_digest`；實際風險極低 |
 | OIDC 自動建立新使用者 | 可加 email domain 白名單；需 OIDC 設定者授權才能觸發 |
-| 無限 share link 建立 | 可加每 release 上限；屬資料 bloat，非安全漏洞 |
-| monitor.py 靜默跳過 | 與手動 rescan 衝突時回傳 0 但無使用者通知；可加狀態端點 |
+| ~~無限 share link 建立~~ | ✅ 已修：每 release 上限 20 條 |
+| ~~monitor.py 靜默跳過~~ | ✅ 已修：last_skip_dt + Settings 頁警示 |
 | ~~非同步 endpoint 阻塞 I/O~~ | ✅ 已修：upload_source + scan_iac 改 asyncio.to_thread |
