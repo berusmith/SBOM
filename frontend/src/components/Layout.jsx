@@ -83,23 +83,39 @@ export default function Layout({ children }) {
               {lockedItems.map((item) => (
                 <span
                   key={item.path}
-                  title={`需要 ${item.minPlan === "standard" ? "Standard" : "Professional"} 方案`}
+                  role="link"
+                  aria-disabled="true"
+                  title={t("nav.lockedHint", {
+                    plan: item.minPlan === "standard" ? "Standard" : "Professional",
+                  })}
                   className="px-2.5 py-1.5 rounded text-sm text-gray-600 cursor-not-allowed flex items-center gap-1 whitespace-nowrap"
                 >
-                  🔒 {t(`nav.${item.key}`)}
+                  <span aria-hidden="true">🔒</span>
+                  <span>{t(`nav.${item.key}`)}</span>
                 </span>
               ))}
             </div>
 
             {/* Desktop search + lang toggle + user */}
-            <form onSubmit={handleSearch} className="hidden md:flex items-center gap-1 ml-auto">
+            <form
+              onSubmit={handleSearch}
+              role="search"
+              className="hidden md:flex items-center gap-1 ml-auto"
+            >
+              <label htmlFor="nav-search" className="sr-only">{t("nav.search")}</label>
               <input
+                id="nav-search"
+                type="search"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder={t("nav.search")}
                 className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-              <button type="submit" className="text-gray-600 hover:text-white px-1 text-sm">⌕</button>
+              <button
+                type="submit"
+                aria-label={t("common.search")}
+                className="text-gray-600 hover:text-white px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
+              >⌕</button>
             </form>
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <button
@@ -133,8 +149,10 @@ export default function Layout({ children }) {
               </button>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="text-gray-300 hover:text-white p-2.5 rounded"
-                aria-label="選單"
+                className="text-gray-300 hover:text-white p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
+                aria-expanded={menuOpen}
+                aria-controls="mobile-menu"
               >
                 {menuOpen ? (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -151,7 +169,7 @@ export default function Layout({ children }) {
 
           {/* Mobile menu */}
           {menuOpen && (
-            <div className="md:hidden border-t border-gray-700 py-3 space-y-1">
+            <div id="mobile-menu" className="md:hidden border-t border-gray-700 py-3 space-y-1">
               {navItems.map((item) => (
                 <Link
                   key={item.path}
@@ -166,12 +184,19 @@ export default function Layout({ children }) {
                   {t(`nav.${item.key}`)}
                 </Link>
               ))}
-              <form onSubmit={handleSearch} className="flex gap-2 px-3 pt-2">
+              {/*
+                On mobile we use text-base (16px) explicitly so iOS Safari
+                doesn't auto-zoom on focus.  text-sm (14px) triggers the zoom.
+              */}
+              <form onSubmit={handleSearch} role="search" className="flex gap-2 px-3 pt-2">
+                <label htmlFor="mobile-nav-search" className="sr-only">{t("nav.search")}</label>
                 <input
+                  id="mobile-nav-search"
+                  type="search"
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
                   placeholder={t("nav.search")}
-                  className="bg-gray-700 text-white text-sm rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="bg-gray-700 text-white text-base rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">
                   {t("common.search")}
@@ -195,6 +220,27 @@ export default function Layout({ children }) {
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">{children}</main>
+
+      <footer className="border-t border-gray-200 bg-white mt-8">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+          <span>SBOM Platform · v2.0.0</span>
+          <div className="flex items-center gap-3">
+            <Link to="/about" className="hover:text-gray-800 hover:underline">
+              {t("nav.openSourceNotices") /* falls back to key if missing */}
+            </Link>
+            <span>·</span>
+            <a
+              href="/api/notice"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-800 hover:underline"
+              title="Raw NOTICE.md"
+            >
+              NOTICE.md
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

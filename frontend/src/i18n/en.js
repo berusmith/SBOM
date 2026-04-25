@@ -15,6 +15,10 @@ const en = {
     search:       "Search components...",
     account:      "Account",
     logout:       "Logout",
+    openSourceNotices: "Open Source Notices",
+    openMenu:     "Open menu",
+    closeMenu:    "Close menu",
+    lockedHint:   "Requires {{plan}} plan",
   },
 
   // ── Common ────────────────────────────────────────────────────────────────
@@ -114,6 +118,13 @@ const en = {
     error:      "Invalid username or password",
     orDivider:  "or",
     ssoButton:  "Sign in with Company Account (SSO)",
+    forgotPassword: "Forgot password?",
+    ssoFailed:  "SSO sign-in failed, please try again",
+  },
+
+  // ── Confirm dialog ────────────────────────────────────────────────────────
+  confirm: {
+    typeToConfirm: "Type {{name}} to confirm this action",
   },
 
   // ── Dashboard ─────────────────────────────────────────────────────────────

@@ -1517,7 +1517,7 @@ export default function ReleaseDetail() {
                           <span>
                             <span className="font-medium text-gray-700">GHSA：</span>
                             <a href={v.ghsa_url || `https://github.com/advisories/${v.ghsa_id}`}
-                              target="_blank" rel="noreferrer"
+                              target="_blank" rel="noopener noreferrer"
                               className="text-purple-600 hover:underline font-mono">{v.ghsa_id}</a>
                           </span>
                         )}
@@ -1709,7 +1709,7 @@ export default function ReleaseDetail() {
                             <span>
                               <span className="font-medium text-gray-700">GHSA：</span>
                               <a href={v.ghsa_url || `https://github.com/advisories/${v.ghsa_id}`}
-                                target="_blank" rel="noreferrer"
+                                target="_blank" rel="noopener noreferrer"
                                 className="text-purple-600 hover:underline font-mono">{v.ghsa_id}</a>
                             </span>
                           )}
@@ -1718,7 +1718,7 @@ export default function ReleaseDetail() {
                           <div className="flex flex-wrap gap-2 text-xs">
                             <span className="font-medium text-gray-700">參考連結：</span>
                             {v.nvd_refs.map((url, i) => (
-                              <a key={i} href={url} target="_blank" rel="noreferrer"
+                              <a key={i} href={url} target="_blank" rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline truncate max-w-xs">{url}</a>
                             ))}
                           </div>

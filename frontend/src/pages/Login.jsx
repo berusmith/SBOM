@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
@@ -7,7 +7,6 @@ import { validate, validators } from "../utils/validate";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,10 +20,17 @@ export default function Login() {
     api.get("/auth/oidc/config").then(r => setOidcEnabled(r.data.enabled)).catch(() => {});
   }, []);
 
-  // Handle SSO callback: ?sso_token=xxx lands here via redirect from backend
+  // Handle SSO callback: backend redirects with token in URL FRAGMENT
+  // (#sso_token=xxx).  Fragments are not sent to servers / not logged by
+  // proxies / not in Referer, so the JWT never leaves the browser.
   useEffect(() => {
-    const ssoToken = searchParams.get("sso_token");
+    const hash = window.location.hash;
+    if (!hash || !hash.includes("sso_token=")) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const ssoToken = params.get("sso_token");
     if (!ssoToken) return;
+    // Wipe the fragment from the address bar before doing anything else.
+    window.history.replaceState(null, "", window.location.pathname);
     localStorage.setItem("token", ssoToken);
     api.get("/auth/me")
       .then(me => {
@@ -40,9 +46,9 @@ export default function Login() {
       })
       .catch(() => {
         localStorage.removeItem("token");
-        setError("SSO 登入失敗，請重試");
+        setError(t("login.ssoFailed"));
       });
-  }, [searchParams, navigate]);
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,20 +95,29 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t("login.username")}</label>
+            <label htmlFor="login-username" className="block text-sm font-medium text-gray-700 mb-1">
+              {t("login.username")}
+            </label>
             <input
+              id="login-username"
+              name="username"
               type="text"
+              autoComplete="username"
               value={username}
               onChange={(e) => {
                 setUsername(e.target.value);
                 if (errors.username) setErrors(prev => ({...prev, username: null}));
               }}
               autoFocus
-              className={`w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
+              aria-invalid={errors.username ? "true" : "false"}
+              aria-describedby={errors.username ? "login-username-err" : undefined}
+              className={`w-full border rounded px-3 py-2 text-base focus:outline-none focus:ring-2 ${
                 errors.username ? "border-red-400 focus:ring-red-400" : "border-gray-300 focus:ring-blue-400"
               }`}
             />
-            {errors.username && <p className="text-xs text-red-500 mt-1">{errors.username}</p>}
+            {errors.username && (
+              <p id="login-username-err" className="text-xs text-red-600 mt-1">{errors.username}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t("login.password")}</label>
@@ -124,8 +139,8 @@ export default function Login() {
             {loading ? t("login.loggingIn") : t("login.submit")}
           </button>
           <div className="text-right mt-2">
-            <Link to="/forgot-password" className="text-xs text-gray-500 hover:text-blue-600 hover:underline">
-              忘記密碼？
+            <Link to="/forgot-password" className="text-xs text-gray-700 hover:text-blue-600 hover:underline">
+              {t("login.forgotPassword")}
             </Link>
           </div>
         </form>
