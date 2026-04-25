@@ -134,7 +134,7 @@ SQL
     # Grant schema permissions (Postgres 15+ requires explicit GRANT on public schema)
     "$PG_BIN/psql" -d "${PG_DB}" -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO ${PG_USER};"
 
-    PG_DSN="postgresql+psycopg2://${PG_USER}:${PG_PASS}@127.0.0.1:5432/${PG_DB}"
+    PG_DSN="postgresql+pg8000://${PG_USER}:${PG_PASS}@127.0.0.1:5432/${PG_DB}"
 fi
 
 if [ "$INSTALL_NGINX" = "1" ]; then

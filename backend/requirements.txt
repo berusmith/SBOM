@@ -13,4 +13,4 @@ bcrypt==4.3.0
 requests==2.33.0
 pillow==12.2.0
 aiofiles==23.2.1
-psycopg2-binary==2.9.9
+pg8000==1.31.2

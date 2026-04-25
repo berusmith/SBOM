@@ -212,7 +212,7 @@ INSTALL_POSTGRES=1 bash deploy/setup-macos.sh
 
 ```
 Add this to $SBOM_HOME/backend/.env:
-    DATABASE_URL=postgresql+psycopg2://sbom_user:Xy7K...32chars...@127.0.0.1:5432/sbom
+    DATABASE_URL=postgresql+pg8000://sbom_user:Xy7K...32chars...@127.0.0.1:5432/sbom
 ```
 
 整行貼到 `~/sbom/backend/.env` 取代範本的 `CHANGE_ME` 行即可。**密碼只印一次,務必當下保存**(若漏抄,在 Mac Mini 上重跑 `INSTALL_POSTGRES=1 PG_PASS=新密碼 bash setup-macos.sh` 會更新密碼)。
@@ -234,7 +234,7 @@ psql -d postgres -c "CREATE DATABASE sbom OWNER sbom_user;"
 psql -d sbom -c "GRANT ALL ON SCHEMA public TO sbom_user;"
 
 # .env 寫:
-# DATABASE_URL=postgresql+psycopg2://sbom_user:你的密碼@127.0.0.1:5432/sbom
+# DATABASE_URL=postgresql+pg8000://sbom_user:你的密碼@127.0.0.1:5432/sbom
 ```
 
 ### 從 SQLite 遷移現有資料
@@ -248,13 +248,13 @@ launchctl unload ~/Library/LaunchAgents/com.sbom.backend.plist  # 停掉 backend
 # 1. 先 dry-run 看會搬多少
 $SBOM_HOME/backend/venv/bin/python $SBOM_HOME/backend/../deploy/migrate-sqlite-to-postgres.py \
     --source "sqlite:///$SBOM_HOME/data/sbom.db" \
-    --dest   "postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom" \
+    --dest   "postgresql+pg8000://sbom_user:PASS@127.0.0.1:5432/sbom" \
     --dry-run
 
 # 2. 確認沒問題後實跑(若 Postgres 已有資料,加 --force 會先 DELETE)
 $SBOM_HOME/backend/venv/bin/python $SBOM_HOME/backend/../deploy/migrate-sqlite-to-postgres.py \
     --source "sqlite:///$SBOM_HOME/data/sbom.db" \
-    --dest   "postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom"
+    --dest   "postgresql+pg8000://sbom_user:PASS@127.0.0.1:5432/sbom"
 
 # 3. 改 .env 的 DATABASE_URL 指向 Postgres
 vi $SBOM_HOME/backend/.env

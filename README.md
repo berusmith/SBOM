@@ -127,7 +127,7 @@ bash deploy/first-deploy.sh
 
 | 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `DATABASE_URL` | `sqlite:///./sbom.db` | dev SQLite；生產建議 `postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom`（`setup-macos.sh INSTALL_POSTGRES=1` 自動產） |
+| `DATABASE_URL` | `sqlite:///./sbom.db` | dev SQLite；生產建議 `postgresql+pg8000://sbom_user:PASS@127.0.0.1:5432/sbom`（`setup-macos.sh INSTALL_POSTGRES=1` 自動產） |
 | `SECRET_KEY` | `change-me-in-production` | JWT 簽名金鑰，**`DEBUG=false` 時必改**（預設值會讓 backend 拒啟動） |
 | `ADMIN_USERNAME` | `admin` | 管理員帳號 |
 | `ADMIN_PASSWORD` | `sbom@2024` | 管理員密碼，**`DEBUG=false` 時必改** |
@@ -288,8 +288,8 @@ User / PolicyRule / BrandConfig / AlertConfig（全域）
 - 線上版（產品執行中可訪問）：`http://<your-host>/about` 或 `GET /api/notice`（公開、無需登入）
 
 **License 摘要**：
-- **核心依賴 95% 為 permissive license**（MIT / BSD / Apache-2.0）— 商業閉源使用無限制
-- **2 個 LGPL 元件**（`fpdf2` PDF 生成、`psycopg2-binary` Postgres driver）— Python dynamic import 滿足 LGPL §4 條件，**不會讓本產品 source 變成 LGPL**
+- **核心依賴 96% 為 permissive license**（MIT / BSD / Apache-2.0）— 商業閉源使用無限制
+- **僅 1 個 LGPL 元件**（`fpdf2` PDF 生成）— Python dynamic import 滿足 LGPL §4 條件，**不會讓本產品 source 變成 LGPL**。Postgres driver 已從 LGPL 的 `psycopg2-binary` 換成 BSD-3 的 `pg8000`
 - **EMBA 為 GPL-3.0**，本產品**從不打包 EMBA**；透過 subprocess 在使用者自願安裝後呼叫，arms-length 模式不會讓 GPL 義務擴及本產品
 
 如需將本平台整合進企業產品 / OEM 出貨，請參考 [`NOTICE.md`](NOTICE.md) §7「下游使用者合規 checklist」。

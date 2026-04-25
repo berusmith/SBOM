@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+### 變更(License 簡化 — 路線 B 第一步)
+- **Postgres driver:`psycopg2-binary` (LGPL-3.0) → `pg8000` (BSD-3-Clause)**
+  - `requirements.txt` 改成 `pg8000==1.31.2`(純 Python,無 C extension)
+  - DSN scheme 全鏈路同步:`postgresql+psycopg2://` → `postgresql+pg8000://`(`.env.production` / `setup-macos.sh` PG_DSN / `migrate-sqlite-to-postgres.py` 範例 / `MACMINI_SETUP.md` 範例 / `README.md` 範例)
+  - **NOTICE.md 從「2 個 LGPL 元件」變成「僅 1 個 LGPL 元件(fpdf2)」** ── 路線 A 客戶法務的 review surface 進一步縮小
+  - pg8000 是純 Python,效能略差於 psycopg2 的 C 擴展但對本平台量級無感;若要追求極致效能未來可再評估 asyncpg(Apache-2.0,需 async stack)
+
 ### 修正(安全強化 — Phase 0:14 項 Critical/High)
 - **C-1 multi-tenant breach**:`releases.py:upload_sbom` 接收 `org_scope` 但未呼叫 `_assert_release_org`,viewer 知道 release_id(UUID)即可覆寫他組 SBOM。**僅補 1 行 `_assert_release_org(release, org_scope, db)` 即修復**
 - **C-2 path traversal**:`firmware.py:upload_firmware` 直接拼接使用者 `file.filename`,改 `Path(file.filename).name` 過濾路徑分隔符
@@ -87,7 +94,7 @@
 - 部署到自家 Mac Mini 生產環境(所有功能已完成)
 - ~~Binary SBOM 生成(Syft,等客戶需求)~~ ✅ 已完成 ── Syft 整合(原始碼 + binary 兩個端點)
 - FDA Pre-market 合規報告(等醫材客戶)
-- (進企業 OEM 客戶時)路線 B:替換 fpdf2 → reportlab、psycopg2 → asyncpg/pg8000,徹底剔除 LGPL 義務;前端 JWT 改 httpOnly cookie
+- (進企業 OEM 客戶時)路線 B 剩餘步驟:替換 fpdf2 → reportlab(剩唯一 LGPL 元件);前端 JWT 改 httpOnly cookie。~~psycopg2 → pg8000~~ ✅ 已完成
 
 ---
 

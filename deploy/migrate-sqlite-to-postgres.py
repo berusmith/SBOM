@@ -10,12 +10,12 @@ also acts as a fresh-init for an empty Postgres.
 Usage:
     # From repo root.  Source defaults to backend/sbom.db; dest is required.
     python deploy/migrate-sqlite-to-postgres.py \\
-        --dest "postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom"
+        --dest "postgresql+pg8000://sbom_user:PASS@127.0.0.1:5432/sbom"
 
     # With explicit source and force-overwrite of existing dest data:
     python deploy/migrate-sqlite-to-postgres.py \\
         --source "sqlite:///path/to/sbom.db" \\
-        --dest   "postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom" \\
+        --dest   "postgresql+pg8000://sbom_user:PASS@127.0.0.1:5432/sbom" \\
         --force
 
 Behavior:
@@ -77,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--source", default=f"sqlite:///{BACKEND_DIR / 'sbom.db'}",
                    help="Source DB DSN (default: sqlite:///<repo>/backend/sbom.db)")
     p.add_argument("--dest", required=True,
-                   help="Destination Postgres DSN (postgresql+psycopg2://user:pass@host/db)")
+                   help="Destination Postgres DSN (postgresql+pg8000://user:pass@host/db)")
     p.add_argument("--force", action="store_true",
                    help="DELETE existing rows in dest before copying (DESTRUCTIVE)")
     p.add_argument("--dry-run", action="store_true",
