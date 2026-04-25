@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
 import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
+import { pickErrorDetail } from "../utils/errors";
 import { validate, validators } from "../utils/validate";
 
 export default function Users() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [orgs, setOrgs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -53,7 +56,7 @@ export default function Users() {
       flash("success", `帳號 ${form.username} 已建立`);
       fetchAll();
     } catch (err) {
-      flash("error", err.response?.data?.detail || "建立失敗");
+      flash("error", pickErrorDetail(err, t("errors.createFailed")));
     } finally { setLoading(false); }
   };
 
@@ -81,7 +84,7 @@ export default function Users() {
       flash("success", "已更新");
       fetchAll();
     } catch (err) {
-      flash("error", err.response?.data?.detail || "更新失敗");
+      flash("error", pickErrorDetail(err, t("errors.updateFailed")));
     }
   };
 
@@ -93,7 +96,7 @@ export default function Users() {
       setConfirmDelete(null);
       fetchAll();
     } catch (err) {
-      flash("error", err.response?.data?.detail || "刪除失敗");
+      flash("error", pickErrorDetail(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }

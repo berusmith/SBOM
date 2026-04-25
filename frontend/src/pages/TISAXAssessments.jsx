@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react";
 import api from "../api/client";
 import { TISAX_LEVEL_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { SkeletonTable } from "../components/Skeleton";
+import { formatApiError } from "../utils/errors";
 
 const MODULE_LABELS = { infosec: "資訊安全", prototype: "原型保護", dataprotection: "個資保護" };
 
@@ -23,6 +25,7 @@ function MaturityBar({ value, max = 5 }) {
 }
 
 export default function TISAXAssessments() {
+  const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
   const [assessments, setAssessments] = useState([]);
@@ -56,7 +59,7 @@ export default function TISAXAssessments() {
       setShowForm(false);
       navigate(`/tisax/${res.data.id}`);
     } catch (err) {
-      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setLoading(false);
     }
@@ -69,7 +72,7 @@ export default function TISAXAssessments() {
       setConfirmDelete(null);
       fetchAll();
     } catch (err) {
-      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }

@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
+import { pickErrorDetail } from "../utils/errors";
 
 export default function Profile() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const username = localStorage.getItem("username") || "—";
   const role = localStorage.getItem("role") || "viewer";
@@ -43,7 +46,7 @@ export default function Profile() {
       setEmailEditing(false);
       flash("success", "Email 已更新");
     } catch (err) {
-      flash("error", err.response?.data?.detail || "更新失敗");
+      flash("error", pickErrorDetail(err, t("errors.updateFailed")));
     } finally {
       setEmailSaving(false);
     }
@@ -59,7 +62,7 @@ export default function Profile() {
       setCur(""); setNext(""); setConfirm("");
       flash("success", "密碼已更新");
     } catch (err) {
-      flash("error", err.response?.data?.detail || "更新失敗");
+      flash("error", pickErrorDetail(err, t("errors.updateFailed")));
     } finally {
       setLoading(false);
     }

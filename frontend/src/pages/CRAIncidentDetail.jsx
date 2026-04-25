@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Check, AlertTriangle, Clock } from "lucide-react";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonDetail } from "../components/Skeleton";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { formatApiError } from "../utils/errors";
 
 const STATES = [
   "detected", "pending_triage", "clock_running", "t24_submitted",
@@ -93,6 +95,7 @@ function DeadlineBar({ label, seconds, submitted }) {
 }
 
 export default function CRAIncidentDetail() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { incidentId } = useParams();
   const navigate = useNavigate();
@@ -224,6 +227,7 @@ export default function CRAIncidentDetail() {
 }
 
 function ActionPanel({ inc, onUpdate }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [confirmClose, setConfirmClose] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -239,7 +243,7 @@ function ActionPanel({ inc, onUpdate }) {
       onUpdate();
       setNote("");
     } catch (err) {
-      toast.error("操作失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setSaving(false);
     }
@@ -252,7 +256,7 @@ function ActionPanel({ inc, onUpdate }) {
       setConfirmClose(false);
       onUpdate();
     } catch (err) {
-      toast.error("操作失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setClosing(false);
     }
@@ -271,7 +275,7 @@ function ActionPanel({ inc, onUpdate }) {
       setEnisaRef("");
       setRemDate("");
     } catch (err) {
-      toast.error("操作失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setSaving(false);
     }

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CheckCircle2 } from "lucide-react";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
 import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
+import { pickErrorDetail } from "../utils/errors";
 
 const SEVERITY_OPTIONS = [
   { value: "any",      label: "任何嚴重度" },
@@ -21,6 +23,7 @@ const DEFAULT_FORM = {
 };
 
 export default function Policies() {
+  const { t } = useTranslation();
   const [rules, setRules] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,7 +87,7 @@ export default function Policies() {
       setShowForm(false);
       fetchAll();
     } catch (e) {
-      flash("err", e.response?.data?.detail || "儲存失敗");
+      flash("err", pickErrorDetail(e, t("errors.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -94,7 +97,7 @@ export default function Policies() {
     try {
       await api.patch(`/policies/${rule.id}`, { enabled: !rule.enabled });
       fetchAll();
-    } catch { flash("err", "更新失敗"); }
+    } catch { flash("err", t("errors.updateFailed")); }
   };
 
   const handleDelete = async () => {
@@ -104,7 +107,7 @@ export default function Policies() {
       flash("ok", "規則已刪除");
       setConfirmDeleteRule(null);
       fetchAll();
-    } catch { flash("err", "刪除失敗"); }
+    } catch { flash("err", t("errors.deleteFailed")); }
     finally { setDeleting(false); }
   };
 
@@ -138,17 +141,17 @@ export default function Policies() {
       setShowLicenseForm(false);
       fetchAll();
     } catch (e) {
-      flash("err", e.response?.data?.detail || "儲存失敗");
+      flash("err", pickErrorDetail(e, t("errors.saveFailed")));
     } finally { setSavingLicense(false); }
   };
   const handleToggleLicense = async (r) => {
     try { await api.patch(`/licenses/rules/${r.id}`, { enabled: !r.enabled }); fetchAll(); }
-    catch { flash("err", "更新失敗"); }
+    catch { flash("err", t("errors.updateFailed")); }
   };
   const handleDeleteLicense = async () => {
     setDeleting(true);
     try { await api.delete(`/licenses/rules/${confirmDeleteLicense.id}`); flash("ok", "規則已刪除"); setConfirmDeleteLicense(null); fetchAll(); }
-    catch { flash("err", "刪除失敗"); }
+    catch { flash("err", t("errors.deleteFailed")); }
     finally { setDeleting(false); }
   };
 

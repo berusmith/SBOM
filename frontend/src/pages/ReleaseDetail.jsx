@@ -9,6 +9,7 @@ import { SkeletonInline } from "../components/Skeleton";
 import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDateTime } from "../utils/date";
+import { formatApiError, pickErrorDetail } from "../utils/errors";
 import { hasPlan } from "../utils/plan";
 
 const DependencyGraph = lazy(() => import("../components/DependencyGraph").then(m => ({ default: m.DependencyGraph })));
@@ -187,7 +188,7 @@ export default function ReleaseDetail() {
       await api.post(`/releases/${releaseId}/${action}`);
       setLocked(!locked);
       setConfirmLock(false);
-    } catch (e) { toast.error(e.response?.data?.detail || "操作失敗"); }
+    } catch (e) { toast.error(pickErrorDetail(e, t("errors.operationFailed"))); }
     finally { setToggling(false); }
   };
 
@@ -221,7 +222,7 @@ export default function ReleaseDetail() {
       setSigForm({ signature: "", public_key: "", algorithm: "", signer_identity: "" });
       fetchSigStatus();
     } catch (e) {
-      toast.error(e.response?.data?.detail || "簽章上傳失敗");
+      toast.error(pickErrorDetail(e, t("errors.uploadFailed")));
     } finally {
       setSigUploading(false);
     }
@@ -233,7 +234,7 @@ export default function ReleaseDetail() {
       toast.success("簽章已移除");
       setSigStatus(null);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "刪除簽章失敗");
+      toast.error(pickErrorDetail(e, t("errors.deleteFailed")));
     }
   };
 
@@ -296,7 +297,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setBusyKey("pdf", false);
     }
@@ -313,7 +314,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setBusyKey("iec", false);
     }
@@ -330,7 +331,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setBusyKey("evidence", false);
     }
@@ -407,7 +408,7 @@ export default function ReleaseDetail() {
       fetchShareLinks();
       toast.success("分享連結已建立，請複製後傳給外部人員");
     } catch (err) {
-      toast.error("建立分享連結失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setShareCreating(false);
     }
@@ -419,7 +420,7 @@ export default function ReleaseDetail() {
       fetchShareLinks();
       if (shareNewLink?.id === linkId) setShareNewLink(null);
     } catch (err) {
-      toast.error("撤銷失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     }
   };
 
@@ -437,7 +438,7 @@ export default function ReleaseDetail() {
       URL.revokeObjectURL(url);
     } catch (err) {
       const msg = err.response?.data ? await err.response.data.text?.() : err.message;
-      toast.error("格式轉換失敗：" + (msg || err.message));
+      toast.error(`${t("errors.operationFailed")}: ${msg || err.message}`);
     } finally {
       setConverting(false);
       if (convertFileRef.current) convertFileRef.current.value = "";
@@ -473,7 +474,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("匯出失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setBusyKey("csv", false);
     }
@@ -512,7 +513,7 @@ export default function ReleaseDetail() {
       await api.post(`/releases/${releaseId}/enrich-epss`);
       fetchVulns();
     } catch (err) {
-      toast.error("EPSS 更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.updateFailed")));
     } finally {
       setBusyKey("epss", false);
     }
@@ -531,7 +532,7 @@ export default function ReleaseDetail() {
       fetchVulns();
       toast.success(`已批次更新 ${count} 筆漏洞狀態為「${STATUS_LABEL[batchStatus] || batchStatus}」`);
     } catch (err) {
-      toast.error("批次更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.updateFailed")));
     } finally {
       setBatching(false);
     }
@@ -548,7 +549,7 @@ export default function ReleaseDetail() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error("下載失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.operationFailed")));
     } finally {
       setBusyKey("csaf", false);
     }
@@ -773,7 +774,7 @@ export default function ReleaseDetail() {
                       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/xml" }));
                       const a = document.createElement("a"); a.href = url; a.download = `cyclonedx_${releaseId.slice(0,8)}.xml`; a.click();
                       URL.revokeObjectURL(url);
-                    } catch { toast.error("匯出失敗"); } finally { setBusyKey("cdx", false); }
+                    } catch { toast.error(t("errors.operationFailed")); } finally { setBusyKey("cdx", false); }
                   }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {busy.cdx ? "匯出中..." : "CycloneDX XML"}
                   </button>
@@ -784,7 +785,7 @@ export default function ReleaseDetail() {
                       const url = URL.createObjectURL(new Blob([resp.data], { type: "application/json" }));
                       const a = document.createElement("a"); a.href = url; a.download = `spdx_${releaseId.slice(0,8)}.json`; a.click();
                       URL.revokeObjectURL(url);
-                    } catch { toast.error("匯出失敗"); } finally { setBusyKey("spdx", false); }
+                    } catch { toast.error(t("errors.operationFailed")); } finally { setBusyKey("spdx", false); }
                   }} className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                     {busy.spdx ? "匯出中..." : "SPDX JSON"}
                   </button>
@@ -1969,7 +1970,7 @@ function VexModal({ vuln, onClose, onUpdate }) {
       onUpdate();
       onClose();
     } catch {
-      toast.error("更新失敗");
+      toast.error(t("errors.updateFailed"));
     } finally {
       setSaving(false);
     }

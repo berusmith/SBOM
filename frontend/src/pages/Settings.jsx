@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate, formatDateTime } from "../utils/date";
+import { pickErrorDetail } from "../utils/errors";
 
 export default function Settings() {
+  const { t } = useTranslation();
   // Current user role
   const [currentRole, setCurrentRole] = useState(null);
 
@@ -92,7 +95,7 @@ export default function Settings() {
       fetchCfg();
       fetchMonitorStatus();
     } catch (e) {
-      flash("err", e.response?.data?.detail || "儲存失敗");
+      flash("err", pickErrorDetail(e, t("errors.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -109,7 +112,7 @@ export default function Settings() {
         setTimeout(fetchMonitorStatus, 3000);
       }
     } catch (e) {
-      flash("err", e.response?.data?.detail || "啟動失敗");
+      flash("err", pickErrorDetail(e, t("errors.operationFailed")));
     } finally {
       setTriggering(false);
     }
@@ -121,7 +124,7 @@ export default function Settings() {
       await api.post("/settings/alerts/test-webhook");
       flash("ok", "Webhook 測試發送成功");
     } catch (e) {
-      flash("err", e.response?.data?.detail || "Webhook 測試失敗");
+      flash("err", pickErrorDetail(e, t("errors.operationFailed")));
     } finally {
       setTestingWh(false);
     }
@@ -133,7 +136,7 @@ export default function Settings() {
       await api.post("/settings/alerts/test-email");
       flash("ok", "測試 Email 已發送，請檢查收件匣");
     } catch (e) {
-      flash("err", e.response?.data?.detail || "Email 測試失敗");
+      flash("err", pickErrorDetail(e, t("errors.operationFailed")));
     } finally {
       setTestingEmail(false);
     }
@@ -151,7 +154,7 @@ export default function Settings() {
       flash("ok", "品牌設定已儲存");
       fetchBrand();
     } catch (e) {
-      flash("err", e.response?.data?.detail || "儲存失敗");
+      flash("err", pickErrorDetail(e, t("errors.saveFailed")));
     } finally {
       setSavingBrand(false);
     }
@@ -168,7 +171,7 @@ export default function Settings() {
       flash("ok", "Logo 上傳成功");
       fetchBrand();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "Logo 上傳失敗");
+      flash("err", pickErrorDetail(err, t("errors.uploadFailed")));
     } finally {
       setUploadingLogo(false);
       if (logoInputRef.current) logoInputRef.current.value = "";
@@ -181,7 +184,7 @@ export default function Settings() {
       flash("ok", "Logo 已移除");
       fetchBrand();
     } catch {
-      flash("err", "移除失敗");
+      flash("err", t("errors.deleteFailed"));
     }
   };
 
@@ -478,6 +481,7 @@ export default function Settings() {
 }
 
 function ApiTokens({ flash }) {
+  const { t } = useTranslation();
   const [tokens, setTokens] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -502,7 +506,7 @@ function ApiTokens({ flash }) {
       setShowForm(false);
       fetchTokens();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "建立失敗");
+      flash("err", pickErrorDetail(err, t("errors.createFailed")));
     } finally {
       setSaving(false);
     }
@@ -515,7 +519,7 @@ function ApiTokens({ flash }) {
       setConfirmRevoke(null);
       fetchTokens();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "撤銷失敗");
+      flash("err", pickErrorDetail(err, t("errors.deleteFailed")));
     }
   };
 
@@ -524,7 +528,7 @@ function ApiTokens({ flash }) {
       await navigator.clipboard.writeText(newToken.token);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { flash("err", "複製失敗，請手動選取後複製"); }
+    } catch { flash("err", t("errors.operationFailed")); }
   };
 
   return (
@@ -656,6 +660,7 @@ function ApiTokens({ flash }) {
 }
 
 function UserManagement({ flash }) {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ username: "", password: "", role: "viewer" });
@@ -678,7 +683,7 @@ function UserManagement({ flash }) {
       setShowForm(false);
       fetchUsers();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "建立失敗");
+      flash("err", pickErrorDetail(err, t("errors.createFailed")));
     } finally {
       setSaving(false);
     }
@@ -696,7 +701,7 @@ function UserManagement({ flash }) {
       await api.patch(`/users/${u.id}`, { role: newRole });
       fetchUsers();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "更新失敗");
+      flash("err", pickErrorDetail(err, t("errors.updateFailed")));
     }
   };
 
@@ -708,7 +713,7 @@ function UserManagement({ flash }) {
       setConfirmDelete(null);
       fetchUsers();
     } catch (err) {
-      flash("err", err.response?.data?.detail || "刪除失敗");
+      flash("err", pickErrorDetail(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { TISAX_COMPLIANCE_STATUS, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonDetail } from "../components/Skeleton";
+import { formatApiError } from "../utils/errors";
 
 const STATUS_CONFIG = TISAX_COMPLIANCE_STATUS;
 
@@ -24,6 +26,7 @@ function StatusBadge({ status }) {
 }
 
 function ControlRow({ ctrl, onSave }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing]   = useState(false);
@@ -50,7 +53,7 @@ function ControlRow({ ctrl, onSave }) {
       });
       setEditing(false);
     } catch (err) {
-      toast.error("儲存失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.saveFailed")));
     } finally {
       setSaving(false);
     }
@@ -163,6 +166,7 @@ function ControlRow({ ctrl, onSave }) {
 }
 
 export default function TISAXDetail() {
+  const { t } = useTranslation();
   const toast = useToast();
   const { assessmentId } = useParams();
   const navigate = useNavigate();
@@ -193,7 +197,7 @@ export default function TISAXDetail() {
       const a = document.createElement("a");
       a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.csv`; a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error("匯出失敗"); } finally { setExporting(false); }
+    } catch { toast.error(t("errors.operationFailed")); } finally { setExporting(false); }
   };
 
   const handleExportPdf = async () => {
@@ -204,7 +208,7 @@ export default function TISAXDetail() {
       const a = document.createElement("a");
       a.href = url; a.download = `tisax_${assessmentId.slice(0,8)}.pdf`; a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error("PDF 匯出失敗"); } finally { setExportingPdf(false); }
+    } catch { toast.error(t("errors.operationFailed")); } finally { setExportingPdf(false); }
   };
 
   if (!data) return <div className="p-6"><SkeletonDetail sections={3} /></div>;
