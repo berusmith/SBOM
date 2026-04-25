@@ -79,6 +79,35 @@ const en = {
     showing:        "Showing {{shown}} / {{total}}",
   },
 
+  // ── Common error messages ─────────────────────────────────────────────────
+  errors: {
+    operationFailed: "Operation failed",
+    createFailed:    "Create failed",
+    updateFailed:    "Update failed",
+    deleteFailed:    "Delete failed",
+    uploadFailed:    "Upload failed",
+    loadFailed:      "Load failed",
+    saveFailed:      "Save failed",
+    importFailed:    "Import failed",
+    networkError:    "Network error, please check the connection and retry",
+    permissionDenied:"Permission denied",
+    notFound:        "Not found",
+    expired:         "Session expired, please sign in again",
+    rateLimited:     "Too many requests, please wait a moment",
+    withDetail:      "{{action}}: {{detail}}",
+    cantLoad:        "Cannot load {{what}}",
+  },
+
+  // ── Common success messages ───────────────────────────────────────────────
+  successes: {
+    created:         "{{name}} created",
+    updated:         "{{name}} updated",
+    deleted:         "{{name}} deleted",
+    saved:           "Saved",
+    uploaded:        "Upload complete",
+    imported:        "Imported",
+  },
+
   // ── Severity ──────────────────────────────────────────────────────────────
   severity: {
     critical: "Critical",

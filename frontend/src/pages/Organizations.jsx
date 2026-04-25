@@ -5,8 +5,10 @@ import { Check } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { PasswordInput } from "../components/PasswordInput";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
+import { formatApiError } from "../utils/errors";
 import { validate, validators } from "../utils/validate";
 import { SkeletonTable } from "../components/Skeleton";
 
@@ -34,7 +36,7 @@ export default function Organizations() {
     setOrgsLoading(true);
     api.get("/organizations")
       .then((res) => setOrgs(res.data))
-      .catch(() => toast.error("客戶清單載入失敗，請重新整理"))
+      .catch((err) => toast.error(formatApiError(err, t("errors.loadFailed"))))
       .finally(() => setOrgsLoading(false));
   };
 
@@ -71,7 +73,7 @@ export default function Organizations() {
       setCreated(res.data);
       fetchOrgs();
     } catch (err) {
-      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export default function Organizations() {
       setEditOrg(null);
       fetchOrgs();
     } catch (err) {
-      toast.error("更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.updateFailed")));
     }
   };
 
@@ -96,7 +98,7 @@ export default function Organizations() {
       setConfirmDelete(null);
       fetchOrgs();
     } catch (err) {
-      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }
@@ -197,25 +199,21 @@ export default function Organizations() {
         </form>
       )}
 
-      {editOrg && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4">
-            <h2 className="text-lg font-semibold mb-4">編輯客戶名稱</h2>
-            <input
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setEditOrg(null)}
-                className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100">取消</button>
-              <button type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">儲存</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal isOpen={!!editOrg} title="編輯客戶名稱" onClose={() => setEditOrg(null)}>
+        <form onSubmit={handleEdit}>
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
+          />
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <button type="button" onClick={() => setEditOrg(null)}
+              className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+            <button type="submit"
+              className="bg-blue-600 text-white px-4 py-2.5 text-sm rounded font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">儲存</button>
+          </div>
+        </form>
+      </Modal>
 
       {orgsLoading ? <SkeletonTable rows={4} cols={4} /> : null}
       <div className="bg-white rounded-lg shadow overflow-hidden" style={{ display: orgsLoading ? "none" : "" }}>

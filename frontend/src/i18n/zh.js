@@ -79,6 +79,37 @@ const zh = {
     showing:        "顯示 {{shown}} / {{total}} 筆",
   },
 
+  // ── 通用錯誤訊息 ──────────────────────────────────────────────────────────
+  // 用於 toast.error / setError;若 backend 回傳 detail 訊息,優先顯示 detail。
+  errors: {
+    operationFailed: "操作失敗",
+    createFailed:    "建立失敗",
+    updateFailed:    "更新失敗",
+    deleteFailed:    "刪除失敗",
+    uploadFailed:    "上傳失敗",
+    loadFailed:      "載入失敗",
+    saveFailed:      "儲存失敗",
+    importFailed:    "匯入失敗",
+    networkError:    "網路錯誤,請檢查連線後重試",
+    permissionDenied:"權限不足",
+    notFound:        "找不到資料",
+    expired:         "登入已過期,請重新登入",
+    rateLimited:     "請求過於頻繁,請稍候再試",
+    // 帶 detail 變數的格式: 例如 t("errors.withDetail", { action: t("errors.createFailed"), detail: ... })
+    withDetail:      "{{action}}:{{detail}}",
+    cantLoad:        "無法載入{{what}}",
+  },
+
+  // ── 通用成功訊息 ──────────────────────────────────────────────────────────
+  successes: {
+    created:         "{{name}} 已建立",
+    updated:         "{{name}} 已更新",
+    deleted:         "{{name}} 已刪除",
+    saved:           "已儲存",
+    uploaded:        "上傳完成",
+    imported:        "已匯入",
+  },
+
   // ── 嚴重度 ────────────────────────────────────────────────────────────────
   severity: {
     critical: "嚴重",

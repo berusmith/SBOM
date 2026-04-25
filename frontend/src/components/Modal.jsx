@@ -1,0 +1,156 @@
+import { useEffect, useRef, useId } from "react";
+import { X } from "lucide-react";
+
+/**
+ * Accessible modal wrapper.  Handles every detail of the WAI-ARIA modal
+ * pattern so callers don't have to:
+ *   - role="dialog" + aria-modal="true" + aria-labelledby
+ *   - Tab cycles within the dialog (focus trap)
+ *   - Escape closes (calls onClose)
+ *   - Initial focus moves to the first focusable element after mount
+ *   - On close, focus returns to whatever opened the dialog
+ *   - Body scroll is locked while open
+ *   - Backdrop click closes (configurable via closeOnBackdrop)
+ *
+ * RWD:
+ *   - Full-width on mobile with comfortable padding
+ *   - Caps at sm:max-w-md by default; pass `size="lg"` or `size="xl"` for
+ *     wider content (forms with two columns, etc.)
+ *   - max-h-[90vh] with overflow-y-auto so long content stays scrollable
+ *
+ * Usage:
+ *   <Modal isOpen={open} title="Edit user" onClose={() => setOpen(false)}>
+ *     <form>...</form>
+ *   </Modal>
+ *
+ * For the common confirm-an-action pattern, use ConfirmModal — it composes
+ * this Modal and adds the confirm/cancel button row + optional type-to-confirm.
+ */
+const SIZE_CLASSES = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-2xl",
+  xl: "sm:max-w-4xl",
+};
+
+export function Modal({
+  isOpen,
+  title,
+  onClose,
+  children,
+  size = "md",
+  closeOnBackdrop = true,
+  showCloseButton = true,
+  initialFocusRef,        // optional: ref to element to focus first
+  ariaDescribedBy,        // optional: id of element describing the dialog
+}) {
+  const containerRef = useRef(null);
+  const previouslyFocusedRef = useRef(null);
+  const titleId = useId();
+
+  // Lifecycle: capture previous focus, lock scroll, set initial focus, and
+  // restore on unmount.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previouslyFocusedRef.current = document.activeElement;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // Defer focus so refs are populated.
+    const focusTimer = window.setTimeout(() => {
+      if (initialFocusRef?.current?.focus) {
+        initialFocusRef.current.focus();
+        return;
+      }
+      if (!containerRef.current) return;
+      // Auto-focus the first focusable child; if none, focus the dialog
+      // itself (we set tabIndex={-1} below to make this possible).
+      const focusables = containerRef.current.querySelectorAll(
+        'input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        containerRef.current.focus();
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = prevOverflow;
+      const prev = previouslyFocusedRef.current;
+      if (prev && document.body.contains(prev) && typeof prev.focus === "function") {
+        prev.focus();
+      }
+    };
+  }, [isOpen, initialFocusRef]);
+
+  // Keyboard: Escape closes; Tab cycles.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose?.();
+        return;
+      }
+      if (e.key !== "Tab" || !containerRef.current) return;
+      const focusables = containerRef.current.querySelectorAll(
+        'input:not([disabled]), button:not([disabled]), [href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-4">
+      <div
+        className="absolute inset-0 bg-black/40"
+        aria-hidden="true"
+        onClick={() => closeOnBackdrop && onClose?.()}
+      />
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={ariaDescribedBy}
+        tabIndex={-1}
+        className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClass} max-h-[90vh] overflow-y-auto focus:outline-none`}
+      >
+        <div className="flex items-start justify-between p-5 sm:p-6 pb-3">
+          <h2 id={titleId} className="text-lg font-bold text-gray-800">{title}</h2>
+          {showCloseButton && (
+            <button
+              type="button"
+              onClick={() => onClose?.()}
+              aria-label="Close"
+              className="-mr-1 -mt-1 p-1.5 rounded text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        <div className="px-5 sm:px-6 pb-5 sm:pb-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}

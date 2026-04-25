@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { Upload, CheckCircle, AlertCircle, Clock, X } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { Modal } from "../components/Modal";
+import { formatApiError } from "../utils/errors";
 
 export default function FirmwareUpload() {
+  const { t } = useTranslation();
   const toast = useToast();
   const navigate = useNavigate();
   const [scans, setScans] = useState([]);
@@ -64,7 +68,7 @@ export default function FirmwareUpload() {
       setAutoRefresh(true);
       fetchScans();
     } catch (err) {
-      toast.error("上傳失敗: " + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.uploadFailed")));
     } finally {
       setUploading(false);
     }
@@ -83,7 +87,7 @@ export default function FirmwareUpload() {
       const orgs = await api.get("/organizations");
       setOrganizations(orgs.data || []);
     } catch (err) {
-      toast.error("無法載入組織清單");
+      toast.error(t("errors.cantLoad", { what: t("nav.customers") }));
     }
 
     setImportModalOpen(true);
@@ -101,7 +105,7 @@ export default function FirmwareUpload() {
       const prods = await api.get(`/organizations/${orgId}/products`);
       setProducts(prods.data || []);
     } catch (err) {
-      toast.error("無法載入產品清單");
+      toast.error(t("errors.cantLoad", { what: t("products.title") }));
     }
   };
 
@@ -139,7 +143,7 @@ export default function FirmwareUpload() {
         }
       });
     } catch (err) {
-      toast.error("匯入失敗: " + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.importFailed")));
     } finally {
       setImportLoading(false);
     }
@@ -313,100 +317,87 @@ export default function FirmwareUpload() {
       </div>
 
       {/* Import Modal */}
-      {importModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">匯入為版本</h3>
-              <button
-                onClick={() => setImportModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-                disabled={importLoading}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              {/* Organization Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">組織</label>
-                <select
-                  value={importData.org}
-                  onChange={(e) => handleOrgChange(e.target.value)}
-                  disabled={importLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="">選擇組織...</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={org.id}>
-                      {org.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Product Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">產品</label>
-                <select
-                  value={importData.product}
-                  onChange={(e) => setImportData({ ...importData, product: e.target.value })}
-                  disabled={importLoading || !importData.org}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
-                >
-                  <option value="">選擇產品...</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Version Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">版本號</label>
-                <input
-                  type="text"
-                  value={importData.version}
-                  onChange={(e) => setImportData({ ...importData, version: e.target.value })}
-                  disabled={importLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  placeholder="e.g., v1.0.0"
-                />
-              </div>
-
-              {/* Component Count Info */}
-              {importingScan?.components_count > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                  <p className="text-sm text-blue-800">
-                    將匯入 <strong>{importingScan.components_count}</strong> 個檢測到的元件
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex gap-3 p-6 border-t border-gray-200">
-              <button
-                onClick={() => setImportModalOpen(false)}
-                disabled={importLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleImportConfirm}
-                disabled={importLoading || !importData.org || !importData.product || !importData.version}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:cursor-not-allowed"
-              >
-                {importLoading ? "匯入中..." : "確認匯入"}
-              </button>
-            </div>
+      <Modal isOpen={importModalOpen} title="匯入為版本" onClose={() => !importLoading && setImportModalOpen(false)}>
+        <div className="space-y-4">
+          {/* Organization Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">組織</label>
+            <select
+              value={importData.org}
+              onChange={(e) => handleOrgChange(e.target.value)}
+              disabled={importLoading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">選擇組織...</option>
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
           </div>
+
+          {/* Product Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">產品</label>
+            <select
+              value={importData.product}
+              onChange={(e) => setImportData({ ...importData, product: e.target.value })}
+              disabled={importLoading || !importData.org}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+            >
+              <option value="">選擇產品...</option>
+              {products.map((product) => (
+                <option key={product.id} value={product.id}>
+                  {product.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Version Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">版本號</label>
+            <input
+              type="text"
+              value={importData.version}
+              onChange={(e) => setImportData({ ...importData, version: e.target.value })}
+              disabled={importLoading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="e.g., v1.0.0"
+            />
+          </div>
+
+          {/* Component Count Info */}
+          {importingScan?.components_count > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+              <p className="text-sm text-blue-800">
+                將匯入 <strong>{importingScan.components_count}</strong> 個檢測到的元件
+              </p>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Footer */}
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 mt-5">
+          <button
+            type="button"
+            onClick={() => setImportModalOpen(false)}
+            disabled={importLoading}
+            className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleImportConfirm}
+            disabled={importLoading || !importData.org || !importData.product || !importData.version}
+            className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1"
+          >
+            {importLoading ? "匯入中..." : "確認匯入"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

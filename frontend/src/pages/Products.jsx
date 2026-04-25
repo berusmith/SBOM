@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Package } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { SkeletonTable } from "../components/Skeleton";
+import { formatApiError } from "../utils/errors";
 
 export default function Products() {
   const { t } = useTranslation();
@@ -46,7 +48,7 @@ export default function Products() {
       setShowForm(false);
       fetchData();
     } catch (err) {
-      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ export default function Products() {
       setConfirmDelete(null);
       fetchData();
     } catch (err) {
-      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }
@@ -72,10 +74,10 @@ export default function Products() {
     try {
       await api.patch(`/products/${editProduct.id}`, editForm);
       setEditProduct(null);
-      toast.success("產品已更新");
+      toast.success(t("successes.updated", { name: editForm.name }));
       fetchData();
     } catch (err) {
-      toast.error("更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.updateFailed")));
     } finally {
       setEditSaving(false);
     }
@@ -117,31 +119,30 @@ export default function Products() {
       )}
 
       {/* Edit modal */}
-      {editProduct && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={handleEdit} className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-semibold text-gray-800">編輯產品</h3>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">產品名稱</label>
-              <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                required className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">產品描述（選填）</label>
-              <input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setEditProduct(null)}
-                className="px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-100">{t("common.cancel")}</button>
-              <button type="submit" disabled={editSaving}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-                {editSaving ? "儲存中..." : "儲存"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal isOpen={!!editProduct} title="編輯產品" onClose={() => setEditProduct(null)}>
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">產品名稱</label>
+            <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">產品描述（選填）</label>
+            <input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <button type="button" onClick={() => setEditProduct(null)}
+              className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={editSaving}
+              className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+              {editSaving ? "儲存中..." : "儲存"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {pageLoading ? <SkeletonTable rows={4} cols={3} /> : (
         <div className="bg-white rounded-lg shadow overflow-hidden">

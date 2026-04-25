@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
 import { validate, validators } from "../utils/validate";
@@ -187,62 +188,60 @@ export default function Users() {
         </form>
       )}
 
-      {editUser && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <form onSubmit={handleEdit} className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-4 space-y-3">
-            <h2 className="text-lg font-semibold">編輯帳號</h2>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">登入帳號</label>
-              <input value={editForm.username}
-                onChange={e => setEditForm({ ...editForm, username: e.target.value })}
-                className="border border-gray-300 rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">密碼（留空則不修改）</label>
-              <PasswordInput
-                value={editForm.password}
-                onChange={e => {
-                  setEditForm({ ...editForm, password: e.target.value });
-                  if (editErrors.password) setEditErrors(prev => ({...prev, password: null}));
-                }}
-                error={editErrors.password}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">角色</label>
-              <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}
-                className="border rounded px-3 py-2 w-full text-sm">
-                <option value="viewer">客戶（viewer）</option>
-                <option value="admin">管理員（admin）</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">綁定組織</label>
-              <select value={editForm.organization_id} onChange={e => setEditForm({ ...editForm, organization_id: e.target.value })}
-                className="border rounded px-3 py-2 w-full text-sm">
-                <option value="">— 不綁定 —</option>
-                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Email（密碼重設用，選填）</label>
-              <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                placeholder="user@example.com"
-                className="border rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm({ ...editForm, is_active: e.target.checked })} />
-              帳號啟用中
-            </label>
-            <div className="flex gap-2 justify-end pt-1">
-              <button type="button" onClick={() => setEditUser(null)}
-                className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100">取消</button>
-              <button type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">儲存</button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal isOpen={!!editUser} title="編輯帳號" onClose={() => setEditUser(null)}>
+        <form onSubmit={handleEdit} className="space-y-3">
+          <div>
+            <label className="text-xs text-gray-700 block mb-1">登入帳號</label>
+            <input value={editForm.username}
+              onChange={e => setEditForm({ ...editForm, username: e.target.value })}
+              className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-700 block mb-1">密碼（留空則不修改）</label>
+            <PasswordInput
+              value={editForm.password}
+              onChange={e => {
+                setEditForm({ ...editForm, password: e.target.value });
+                if (editErrors.password) setEditErrors(prev => ({...prev, password: null}));
+              }}
+              autoComplete="new-password"
+              error={editErrors.password}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-700 block mb-1">角色</label>
+            <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+              className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="viewer">客戶（viewer）</option>
+              <option value="admin">管理員（admin）</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-700 block mb-1">綁定組織</label>
+            <select value={editForm.organization_id} onChange={e => setEditForm({ ...editForm, organization_id: e.target.value })}
+              className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">— 不綁定 —</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-700 block mb-1">Email（密碼重設用，選填）</label>
+            <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+              placeholder="user@example.com"
+              className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm({ ...editForm, is_active: e.target.checked })} />
+            帳號啟用中
+          </label>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-2">
+            <button type="button" onClick={() => setEditUser(null)}
+              className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+            <button type="submit"
+              className="bg-blue-600 text-white px-4 py-2.5 text-sm rounded font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">儲存</button>
+          </div>
+        </form>
+      </Modal>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {users.length === 0 ? (

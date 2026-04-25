@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import api from "../api/client";
 import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 
 const SEVERITY_OPTIONS = [
@@ -313,161 +314,157 @@ export default function Policies() {
       </div>
 
       {/* License rule form modal */}
-      {showLicenseForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowLicenseForm(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-gray-800 mb-4">{editLicenseRule ? "編輯 License 規則" : "新增 License 規則"}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">License SPDX ID <span className="text-red-400">*</span></label>
-                <input value={licenseForm.license_id}
-                  onChange={(e) => setLicenseForm({ ...licenseForm, license_id: e.target.value })}
-                  placeholder="例：GPL-3.0、AGPL-3.0、LGPL-2.1"
-                  className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-purple-400" />
-                <p className="text-xs text-gray-600 mt-0.5">使用 SPDX 識別碼，系統會對元件授權做子字串比對</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">顯示名稱</label>
-                <input value={licenseForm.label}
-                  onChange={(e) => setLicenseForm({ ...licenseForm, label: e.target.value })}
-                  placeholder="例：GNU GPL v3"
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">動作</label>
-                <div className="flex gap-4">
-                  {[{ v: "warn", l: "警告（標記元件）" }, { v: "block", l: "阻擋（強制違規）" }].map((o) => (
-                    <label key={o.v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="radio" value={o.v} checked={licenseForm.action === o.v}
-                        onChange={() => setLicenseForm({ ...licenseForm, action: o.v })} />
-                      {o.l}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={licenseForm.enabled}
-                  onChange={(e) => setLicenseForm({ ...licenseForm, enabled: e.target.checked })} />
-                啟用此規則
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setShowLicenseForm(false)} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
-              <button onClick={handleSaveLicense} disabled={savingLicense}
-                className={`px-4 py-2 text-sm text-white rounded ${savingLicense ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}>
-                {savingLicense ? "儲存中..." : "儲存"}
-              </button>
+      <Modal isOpen={showLicenseForm} title={editLicenseRule ? "編輯 License 規則" : "新增 License 規則"} onClose={() => setShowLicenseForm(false)}>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">License SPDX ID <span className="text-red-600" aria-hidden="true">*</span></label>
+            <input value={licenseForm.license_id}
+              onChange={(e) => setLicenseForm({ ...licenseForm, license_id: e.target.value })}
+              placeholder="例：GPL-3.0、AGPL-3.0、LGPL-2.1"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-purple-400" />
+            <p className="text-xs text-gray-700 mt-0.5">使用 SPDX 識別碼，系統會對元件授權做子字串比對</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">顯示名稱</label>
+            <input value={licenseForm.label}
+              onChange={(e) => setLicenseForm({ ...licenseForm, label: e.target.value })}
+              placeholder="例：GNU GPL v3"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-purple-400" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">動作</label>
+            <div className="flex flex-wrap gap-4">
+              {[{ v: "warn", l: "警告（標記元件）" }, { v: "block", l: "阻擋（強制違規）" }].map((o) => (
+                <label key={o.v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="radio" value={o.v} checked={licenseForm.action === o.v}
+                    onChange={() => setLicenseForm({ ...licenseForm, action: o.v })} />
+                  {o.l}
+                </label>
+              ))}
             </div>
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={licenseForm.enabled}
+              onChange={(e) => setLicenseForm({ ...licenseForm, enabled: e.target.checked })} />
+            啟用此規則
+          </label>
         </div>
-      )}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+          <button type="button" onClick={() => setShowLicenseForm(false)}
+            className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+          <button type="button" onClick={handleSaveLicense} disabled={savingLicense}
+            className={`px-4 py-2.5 text-sm text-white rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              savingLicense ? "bg-gray-400 cursor-not-allowed" : "bg-purple-600 hover:bg-purple-700 focus:ring-purple-400"
+            }`}>
+            {savingLicense ? "儲存中..." : "儲存"}
+          </button>
+        </div>
+      </Modal>
 
       {/* Rule form modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg mx-2 sm:mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-semibold text-gray-800 mb-4">{editRule ? "編輯規則" : "新增規則"}</h3>
+      <Modal isOpen={showForm} title={editRule ? "編輯規則" : "新增規則"} onClose={() => setShowForm(false)} size="lg">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">規則名稱 <span className="text-red-600" aria-hidden="true">*</span></label>
+            <input
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">規則名稱 <span className="text-red-400">*</span></label>
-                <input
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">說明</label>
+            <input
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">說明</label>
-                <input
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">嚴重度條件</label>
-                  <select
-                    value={form.severity}
-                    onChange={(e) => setForm({ ...form, severity: e.target.value })}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  >
-                    {SEVERITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">超過天數才違規</label>
-                  <input
-                    type="number" min={0}
-                    value={form.min_days_open}
-                    onChange={(e) => setForm({ ...form, min_days_open: parseInt(e.target.value) || 0 })}
-                    className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">適用狀態（逗號分隔）</label>
-                <input
-                  value={form.statuses}
-                  onChange={(e) => setForm({ ...form, statuses: e.target.value })}
-                  placeholder="open,in_triage,affected"
-                  className="w-full border rounded px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <p className="text-xs text-gray-600 mt-0.5">可用值：open / in_triage / affected / not_affected / fixed</p>
-              </div>
-
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.require_kev}
-                    onChange={(e) => setForm({ ...form, require_kev: e.target.checked })}
-                    className="rounded"
-                  />
-                  僅適用 KEV 漏洞
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.enabled}
-                    onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
-                    className="rounded"
-                  />
-                  啟用此規則
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">動作</label>
-                <div className="flex gap-4">
-                  {[{ v: "warn", l: "警告（顯示徽章）" }, { v: "block", l: "阻擋（標記嚴重）" }].map((o) => (
-                    <label key={o.v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                      <input type="radio" value={o.v} checked={form.action === o.v}
-                        onChange={() => setForm({ ...form, action: o.v })} />
-                      {o.l}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">嚴重度條件</label>
+              <select
+                value={form.severity}
+                onChange={(e) => setForm({ ...form, severity: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                {saving ? "儲存中..." : "儲存"}
-              </button>
+                {SEVERITY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">超過天數才違規</label>
+              <input
+                type="number" min={0}
+                value={form.min_days_open}
+                onChange={(e) => setForm({ ...form, min_days_open: parseInt(e.target.value) || 0 })}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">適用狀態（逗號分隔）</label>
+            <input
+              value={form.statuses}
+              onChange={(e) => setForm({ ...form, statuses: e.target.value })}
+              placeholder="open,in_triage,affected"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <p className="text-xs text-gray-700 mt-0.5">可用值：open / in_triage / affected / not_affected / fixed</p>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.require_kev}
+                onChange={(e) => setForm({ ...form, require_kev: e.target.checked })}
+                className="rounded"
+              />
+              僅適用 KEV 漏洞
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.enabled}
+                onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+                className="rounded"
+              />
+              啟用此規則
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">動作</label>
+            <div className="flex flex-wrap gap-4">
+              {[{ v: "warn", l: "警告（顯示徽章）" }, { v: "block", l: "阻擋（標記嚴重）" }].map((o) => (
+                <label key={o.v} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input type="radio" value={o.v} checked={form.action === o.v}
+                    onChange={() => setForm({ ...form, action: o.v })} />
+                  {o.l}
+                </label>
+              ))}
             </div>
           </div>
         </div>
-      )}
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+          <button type="button" onClick={() => setShowForm(false)}
+            className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className={`px-4 py-2.5 text-sm text-white rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              saving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-400"
+            }`}
+          >
+            {saving ? "儲存中..." : "儲存"}
+          </button>
+        </div>
+      </Modal>
 
       <ConfirmModal
         isOpen={!!confirmDeleteRule}

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import api from "../api/client";
 import { CRA_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonTable } from "../components/Skeleton";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDateTime } from "../utils/date";
+import { formatApiError } from "../utils/errors";
 
 function Countdown({ seconds, label }) {
   if (seconds === null || seconds === undefined) return null;
@@ -23,6 +26,7 @@ function Countdown({ seconds, label }) {
 }
 
 export default function CRAIncidents() {
+  const { t } = useTranslation();
   const toast = useToast();
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export default function CRAIncidents() {
       setConfirmDelete(null);
       fetchIncidents();
     } catch (err) {
-      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }
@@ -157,6 +161,7 @@ export default function CRAIncidents() {
 }
 
 function CreateForm({ onClose, onCreated }) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [title, setTitle] = useState("");
   const [cveIds, setCveIds] = useState("");
@@ -176,56 +181,59 @@ function CreateForm({ onClose, onCreated }) {
       });
       onCreated();
     } catch (err) {
-      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <h2 className="font-semibold text-gray-800 mb-4">新增 CRA 事件</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">事件標題 <span className="text-red-500">*</span></label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="例：Log4Shell 影響評估"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-600 font-normal">(逗號分隔)</span></label>
-            <input
-              value={cveIds}
-              onChange={(e) => setCveIds(e.target.value)}
-              placeholder="CVE-2021-44228,CVE-2021-45046"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-600 font-normal">(選填)</span></label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
-            <button
-              type="submit"
-              disabled={saving || !title.trim()}
-              className={`px-4 py-2 text-sm text-white rounded ${saving || !title.trim() ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"}`}
-            >
-              {saving ? "建立中..." : "建立"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal isOpen={true} title="新增 CRA 事件" onClose={onClose} size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">事件標題 <span className="text-red-600" aria-hidden="true">*</span></label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="例：Log4Shell 影響評估"
+            required
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-700 font-normal">(逗號分隔)</span></label>
+          <input
+            value={cveIds}
+            onChange={(e) => setCveIds(e.target.value)}
+            placeholder="CVE-2021-44228,CVE-2021-45046"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-700 font-normal">(選填)</span></label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+          />
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <button type="button" onClick={onClose}
+            className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+            取消
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !title.trim()}
+            className={`px-4 py-2.5 text-sm text-white rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+              saving || !title.trim() ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 focus:ring-red-400"
+            }`}
+          >
+            {saving ? "建立中..." : "建立"}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

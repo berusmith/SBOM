@@ -6,6 +6,7 @@ import api from "../api/client";
 import { SEVERITY_COLOR, VEX_STATUS_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { useToast } from "../components/Toast";
 import { SkeletonInline } from "../components/Skeleton";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDateTime } from "../utils/date";
 import { hasPlan } from "../utils/plan";
@@ -1859,71 +1860,76 @@ function SuppressModal({ vuln, onClose, onUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-semibold text-gray-800 mb-1">漏洞抑制（風險接受）</h3>
-        <p className="text-xs text-gray-600 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+    <Modal isOpen={true} title="漏洞抑制（風險接受）" onClose={onClose}>
+      <p className="text-xs text-gray-700 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
 
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setSuppressing(true)}
-              className={`flex-1 py-2 rounded text-sm font-medium border transition-colors ${suppressing ? "bg-amber-500 text-white border-amber-500" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
-            >
-              抑制此漏洞
-            </button>
-            <button
-              onClick={() => setSuppressing(false)}
-              className={`flex-1 py-2 rounded text-sm font-medium border transition-colors ${!suppressing ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
-            >
-              解除抑制
-            </button>
-          </div>
-
-          {suppressing && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  抑制原因 <span className="text-gray-600 font-normal">(選填)</span>
-                </label>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={3}
-                  placeholder="例：已通過風險評估，此環境不受影響，待下季修補計畫處理..."
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  有效期限 <span className="text-gray-600 font-normal">(選填，到期後自動回復)</span>
-                </label>
-                <input
-                  type="date"
-                  value={until}
-                  onChange={(e) => setUntil(e.target.value)}
-                  className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
-                />
-              </div>
-              <p className="text-xs text-amber-700 bg-amber-50 rounded px-3 py-2">
-                抑制後此漏洞不計入嚴重度統計與 SLA，但仍記錄在案以供稽核。
-              </p>
-            </>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
+      <div className="space-y-4">
+        <div className="flex gap-3">
           <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : suppressing ? "bg-amber-500 hover:bg-amber-600" : "bg-blue-600 hover:bg-blue-700"}`}
+            type="button"
+            onClick={() => setSuppressing(true)}
+            className={`flex-1 py-2 rounded text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1 ${suppressing ? "bg-amber-500 text-white border-amber-500" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
           >
-            {saving ? "儲存中..." : suppressing ? "確認抑制" : "解除抑制"}
+            抑制此漏洞
+          </button>
+          <button
+            type="button"
+            onClick={() => setSuppressing(false)}
+            className={`flex-1 py-2 rounded text-sm font-medium border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 ${!suppressing ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+          >
+            解除抑制
           </button>
         </div>
+
+        {suppressing && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                抑制原因 <span className="text-gray-700 font-normal">(選填)</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="例：已通過風險評估，此環境不受影響，待下季修補計畫處理..."
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                有效期限 <span className="text-gray-700 font-normal">(選填，到期後自動回復)</span>
+              </label>
+              <input
+                type="date"
+                value={until}
+                onChange={(e) => setUntil(e.target.value)}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+            </div>
+            <p className="text-xs text-amber-800 bg-amber-50 rounded px-3 py-2">
+              抑制後此漏洞不計入嚴重度統計與 SLA，但仍記錄在案以供稽核。
+            </p>
+          </>
+        )}
       </div>
-    </div>
+
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+        <button type="button" onClick={onClose}
+          className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className={`px-4 py-2.5 text-sm text-white rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+            saving ? "bg-gray-400 cursor-not-allowed"
+            : suppressing ? "bg-amber-500 hover:bg-amber-600 focus:ring-amber-400"
+            : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-400"
+          }`}
+        >
+          {saving ? "儲存中..." : suppressing ? "確認抑制" : "解除抑制"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -1970,104 +1976,105 @@ function VexModal({ vuln, onClose, onUpdate }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-2 sm:mx-auto" onClick={(e) => e.stopPropagation()}>
-        <h3 className="font-semibold text-gray-800 mb-1">VEX 狀態更新</h3>
-        <p className="text-xs text-gray-600 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
+    <Modal isOpen={true} title="VEX 狀態更新" onClose={onClose}>
+      <p className="text-xs text-gray-700 mb-4 font-mono">{vuln.cve_id} — {vuln.component_name} {vuln.component_version}</p>
 
-        <div className="space-y-4">
-          {/* Status */}
+      <div className="space-y-4">
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Justification — only for not_affected */}
+        {status === "not_affected" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">狀態</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Justification <span className="text-gray-700 font-normal">(不受影響的原因)</span>
+            </label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              <option value="">— 選擇原因 —</option>
+              {JUSTIFICATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
           </div>
+        )}
 
-          {/* Justification — only for not_affected */}
-          {status === "not_affected" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Justification <span className="text-gray-600 font-normal">(不受影響的原因)</span>
-              </label>
-              <select
-                value={justification}
-                onChange={(e) => setJustification(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="">— 選擇原因 —</option>
-                {JUSTIFICATION_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Response — only for affected */}
-          {status === "affected" && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Response <span className="text-gray-600 font-normal">(處置方式)</span>
-              </label>
-              <select
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                <option value="">— 選擇處置 —</option>
-                {RESPONSE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Detail — always optional */}
+        {/* Response — only for affected */}
+        {status === "affected" && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              說明 <span className="text-gray-600 font-normal">(自由文字，選填)</span>
+              Response <span className="text-gray-700 font-normal">(處置方式)</span>
             </label>
-            <textarea
-              value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-              rows={3}
-              placeholder="補充說明此漏洞的評估結果或處置方式..."
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-            />
+            <select
+              value={response}
+              onChange={(e) => setResponse(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">— 選擇處置 —</option>
+              {RESPONSE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
           </div>
+        )}
 
-          {/* Note — recorded in history */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              變更備註 <span className="text-gray-600 font-normal">(記入歷程，選填)</span>
-            </label>
-            <input
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="例：已與開發確認此版本不影響"
-              className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+        {/* Detail — always optional */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            說明 <span className="text-gray-700 font-normal">(自由文字，選填)</span>
+          </label>
+          <textarea
+            value={detail}
+            onChange={(e) => setDetail(e.target.value)}
+            rows={3}
+            placeholder="補充說明此漏洞的評估結果或處置方式..."
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+          />
         </div>
 
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border rounded hover:bg-gray-50">取消</button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className={`px-4 py-2 text-sm text-white rounded ${saving ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
-          >
-            {saving ? "儲存中..." : "儲存"}
-          </button>
+        {/* Note — recorded in history */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            變更備註 <span className="text-gray-700 font-normal">(記入歷程，選填)</span>
+          </label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="例：已與開發確認此版本不影響"
+            className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+        <button type="button" onClick={onClose}
+          className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">取消</button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className={`px-4 py-2.5 text-sm text-white rounded font-medium focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+            saving ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-400"
+          }`}
+        >
+          {saving ? "儲存中..." : "儲存"}
+        </button>
+      </div>
+    </Modal>
   );
 }

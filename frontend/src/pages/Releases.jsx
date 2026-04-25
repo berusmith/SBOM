@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Lock } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
+import { Modal } from "../components/Modal";
 import { ConfirmModal } from "../components/ConfirmModal";
 import { formatDate } from "../utils/date";
+import { formatApiError } from "../utils/errors";
 import { SkeletonInline } from "../components/Skeleton";
 
 const TrendChart = lazy(() => import("../components/TrendChart"));
@@ -53,7 +55,7 @@ export default function Releases() {
       setShowForm(false);
       fetchData();
     } catch (err) {
-      toast.error("建立失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
       setLoading(false);
     }
@@ -66,7 +68,7 @@ export default function Releases() {
       setConfirmDelete(null);
       fetchData();
     } catch (err) {
-      toast.error("刪除失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.deleteFailed")));
     } finally {
       setDeleting(false);
     }
@@ -79,10 +81,10 @@ export default function Releases() {
     try {
       await api.patch(`/releases/${editRelease.id}/version`, { version: editVersion.trim() });
       setEditRelease(null);
-      toast.success("版本號已更新");
+      toast.success(t("successes.saved"));
       fetchData();
     } catch (err) {
-      toast.error("更新失敗：" + (err.response?.data?.detail || err.message));
+      toast.error(formatApiError(err, t("errors.updateFailed")));
     } finally {
       setEditSaving(false);
     }
@@ -270,26 +272,25 @@ export default function Releases() {
       </div>
 
       {/* Edit version modal */}
-      {editRelease && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <form onSubmit={handleEditVersion} className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-semibold text-gray-800">修改版本號</h3>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">版本號</label>
-              <input value={editVersion} onChange={(e) => setEditVersion(e.target.value)} required autoFocus
-                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button type="button" onClick={() => setEditRelease(null)}
-                className="px-4 py-2 text-sm border rounded text-gray-600 hover:bg-gray-100">{t("common.cancel")}</button>
-              <button type="submit" disabled={editSaving}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-                {editSaving ? "儲存中..." : "儲存"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      <Modal isOpen={!!editRelease} title="修改版本號" onClose={() => setEditRelease(null)}>
+        <form onSubmit={handleEditVersion} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">版本號</label>
+            <input value={editVersion} onChange={(e) => setEditVersion(e.target.value)} required
+              className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+            <button type="button" onClick={() => setEditRelease(null)}
+              className="px-4 py-2.5 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+              {t("common.cancel")}
+            </button>
+            <button type="submit" disabled={editSaving}
+              className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+              {editSaving ? "儲存中..." : "儲存"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <ConfirmModal
         isOpen={!!confirmDelete}
