@@ -1,11 +1,12 @@
-import { useEffect, useRef, useId } from "react";
+import { useRef, useId } from "react";
 import { X } from "lucide-react";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 /**
  * Accessible modal wrapper.  Handles every detail of the WAI-ARIA modal
  * pattern so callers don't have to:
  *   - role="dialog" + aria-modal="true" + aria-labelledby
- *   - Tab cycles within the dialog (focus trap)
+ *   - Tab cycles within the dialog (focus trap — via useFocusTrap hook)
  *   - Escape closes (calls onClose)
  *   - Initial focus moves to the first focusable element after mount
  *   - On close, focus returns to whatever opened the dialog
@@ -45,74 +46,17 @@ export function Modal({
   ariaDescribedBy,        // optional: id of element describing the dialog
 }) {
   const containerRef = useRef(null);
-  const previouslyFocusedRef = useRef(null);
   const titleId = useId();
 
-  // Lifecycle: capture previous focus, lock scroll, set initial focus, and
-  // restore on unmount.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    previouslyFocusedRef.current = document.activeElement;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    // Defer focus so refs are populated.
-    const focusTimer = window.setTimeout(() => {
-      if (initialFocusRef?.current?.focus) {
-        initialFocusRef.current.focus();
-        return;
-      }
-      if (!containerRef.current) return;
-      // Auto-focus the first focusable child; if none, focus the dialog
-      // itself (we set tabIndex={-1} below to make this possible).
-      const focusables = containerRef.current.querySelectorAll(
-        'input, button, [href], select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusables.length > 0) {
-        focusables[0].focus();
-      } else {
-        containerRef.current.focus();
-      }
-    }, 0);
-
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.body.style.overflow = prevOverflow;
-      const prev = previouslyFocusedRef.current;
-      if (prev && document.body.contains(prev) && typeof prev.focus === "function") {
-        prev.focus();
-      }
-    };
-  }, [isOpen, initialFocusRef]);
-
-  // Keyboard: Escape closes; Tab cycles.
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose?.();
-        return;
-      }
-      if (e.key !== "Tab" || !containerRef.current) return;
-      const focusables = containerRef.current.querySelectorAll(
-        'input:not([disabled]), button:not([disabled]), [href], select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
+  // a11y: focus trap, Escape-to-close, body-scroll lock, restore focus on
+  // close — all delegated to the shared useFocusTrap hook so dropdowns /
+  // popovers can reuse the same primitive later.
+  useFocusTrap({
+    active: isOpen,
+    containerRef,
+    onEscape: onClose,
+    initialFocusRef,
+  });
 
   if (!isOpen) return null;
 
