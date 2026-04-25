@@ -41,34 +41,22 @@ No source-disclosure obligation. Attribution only.
 | pillow | 12.2.0 | HPND (BSD-like) | https://github.com/python-pillow/Pillow |
 | aiofiles | 23.2.1 | Apache-2.0 | https://github.com/Tinche/aiofiles |
 | pg8000 | 1.31.2 | BSD-3-Clause | https://github.com/tlocke/pg8000 |
+| reportlab | 4.4.4 | BSD-3-Clause | https://www.reportlab.com/opensource/ |
 
-### 1.2 Weak copyleft — LGPL-3.0
+### 1.2 Weak copyleft (LGPL-3.0)
 
-This library is used via Python dynamic import (`from fpdf import FPDF`).
-LGPL-3.0 §4 "combined work" provisions are satisfied by:
+**There are currently no LGPL-licensed runtime dependencies.**  All
+prior LGPL components have been replaced with BSD-3 alternatives:
 
-1. listing the library here with version and source URL,
-2. not modifying the library's source as shipped from PyPI,
-3. allowing the user to substitute their own build of the library into
-   their `venv/` (Python's import mechanism does this naturally — no
-   restriction is imposed by this product).
+| Removed package | Replaced by | License delta |
+|-----------------|-------------|---------------|
+| `psycopg2-binary` 2.9.9 (LGPL-3.0 + OpenSSL Exception) | `pg8000` 1.31.2 (BSD-3) | LGPL → BSD-3 |
+| `fpdf2` 2.8.7 (LGPL-3.0-or-later) | `reportlab` 4.4.4 (BSD-3) via `app/services/pdf_shim.py` fpdf2-compatible shim | LGPL → BSD-3 |
 
-**No part of the SBOM Platform's own source code becomes subject to LGPL.**
-
-| Package | Version | License | Source |
-|---------|---------|---------|--------|
-| **fpdf2** | 2.8.7 | LGPL-3.0-or-later | https://github.com/py-pdf/fpdf2 |
-
-To obtain the LGPL source of this library:
-
-```bash
-pip download --no-deps --no-binary :all: fpdf2==2.8.7
-```
-
-> Historical note: prior to v2.1.0 the Postgres driver was
-> `psycopg2-binary` (LGPL-3.0-or-later with OpenSSL Exception). It has
-> been replaced by `pg8000` (BSD-3-Clause) to remove that copyleft
-> surface entirely.
+**Result: SBOM Platform now has zero copyleft components in its runtime
+dependency closure** — every direct dependency is permissive license
+(MIT / BSD / Apache / HPND / ISC). Downstream redistribution faces
+attribution-only obligations.
 
 ---
 
@@ -176,14 +164,14 @@ service, the obligations you inherit from the dependencies above are:
 
 1. **Reproduce this NOTICE.md** (or an equivalent attribution notice) in
    your documentation, About page, or end-user agreement.
-2. **Do not strip** the license header from `fpdf2` when packaging.
+2. **Preserve attribution headers** in any package you redistribute (per the BSD-3-Clause / MIT / Apache notice obligations).
 3. **Do not bundle EMBA** in your distribution unless you also accept
    GPL-3.0 obligations on the EMBA portion (those obligations do not
    extend to SBOM Platform itself, but they do govern any EMBA artifact
    you ship).
-4. **Document any modifications** you make to fpdf2, if any, and provide
-   a way for downstream users to obtain those modifications (typically a
-   link to your fork's GitHub).
+4. **(N/A)** No copyleft components remain in the runtime closure — no
+   source-availability obligations to forward to your end users for the
+   SBOM Platform's own dependencies.
 
 For commercial licensing questions about SBOM Platform itself, contact
 the project maintainer.

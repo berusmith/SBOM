@@ -5,7 +5,7 @@ Evaluates a release against SM-9, DM-1~5, SUM-1~5 requirements.
 from datetime import datetime, timezone
 from io import BytesIO
 
-from fpdf import XPos, YPos
+from app.services.pdf_shim import XPos, YPos
 
 from app.services.cjk_pdf import CjkPDF, _latin as _s
 

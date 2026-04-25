@@ -288,8 +288,9 @@ User / PolicyRule / BrandConfig / AlertConfig（全域）
 - 線上版（產品執行中可訪問）：`http://<your-host>/about` 或 `GET /api/notice`（公開、無需登入）
 
 **License 摘要**：
-- **核心依賴 96% 為 permissive license**（MIT / BSD / Apache-2.0）— 商業閉源使用無限制
-- **僅 1 個 LGPL 元件**（`fpdf2` PDF 生成）— Python dynamic import 滿足 LGPL §4 條件，**不會讓本產品 source 變成 LGPL**。Postgres driver 已從 LGPL 的 `psycopg2-binary` 換成 BSD-3 的 `pg8000`
+- **核心依賴 100% 為 permissive license**（MIT / BSD / Apache-2.0 / HPND / ISC）— 商業閉源使用零限制，無 LGPL/GPL 義務
+- **PDF 生成**：`fpdf2` (LGPL-3.0) 已換成 `reportlab` (BSD-3-Clause)，透過 `app/services/pdf_shim.py` 提供的 fpdf2-相容 API 包裝層，6 個既有報告檔幾乎免改
+- **Postgres driver**：`psycopg2-binary` (LGPL) 已換成 `pg8000` (BSD-3)
 - **EMBA 為 GPL-3.0**，本產品**從不打包 EMBA**；透過 subprocess 在使用者自願安裝後呼叫，arms-length 模式不會讓 GPL 義務擴及本產品
 
 如需將本平台整合進企業產品 / OEM 出貨，請參考 [`NOTICE.md`](NOTICE.md) §7「下游使用者合規 checklist」。

@@ -6,12 +6,20 @@
 
 ## [Unreleased]
 
-### 變更(License 簡化 — 路線 B 第一步)
+### 變更(License 簡化 — 路線 B 全部完成,runtime 0 LGPL)
+- **PDF 生成:`fpdf2` (LGPL-3.0) → `reportlab` (BSD-3-Clause) via shim**
+  - 新檔 `backend/app/services/pdf_shim.py`(~470 行):fpdf2-相容 API 在 reportlab Canvas 之上,翻譯坐標系(fpdf2 Y-down → reportlab Y-up)、處理 footer/header 不再觸發無限遞迴 page-break、支援 set_xy/get_x/rect/line/image/cell/multi_cell/add_font 等所有現用 API
+  - 6 個既有 PDF 生成檔(`pdf_report.py` / `iec62443_report.py` / `iec62443_42_report.py` / `iec62443_33_report.py` / `nis2_report.py` / `tisax_pdf.py`)+ `cjk_pdf.py` 共用基類:**只改 import 一行** `from fpdf import ...` → `from app.services.pdf_shim import ...`,所有 PDF 內部邏輯零改動
+  - `requirements.txt`:`fpdf2==2.8.7` → `reportlab==4.4.4`
+  - 驗證:6 個 PDF 全部生成成功(總 ~180 KB),fpdf2 從 venv 完全移除後仍可運作
 - **Postgres driver:`psycopg2-binary` (LGPL-3.0) → `pg8000` (BSD-3-Clause)**
   - `requirements.txt` 改成 `pg8000==1.31.2`(純 Python,無 C extension)
   - DSN scheme 全鏈路同步:`postgresql+psycopg2://` → `postgresql+pg8000://`(`.env.production` / `setup-macos.sh` PG_DSN / `migrate-sqlite-to-postgres.py` 範例 / `MACMINI_SETUP.md` 範例 / `README.md` 範例)
-  - **NOTICE.md 從「2 個 LGPL 元件」變成「僅 1 個 LGPL 元件(fpdf2)」** ── 路線 A 客戶法務的 review surface 進一步縮小
-  - pg8000 是純 Python,效能略差於 psycopg2 的 C 擴展但對本平台量級無感;若要追求極致效能未來可再評估 asyncpg(Apache-2.0,需 async stack)
+- **路線 B 完整成果**:
+  - `NOTICE.md` 第 1.2 節從「LGPL 元件」變成「**There are currently no LGPL-licensed runtime dependencies**」附遷移對照表
+  - `README.md` 「License 摘要」從「96% permissive」變成「**100% permissive**」(MIT/BSD/Apache/HPND/ISC)
+  - 客戶法務(OEM 整合 / 白標)的 review surface 進一步縮小,只剩 attribution 義務
+  - **EMBA(GPL-3.0)的處理不變**:本產品從不打包,使用者自願安裝後 subprocess 呼叫的 arms-length 模式
 
 ### 修正(安全強化 — Phase 0:14 項 Critical/High)
 - **C-1 multi-tenant breach**:`releases.py:upload_sbom` 接收 `org_scope` 但未呼叫 `_assert_release_org`,viewer 知道 release_id(UUID)即可覆寫他組 SBOM。**僅補 1 行 `_assert_release_org(release, org_scope, db)` 即修復**
@@ -94,7 +102,8 @@
 - 部署到自家 Mac Mini 生產環境(所有功能已完成)
 - ~~Binary SBOM 生成(Syft,等客戶需求)~~ ✅ 已完成 ── Syft 整合(原始碼 + binary 兩個端點)
 - FDA Pre-market 合規報告(等醫材客戶)
-- (進企業 OEM 客戶時)路線 B 剩餘步驟:替換 fpdf2 → reportlab(剩唯一 LGPL 元件);前端 JWT 改 httpOnly cookie。~~psycopg2 → pg8000~~ ✅ 已完成
+- ~~路線 B:psycopg2 → pg8000;fpdf2 → reportlab~~ ✅ 全部完成,runtime 已無 LGPL/GPL 元件
+- (架構級)前端 JWT 改 httpOnly cookie ── 影響面廣,留待有具體 OEM 客戶安全要求時再做
 
 ---
 

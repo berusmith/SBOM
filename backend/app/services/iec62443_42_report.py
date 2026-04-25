@@ -5,7 +5,7 @@ Evaluates software components against key Capability Requirements (CRs).
 from datetime import datetime, timezone
 from io import BytesIO
 
-from fpdf import XPos, YPos
+from app.services.pdf_shim import XPos, YPos
 from app.services.cjk_pdf import CjkPDF, _latin as _s
 
 

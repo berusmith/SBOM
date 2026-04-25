@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from io import BytesIO
 
-from fpdf import FPDF, XPos, YPos
+from app.services.pdf_shim import FPDF, XPos, YPos
 
 
 def _s(text) -> str:

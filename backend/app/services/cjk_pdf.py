@@ -1,11 +1,14 @@
 """
 CJK-aware FPDF base class.
 All IEC 62443 compliance reports inherit from CjkPDF.
+
+The underlying FPDF class is now provided by `pdf_shim` (reportlab + BSD-3
+licensed) instead of fpdf2 (LGPL-3.0).  The shim's API is fpdf2-compatible
+so every existing subclass keeps working unchanged.
 """
 from __future__ import annotations
 
-from fpdf import FPDF
-
+from app.services.pdf_shim import FPDF
 from app.services.font_manager import setup_cjk_fonts, cjk_font_name
 
 
