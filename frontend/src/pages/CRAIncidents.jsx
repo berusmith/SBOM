@@ -60,7 +60,7 @@ export default function CRAIncidents() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">CRA 事件管理</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("nav.cra")}</h1>
         <button
           onClick={() => setShowForm(true)}
           className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"

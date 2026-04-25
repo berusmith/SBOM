@@ -81,7 +81,7 @@ export default function Users() {
       if (editForm.password) payload.password = editForm.password;
       await api.patch(`/users/${editUser.id}`, payload);
       setEditUser(null);
-      flash("success", "已更新");
+      flash("success", t("successes.saved"));
       fetchAll();
     } catch (err) {
       flash("error", pickErrorDetail(err, t("errors.updateFailed")));
@@ -110,10 +110,10 @@ export default function Users() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">使用者管理</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("users.title")}</h1>
         <button onClick={() => setShowForm(!showForm)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-          + 新增帳號
+          + {t("users.add")}
         </button>
       </div>
 
@@ -125,7 +125,7 @@ export default function Users() {
 
       {showForm && (
         <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-5 mb-5 space-y-3">
-          <h2 className="font-semibold text-gray-700">新增帳號</h2>
+          <h2 className="font-semibold text-gray-700">{t("users.add")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1">帳號名稱</label>
@@ -191,7 +191,7 @@ export default function Users() {
         </form>
       )}
 
-      <Modal isOpen={!!editUser} title="編輯帳號" onClose={() => setEditUser(null)}>
+      <Modal isOpen={!!editUser} title={t("users.edit")} onClose={() => setEditUser(null)}>
         <form onSubmit={handleEdit} className="space-y-3">
           <div>
             <label className="text-xs text-gray-700 block mb-1">登入帳號</label>

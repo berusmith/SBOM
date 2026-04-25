@@ -165,7 +165,7 @@ export default function FirmwareUpload() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">韌體掃描</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("nav.firmware")}</h1>
         <p className="text-sm text-gray-600 mt-1">上傳韌體映像檔，自動生成 SBOM 元件清單</p>
       </div>
 

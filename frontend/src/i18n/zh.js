@@ -396,24 +396,74 @@ const zh = {
 
   // ── 設定 ──────────────────────────────────────────────────────────────────
   settings: {
-    title:       "通知設定",
-    brand:       "品牌設定",
+    title:       "系統設定",
+    brand:       "報告品牌設定",
+    brandHint:   "套用於 PDF 報告與系統介面",
     alerts:      "告警設定",
     webhook:     "Webhook URL",
     email:       "Email 通知",
     test:        "測試",
     save:        "儲存設定",
+    monitor:     "持續漏洞監控",
+    monitorHint: "排程自動掃描並比對最新 CVE",
+    apiTokens:   "API Tokens",
+    userManagement: "使用者管理",
   },
 
   // ── 使用者 ────────────────────────────────────────────────────────────────
   users: {
-    title:    "帳號管理",
+    title:    "使用者管理",
     add:      "新增帳號",
+    edit:     "編輯帳號",
     username: "帳號",
+    password: "密碼",
+    passwordHintEdit: "密碼（留空則不修改）",
     role:     "角色",
     admin:    "管理員",
     viewer:   "檢視者",
+    email:    "Email（密碼重設用，選填）",
+    bindOrg:  "綁定組織",
+    bindOrgNone: "— 不綁定 —",
+    accountActive: "帳號啟用中",
     noData:   "尚無帳號",
+  },
+
+  // ── 個人資料 ──────────────────────────────────────────────────────────────
+  profile: {
+    title:        "帳號設定",
+    loginAccount: "登入帳號",
+    role:         "角色",
+    email:        "Email（用於密碼重設）",
+    emailUnset:   "未設定",
+    changePassword: "修改密碼",
+    currentPassword: "目前密碼",
+    newPassword:  "新密碼（至少 10 字元 + 字母 + 數字）",
+    confirmPassword: "確認新密碼",
+    updating:     "更新中...",
+    updatePassword: "更新密碼",
+    logoutTitle:  "登出",
+    logoutHint:   "登出後 Token 立即失效，需重新登入。",
+    logoutAction: "登出此帳號",
+    emailUpdated: "Email 已更新",
+    passwordUpdated: "密碼已更新",
+    passwordsMismatch: "兩次輸入的新密碼不一致",
+  },
+
+  // ── 風險總覽 ──────────────────────────────────────────────────────────────
+  riskOverview: {
+    title: "跨客戶風險總覽",
+  },
+
+  // ── 稽核日誌 ──────────────────────────────────────────────────────────────
+  auditLog: {
+    title:     "稽核日誌",
+    summary:   "各客戶使用概況",
+  },
+
+  // ── 忘記/重設密碼 ─────────────────────────────────────────────────────────
+  passwordReset: {
+    forgotTitle: "忘記密碼",
+    resetTitle:  "重設密碼",
   },
 
   // ── 搜尋 ──────────────────────────────────────────────────────────────────

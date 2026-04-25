@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { SkeletonTable } from "../components/Skeleton";
 
@@ -33,6 +34,7 @@ const SORT_FIELDS = [
 ];
 
 export default function RiskOverview() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState("risk_score");
@@ -69,7 +71,7 @@ export default function RiskOverview() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">跨客戶風險總覽</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t("riskOverview.title")}</h1>
 
       {/* Summary bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">

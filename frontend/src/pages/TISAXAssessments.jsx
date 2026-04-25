@@ -81,7 +81,7 @@ export default function TISAXAssessments() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <h1 className="text-xl font-bold text-gray-800">TISAX 自評管理</h1>
+        <h1 className="text-xl font-bold text-gray-800">{t("tisax.title")}</h1>
         <button onClick={() => setShowForm(!showForm)}
           className="w-full sm:w-auto sm:ml-auto bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
           + 新增評估

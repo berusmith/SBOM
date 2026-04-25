@@ -190,7 +190,7 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-xl font-bold text-gray-800 mb-6">系統設定</h2>
+      <h2 className="text-xl font-bold text-gray-800 mb-6">{t("settings.title")}</h2>
 
       {msg && (
         <div className={`mb-4 px-4 py-3 rounded text-sm ${msg.type === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
@@ -206,7 +206,7 @@ export default function Settings() {
 
       {/* ── Brand settings ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
-        <h3 className="font-semibold text-gray-700 mb-1">報告品牌設定</h3>
+        <h3 className="font-semibold text-gray-700 mb-1">{t("settings.brand")}</h3>
         <p className="text-xs text-gray-600 mb-4">設定後，PDF 報告將顯示貴公司 Logo、名稱與主色調</p>
 
         {/* Logo upload */}
@@ -318,7 +318,7 @@ export default function Settings() {
 
       {/* ── Continuous monitoring ── */}
       <div className="bg-white rounded-lg shadow p-5 mb-4">
-        <h3 className="font-semibold text-gray-700 mb-1">持續漏洞監控</h3>
+        <h3 className="font-semibold text-gray-700 mb-1">{t("settings.monitor")}</h3>
         <p className="text-xs text-gray-600 mb-4">系統定期對所有版本重新掃描 OSV.dev，發現新 CVE 時自動發送通知</p>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">

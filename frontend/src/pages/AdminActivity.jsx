@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { AUDIT_EVENT_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonTable } from "../components/Skeleton";
@@ -54,6 +55,7 @@ function exportCsv(events) {
 }
 
 export default function AdminActivity() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState([]);
   const [events, setEvents] = useState([]);
   const [filterOrg, setFilterOrg] = useState("");
@@ -101,7 +103,7 @@ export default function AdminActivity() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-800">稽核日誌</h1>
+          <h1 className="text-xl font-bold text-gray-800">{t("auditLog.title")}</h1>
           <p className="text-xs text-gray-600 mt-0.5">所有重要操作的完整紀錄，供合規稽核使用</p>
         </div>
         <button
@@ -132,7 +134,7 @@ export default function AdminActivity() {
       {/* Summary table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-700 text-sm">各客戶使用概況</h2>
+          <h2 className="font-semibold text-gray-700 text-sm">{t("auditLog.summary")}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

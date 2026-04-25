@@ -79,10 +79,10 @@ export default function Policies() {
     try {
       if (editRule) {
         await api.patch(`/policies/${editRule.id}`, form);
-        flash("ok", "規則已更新");
+        flash("ok", t("successes.saved"));
       } else {
         await api.post("/policies", form);
-        flash("ok", "規則已建立");
+        flash("ok", t("successes.saved"));
       }
       setShowForm(false);
       fetchAll();
@@ -103,8 +103,9 @@ export default function Policies() {
   const handleDelete = async () => {
     setDeleting(true);
     try {
+      const name = confirmDeleteRule?.name || "";
       await api.delete(`/policies/${confirmDeleteRule.id}`);
-      flash("ok", "規則已刪除");
+      flash("ok", t("successes.deleted", { name }));
       setConfirmDeleteRule(null);
       fetchAll();
     } catch { flash("err", t("errors.deleteFailed")); }
@@ -133,10 +134,10 @@ export default function Policies() {
     try {
       if (editLicenseRule) {
         await api.patch(`/licenses/rules/${editLicenseRule.id}`, licenseForm);
-        flash("ok", "規則已更新");
+        flash("ok", t("successes.saved"));
       } else {
         await api.post("/licenses/rules", licenseForm);
-        flash("ok", "規則已建立");
+        flash("ok", t("successes.saved"));
       }
       setShowLicenseForm(false);
       fetchAll();
@@ -150,7 +151,12 @@ export default function Policies() {
   };
   const handleDeleteLicense = async () => {
     setDeleting(true);
-    try { await api.delete(`/licenses/rules/${confirmDeleteLicense.id}`); flash("ok", "規則已刪除"); setConfirmDeleteLicense(null); fetchAll(); }
+    try {
+      const name = confirmDeleteLicense?.label || confirmDeleteLicense?.license_id || "";
+      await api.delete(`/licenses/rules/${confirmDeleteLicense.id}`);
+      flash("ok", t("successes.deleted", { name }));
+      setConfirmDeleteLicense(null); fetchAll();
+    }
     catch { flash("err", t("errors.deleteFailed")); }
     finally { setDeleting(false); }
   };
@@ -158,7 +164,7 @@ export default function Policies() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Policy 引擎</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("nav.policy")}</h1>
         <button
           onClick={openCreate}
           className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"

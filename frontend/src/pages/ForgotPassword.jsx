@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import api from "../api/client";
 
 export default function ForgotPassword() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -26,7 +28,7 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-xl shadow p-8 w-full max-w-sm">
-        <h1 className="text-xl font-bold text-gray-800 mb-2">忘記密碼</h1>
+        <h1 className="text-xl font-bold text-gray-800 mb-2">{t("passwordReset.forgotTitle")}</h1>
         {sent ? (
           <div className="text-sm text-gray-700 space-y-3">
             <p className="text-green-700 font-medium">已送出！</p>

@@ -109,7 +109,7 @@ export default function Releases() {
       </div>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">版本列表</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t("releases.title")}</h1>
         <div className="flex gap-2">
           {releases.length >= 2 && (
             <button

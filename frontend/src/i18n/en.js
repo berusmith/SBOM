@@ -394,24 +394,74 @@ const en = {
 
   // ── Settings ──────────────────────────────────────────────────────────────
   settings: {
-    title:   "Notification Settings",
-    brand:   "Brand Settings",
-    alerts:  "Alert Settings",
-    webhook: "Webhook URL",
-    email:   "Email Notifications",
-    test:    "Test",
-    save:    "Save Settings",
+    title:       "System Settings",
+    brand:       "Report Brand Settings",
+    brandHint:   "Applied to PDF reports and the UI",
+    alerts:      "Alert Settings",
+    webhook:     "Webhook URL",
+    email:       "Email Notifications",
+    test:        "Test",
+    save:        "Save Settings",
+    monitor:     "Continuous Vulnerability Monitor",
+    monitorHint: "Schedules background scans against the latest CVE feeds",
+    apiTokens:   "API Tokens",
+    userManagement: "User Management",
   },
 
   // ── Users ─────────────────────────────────────────────────────────────────
   users: {
     title:    "User Management",
     add:      "Add User",
+    edit:     "Edit User",
     username: "Username",
+    password: "Password",
+    passwordHintEdit: "Password (leave blank to keep current)",
     role:     "Role",
     admin:    "Admin",
     viewer:   "Viewer",
+    email:    "Email (for password reset, optional)",
+    bindOrg:  "Linked Organization",
+    bindOrgNone: "— Not linked —",
+    accountActive: "Account active",
     noData:   "No users yet",
+  },
+
+  // ── Profile ───────────────────────────────────────────────────────────────
+  profile: {
+    title:           "Account Settings",
+    loginAccount:    "Username",
+    role:            "Role",
+    email:           "Email (for password reset)",
+    emailUnset:      "not set",
+    changePassword:  "Change Password",
+    currentPassword: "Current password",
+    newPassword:     "New password (min 10 chars + letter + digit)",
+    confirmPassword: "Confirm new password",
+    updating:        "Updating...",
+    updatePassword:  "Update password",
+    logoutTitle:     "Sign Out",
+    logoutHint:      "Token is invalidated immediately on sign-out; you'll need to sign in again.",
+    logoutAction:    "Sign out",
+    emailUpdated:    "Email updated",
+    passwordUpdated: "Password updated",
+    passwordsMismatch: "New passwords do not match",
+  },
+
+  // ── Risk Overview ─────────────────────────────────────────────────────────
+  riskOverview: {
+    title: "Cross-customer Risk Overview",
+  },
+
+  // ── Audit Log ─────────────────────────────────────────────────────────────
+  auditLog: {
+    title:   "Audit Log",
+    summary: "Per-customer usage summary",
+  },
+
+  // ── Password reset ────────────────────────────────────────────────────────
+  passwordReset: {
+    forgotTitle: "Forgot Password",
+    resetTitle:  "Reset Password",
   },
 
   // ── Search ────────────────────────────────────────────────────────────────
