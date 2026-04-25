@@ -139,12 +139,14 @@ User / PolicyRule / BrandConfig / AlertConfig（全局單例）
 - 啟動捷徑：根目錄 `start_backend.bat` / `start_frontend.bat`
 
 ### 生產環境
-- 主機：Oracle Linux 9.7，1GB RAM，IP `161.33.130.101`，使用者 `opc`
-- 部署：`bash deploy/deploy.sh`（本地 build frontend → rsync → systemd restart）
-- 靜態模式：後端設定 `STATIC_DIR` 後直接服務 React `dist/`（單一進程）
-- Nginx：Reverse proxy
-- 資料庫：`backend/sbom.db`（SQLite，持久化）
-- 上傳檔案：`backend/uploads/`
+- 主機：Mac Mini(macOS),部署根 `$HOME/sbom/`,user-level launchd 管理服務
+- 部署：`SBOM_DEPLOY_HOST=mac-mini.local bash deploy/deploy.sh`(本地 build frontend → tar+ssh → `launchctl reload`)
+- 靜態模式：後端設定 `STATIC_DIR` 後直接服務 React `dist/`(單一進程,LAN-only 場景可省 nginx)
+- Nginx(可選): Homebrew 安裝,反向代理 + 靜態快取,僅在公網/TLS 場景需要
+- 資料庫：`$HOME/sbom/data/sbom.db`(SQLite + WAL,持久化)
+- 上傳檔案：`$HOME/sbom/data/uploads/`
+- Log：`$HOME/sbom/logs/backend.{out,err}.log`
+- 詳細部署指南見 `deploy/MACMINI_SETUP.md`
 
 ---
 

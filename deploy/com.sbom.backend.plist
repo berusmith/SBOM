@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- launchd plist for SBOM Platform backend on macOS.
+     Placeholders __SBOM_HOME__ and __PYTHON_BIN__ are substituted by deploy/setup-macos.sh.
+     Install / ops commands: see deploy/MACMINI_SETUP.md. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sbom.backend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON_BIN__</string>
+        <string>app.main:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>9100</string>
+        <string>--workers</string>
+        <string>1</string>
+        <string>--no-access-log</string>
+        <string>--timeout-keep-alive</string>
+        <string>30</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>__SBOM_HOME__/backend</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>STATIC_DIR</key>
+        <string>__SBOM_HOME__/frontend/dist</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>__SBOM_HOME__/logs/backend.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__SBOM_HOME__/logs/backend.err.log</string>
+
+    <!-- Soft memory ceiling: ~400MB resident; macOS will throttle if exceeded.
+         There's no direct equivalent to systemd's MemoryMax=400M; this is the
+         closest by limiting resident set size at process start. -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>ResidentSetSize</key>
+        <integer>419430400</integer>
+    </dict>
+</dict>
+</plist>

@@ -17,10 +17,11 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.core import audit
-from app.core.config import settings as _cfg
+from app.core.config import BACKEND_DIR, resolve_under_backend, settings as _cfg
 from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin, get_current_user
+from app.core.security import csv_safe, safe_attachment_filename
 
 logger = logging.getLogger(__name__)
 from app.models.component import Component
@@ -39,16 +40,17 @@ from app.services.kev import fetch_kev_cve_ids
 from app.services.license_classifier import classify_license
 from app.services.signature_verifier import verify_signature as _verify_sig, detect_algorithm, SUPPORTED_ALGORITHMS
 from app.services import trivy_scanner as _trivy
+from app.services import syft_scanner as _syft
 from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
 from app.services.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
 from app.core.plan import require_plan, check_starter_limit
 
-# Use env-configured path in production; auto-detect from source tree in dev
-UPLOAD_DIR = (
-    Path(_cfg.UPLOAD_DIR)
-    if _cfg.UPLOAD_DIR
-    else Path(__file__).resolve().parent.parent.parent / "uploads"
-)
+# SBOM uploads.  `_cfg.UPLOAD_DIR` may be:
+#   - absolute  → used as-is
+#   - relative  → interpreted against backend/, NOT against process cwd
+#                 (so launchd / tests / migration scripts all agree)
+#   - empty     → defaults to backend/uploads
+UPLOAD_DIR = resolve_under_backend(_cfg.UPLOAD_DIR) or (BACKEND_DIR / "uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 _active_enrichments: set[str] = set()
@@ -184,6 +186,7 @@ def upload_sbom(
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳 SBOM")
 
@@ -675,25 +678,25 @@ def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(
     for c in components_raw:
         for v in sorted(c.vulnerabilities, key=lambda x: x.epss_score or x.cvss_score or 0, reverse=True):
             writer.writerow([
-                v.cve_id,
-                c.name,
-                c.version or "",
+                csv_safe(v.cve_id),
+                csv_safe(c.name),
+                csv_safe(c.version),
                 v.cvss_v3_score if v.cvss_v3_score is not None else (v.cvss_score if v.cvss_score is not None else ""),
                 v.cvss_v4_score if v.cvss_v4_score is not None else "",
-                v.severity or "",
+                csv_safe(v.severity),
                 f"{v.epss_score:.4f}" if v.epss_score is not None else "",
                 f"{v.epss_percentile:.4f}" if v.epss_percentile is not None else "",
                 "是" if v.is_kev else "",
-                v.cwe or "",
-                v.status,
-                v.justification or "",
-                v.response or "",
-                v.detail or "",
-                (v.description or "")[:300],
+                csv_safe(v.cwe),
+                csv_safe(v.status),
+                csv_safe(v.justification),
+                csv_safe(v.response),
+                csv_safe(v.detail),
+                csv_safe((v.description or "")[:300]),
             ])
 
     product_name = (product.name if product else "report").replace(" ", "_")
-    filename = f"vulns_{product_name}_{release.version}.csv"
+    filename = safe_attachment_filename(f"vulns_{product_name}_{release.version}.csv", default="vulns.csv")
     return Response(
         content=buf.getvalue().encode("utf-8-sig"),  # utf-8-sig for Excel compatibility
         media_type="text/csv",
@@ -1885,6 +1888,208 @@ async def scan_iac_archive(
         "misconfigs_found": len(misconfigs),
         "misconfigs": misconfigs[:50],
     }
+
+
+# ── Syft-driven SBOM generation ───────────────────────────────────────────────
+# Source archives + arbitrary binaries.  Both flows produce a CycloneDX dict
+# that we feed straight back through the existing sbom_parser → component
+# upsert → OSV/EPSS/KEV pipeline, so nothing downstream needs to know that
+# the SBOM came from Syft as opposed to a user upload.
+
+def _import_syft_cdx(
+    *,
+    cdx: dict,
+    release_id: str,
+    db: Session,
+    source_label: str,
+    user: dict,
+    audit_event: str,
+    audit_resource_label: str,
+) -> dict:
+    """Shared post-processing for the Syft-from-source / Syft-from-binary flows.
+
+    Parses the CycloneDX dict, upserts components by PURL onto the release
+    (additive — never wipes existing components, mirroring `scan-image`),
+    runs OSV vuln scan, then enriches with EPSS + KEV.  Returns the user-
+    facing summary dict.
+    """
+    parsed = sbom_parser.parse(json.dumps(cdx).encode(), source_label)
+
+    existing_purls = {
+        c.purl: c for c in db.query(Component).filter(Component.release_id == release_id).all()
+        if c.purl
+    }
+    new_comps: list[tuple] = []
+    for c in parsed:
+        purl = c.get("purl") or ""
+        if purl and purl in existing_purls:
+            comp = existing_purls[purl]
+        else:
+            comp = Component(
+                release_id=release_id,
+                name=c["name"],
+                version=c["version"],
+                purl=purl,
+                license=c.get("license", ""),
+            )
+            db.add(comp)
+            new_comps.append((comp, purl))
+    db.commit()
+    for comp, _ in new_comps:
+        db.refresh(comp)
+
+    # Walk parsed list once more to build (component, purl) pairs covering
+    # both freshly-inserted and previously-existing components.
+    all_pairs: list[tuple] = []
+    for c in parsed:
+        purl = c.get("purl") or ""
+        if purl in existing_purls:
+            all_pairs.append((existing_purls[purl], purl))
+        else:
+            for co, p in new_comps:
+                if p == purl:
+                    all_pairs.append((co, p))
+                    break
+    all_pairs = [(co, p) for co, p in all_pairs if co is not None]
+
+    vuln_results = vuln_scanner.scan_components(parsed)
+    vuln_count = 0
+    for comp, purl in all_pairs:
+        seen = {v.cve_id for v in comp.vulnerabilities}
+        for v in vuln_results.get(purl, []):
+            if v["cve_id"] in seen:
+                continue
+            seen.add(v["cve_id"])
+            db.add(Vulnerability(
+                component_id=comp.id,
+                cve_id=v["cve_id"],
+                description=v.get("description", ""),
+                cvss_score=v["cvss_score"],
+                severity=v["severity"],
+                cvss_v4_vector=v.get("cvss_v4_vector"),
+                status="open",
+            ))
+            vuln_count += 1
+    db.commit()
+
+    all_vulns = (
+        db.query(Vulnerability)
+        .join(Component)
+        .filter(Component.release_id == release_id)
+        .all()
+    )
+    _enrich_epss(all_vulns, db)
+    _enrich_kev(all_vulns, db)
+
+    audit.record(db, audit_event, user, resource_id=release_id,
+                 resource_label=audit_resource_label)
+    db.commit()
+    return {"components_found": len(parsed), "vulnerabilities_found": vuln_count}
+
+
+@router.post("/{release_id}/sbom-from-source")
+async def sbom_from_source(
+    release_id: str,
+    file: UploadFile = File(...),
+    _plan=Depends(require_plan("syft")),
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """上傳原始碼 zip,讓 Syft 識別 manifest(package.json/requirements.txt/...) 產出 SBOM 並合併進此版本。
+
+    與 /upload-source 不同:此端點**產生**元件清單(SBOM),前者是給定 SBOM 後分析 reachability。
+    """
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定,無法掃描")
+    _assert_release_org(release, org_scope, db)
+
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔(原始碼)")
+
+    if not _syft.is_syft_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Syft 未安裝。macOS:`brew install syft`;Linux 安裝腳本見 NOTICE.md",
+        )
+
+    MAX_SIZE = 100 * 1024 * 1024  # 100 MB
+    content = await file.read(MAX_SIZE + 1)
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail=f"壓縮檔超過 {MAX_SIZE // (1024*1024)}MB 上限")
+
+    try:
+        cdx = await asyncio.to_thread(_syft.scan_source, content)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    summary = _import_syft_cdx(
+        cdx=cdx,
+        release_id=release_id,
+        db=db,
+        source_label="syft-source.json",
+        user=user,
+        audit_event="syft_source_scan",
+        audit_resource_label=file.filename,
+    )
+    return {"filename": file.filename, **summary}
+
+
+@router.post("/{release_id}/sbom-from-binary")
+async def sbom_from_binary(
+    release_id: str,
+    file: UploadFile = File(...),
+    _plan=Depends(require_plan("syft")),
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """上傳單一 binary(.exe / .so / .dll / firmware image / .jar / .whl 等),讓 Syft 提取嵌入元件資訊。
+
+    Syft 內建 binary cataloguers 可從 Go / .NET / Java / Python wheel /
+    Rust / Linux 核心等可執行檔抽出版本資訊。產出與 /sbom-from-source
+    同一條 pipeline。
+    """
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    if release.locked:
+        raise HTTPException(status_code=409, detail="版本已鎖定,無法掃描")
+    _assert_release_org(release, org_scope, db)
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="請提供檔案")
+
+    if not _syft.is_syft_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Syft 未安裝。macOS:`brew install syft`;Linux 安裝腳本見 NOTICE.md",
+        )
+
+    # Binaries can legitimately be large (firmware images / fat binaries).
+    MAX_SIZE = 200 * 1024 * 1024  # 200 MB
+    content = await file.read(MAX_SIZE + 1)
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail=f"檔案超過 {MAX_SIZE // (1024*1024)}MB 上限")
+
+    try:
+        cdx = await asyncio.to_thread(_syft.scan_binary, content, file.filename)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    summary = _import_syft_cdx(
+        cdx=cdx,
+        release_id=release_id,
+        db=db,
+        source_label="syft-binary.json",
+        user=user,
+        audit_event="syft_binary_scan",
+        audit_resource_label=file.filename,
+    )
+    return {"filename": file.filename, **summary}
 
 
 def _highest_severity(vulns) -> str | None:

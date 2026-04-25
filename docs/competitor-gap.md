@@ -126,7 +126,7 @@
 3. TISAX VDA ISA 6.0 自評（63 個控制項、AL2/AL3 gap 分析）
 4. Reachability 三階段 AST call graph（連 Keysight/Cybeats 都沒有）
 5. 中文化 + 本地顧問 SOP
-6. 離線部署（Oracle Cloud 1GB RAM 可跑）
+6. 離線/低資源部署(個人 Mac Mini / 1GB RAM VPS 都可跑,SQLite 單機足夠)
 7. 價格差距 10–100 倍
 
 ---

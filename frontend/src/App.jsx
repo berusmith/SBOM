@@ -25,6 +25,7 @@ const Users             = lazy(() => import("./pages/Users"));
 const FirmwareUpload    = lazy(() => import("./pages/FirmwareUpload"));
 const ForgotPassword    = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword     = lazy(() => import("./pages/ResetPassword"));
+const About             = lazy(() => import("./pages/About"));
 
 function RequireAuth({ children }) {
   const token = localStorage.getItem("token");
@@ -46,9 +47,19 @@ function ViewerOrgRedirect() {
 }
 
 function PageLoading() {
+  // i18n is initialized at app boot, but this component renders inside a
+  // <Suspense fallback> while a route's chunk is loading.  We can't safely
+  // call useTranslation here in older React-i18next setups (no <Trans>
+  // available pre-init).  Read directly from localStorage to keep it safe.
+  const lang = (typeof window !== "undefined" && window.localStorage.getItem("lang")) || "zh";
+  const label = lang === "en" ? "Loading..." : "載入中...";
   return (
-    <div className="flex items-center justify-center p-10 text-gray-600 text-sm">
-      載入中...
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex items-center justify-center p-10 text-gray-700 text-sm"
+    >
+      {label}
     </div>
   );
 }
@@ -61,6 +72,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* OSS attribution is intentionally public — auditors and downstream
+            users must be able to verify license compliance without an account. */}
+        <Route path="/about" element={<Suspense fallback={<PageLoading />}><About /></Suspense>} />
         <Route
           path="/*"
           element={

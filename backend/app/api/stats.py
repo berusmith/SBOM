@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
+from app.core.database import days_between, get_db
 from app.core.deps import get_org_scope
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
@@ -71,7 +71,7 @@ def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depe
             Vulnerability.fixed_at.isnot(None),
             Vulnerability.scanned_at.isnot(None),
         )
-        .with_entities(func.avg(func.julianday(Vulnerability.fixed_at) - func.julianday(Vulnerability.scanned_at)))
+        .with_entities(func.avg(days_between(Vulnerability.fixed_at, Vulnerability.scanned_at)))
         .scalar()
     )
     avg_days = round(float(avg_raw), 1) if avg_raw is not None else None

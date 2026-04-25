@@ -16,6 +16,7 @@
 - [PowerShell: npm.ps1 blocked by ExecutionPolicy](pitfalls/powershell-npm-ps1-blocked.md) — 用 `npm.cmd` 或 bash
 - [npm install: child process lacks refreshed PATH](pitfalls/npm-install-child-path.md) — esbuild postinstall 找不到 node
 - [health endpoint misreport monitor.running](pitfalls/health-monitor-running-key.md) — `get_status()` 沒回 `running` key
+- [WDAC blocks third-party binaries](pitfalls/wdac-blocks-unsigned-binaries.md) — 這台 Windows 開強制模式,EDB Postgres / 非 MS publisher .exe 一律被擋,Postgres 本機驗證走不通
 
 ## References
 - [pip-audit](references/pip-audit.md) — Python 依賴 CVE 掃描工具

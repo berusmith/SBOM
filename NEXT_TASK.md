@@ -62,16 +62,21 @@
 
 ---
 
-## 下一步：部署 Oracle Cloud
+## 下一步：部署到 Mac Mini
 
-**所有功能已完成，現在最重要的是將系統部署到生產環境。**
+**所有功能已完成,現在最重要的是將系統部署到自家 Mac Mini。**
 
 ```bash
-# 從 sbom-platform/ 執行
-bash deploy/deploy.sh
+# 在開發機上,設定 Mac Mini 連線資訊後執行首次部署
+export SBOM_DEPLOY_HOST=mac-mini.local
+export SBOM_DEPLOY_USER=peter
+bash deploy/first-deploy.sh
+
+# 之後每次更新
+SBOM_DEPLOY_HOST=mac-mini.local bash deploy/deploy.sh
 ```
 
-詳細步驟見 `deploy/ORACLE_CLOUD_SETUP.md`
+詳細步驟見 `deploy/MACMINI_SETUP.md`(包含前置作業、launchd ops、三種對外連線方式)
 
 ---
 

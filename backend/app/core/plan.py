@@ -51,6 +51,7 @@ FEATURE_PLAN: dict[str, str] = {
     "reachability":     "professional",
     "signature":        "professional",
     "trivy":            "professional",
+    "syft":             "professional",
 }
 
 

@@ -78,7 +78,8 @@ All FK relationships use `cascade="all, delete-orphan"`. UUID primary keys throu
 | `auth.py` | `/api/auth` | POST `/login`, GET `/me`（回傳 `plan`）, GET `/oidc/config` `/oidc/login` `/oidc/callback`, POST `/change-password` |
 | `organizations.py` | `/api/organizations` | CRUD + `/{id}/products` + PATCH `/{id}/plan`（admin only）|
 | `products.py` | `/api/products` | CRUD + `/{id}/releases`, `/vuln-trend` (returns `total` unresolved + `total_all`), `/diff` |
-| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/enrich-ghsa` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac` `/upload-source`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
+| `releases.py` | `/api/releases` | CRUD + POST `/sbom` `/rescan` `/enrich-epss` `/enrich-nvd` `/enrich-ghsa` `/lock` `/unlock` `/signature` `/scan-image` `/scan-iac` `/upload-source` `/sbom-from-source` `/sbom-from-binary`; GET `/vulnerabilities` `/report` `/compliance/iec62443` `/compliance/iec62443-4-2` `/compliance/iec62443-3-3` `/evidence-package` `/csaf` `/integrity` `/patch-stats` `/gate` `/dependency-graph` `/export/cyclonedx-xml` `/export/spdx-json` `/sbom-quality` `/signature/verify`; DELETE `/signature` |
+| `notice.py` | `/api/notice` | GET — public OSS attribution (NOTICE.md plain text) |
 | `vulnerabilities.py` | `/api/vulnerabilities` | PATCH `/{id}/status`, PATCH `/batch`, PATCH `/{id}/suppress`, GET `/{id}/history` |
 | `cra.py` | `/api/cra` | CRUD `/incidents` + POST `/start-clock` `/advance` `/close-not-affected` |
 | `stats.py` | `/api/stats` | GET `/` `/risk-overview` `/top-threats` `/top-risky-components` `/sbom-quality-summary` `/cve-impact` |
@@ -127,6 +128,7 @@ User-facing 409/400 error messages are in Traditional Chinese (zh-TW).
 | `firmware_service.py` | EMBA firmware analysis: auto-detect EMBA, run background scans, parse EMBA JSON → component list, demo mode for Windows dev |
 | `signature_verifier.py` | SBOM signature verification: ECDSA (cosign/Sigstore default), RSA-PSS, RSA-PKCS1; auto-detect algorithm from public key; extract signer identity from X.509 certs |
 | `trivy_scanner.py` | Trivy wrapper: `scan_image(image_ref)` → CycloneDX, `scan_iac(zip_bytes)` → CycloneDX + misconfigs, `extract_misconfigs()` pulls AVD-/DS- findings; 503 if Trivy not installed (no demo mode needed — Trivy is free) |
+| `syft_scanner.py` | Syft wrapper (Apache-2.0): `scan_source(zip_bytes)` extracts archive (zip-bomb safe, 500MB cap) and runs `syft <dir>`, `scan_binary(file_bytes, filename)` runs `syft <file>`; both return CycloneDX dict; 503 if Syft not installed |
 | `ghsa.py` | GitHub Advisory Database REST API: `fetch_ghsa_for_components(components)` → per-purl advisory list; supports npm/pypi/maven/nuget/cargo/gem/go; optional `GITHUB_TOKEN` (60 req/h without, 5000/h with) |
 | `reachability.py` | Three-phase source reachability: `scan_zip(zip_bytes)` → `ScanResult(presence, ast_reachable)`; Phase 1 regex import scan, Phase 2 test-path filtering, Phase 3 Python AST call graph (`_FileAnalyser` — alias tracking, route decorator detection, 1-hop call graph); `classify_vulns()` → `function_reachable`/`reachable`/`test_only`/`not_found` |
 | `converter.py` | SBOM format conversion: `convert(content, filename, target)` → `(bytes, filename)`; supports CycloneDX JSON ↔ SPDX JSON, CycloneDX JSON ↔ XML; preserves PURL/License/metadata |
@@ -230,11 +232,12 @@ Separate from VEX status. `suppressed=true` removes a vuln from SLA tracking, se
 - Usage: `uses: ./tools/sbom-action` with secrets for API token
 
 ### Production Server
-- **IP**: `161.33.130.101` — Oracle Linux 9.7, 1GB RAM, user `opc`
-- **SSH key**: `D:\projects\SBOM\ssh-key-2026-04-21.key` (gitignored, one level above `sbom-platform/`)
-- **Deploy**: `bash deploy/deploy.sh` from `sbom-platform/` — builds frontend locally, rsyncs to server, restarts service
-- **First deploy**: `bash deploy/first-deploy.sh` — also runs `setup.sh` on server (installs python3.11 + nginx via dnf)
-- Node.js is NOT installed on the server; frontend is always built locally then uploaded as `dist/`
+- **Target**: Mac Mini (macOS), `$HOME/sbom/`, no sudo required
+- **Service supervisor**: launchd user agent at `~/Library/LaunchAgents/com.sbom.backend.plist`
+- **Connection**: env-driven — `SBOM_DEPLOY_HOST` (e.g. `mac-mini.local` / Tailscale name), `SBOM_DEPLOY_USER`, optional `SBOM_DEPLOY_DIR` / `SBOM_SSH_KEY`
+- **First deploy**: `SBOM_DEPLOY_HOST=mac-mini.local bash deploy/first-deploy.sh` — uploads bootstrap files, runs `setup-macos.sh` (Homebrew python@3.11, dirs, venv, launchd plist), pauses for manual `.env` edit, then runs `deploy.sh`
+- **Routine deploy**: `SBOM_DEPLOY_HOST=mac-mini.local bash deploy/deploy.sh` — local frontend build, tar+ssh upload backend + dist, pip install, reload launchd agent
+- Node.js is NOT installed on the Mac Mini; frontend is always built on the dev machine then uploaded as `dist/`
 
 ## Documentation
 - `docs/api-reference.md` — Full API endpoint reference with request/response shapes
@@ -242,4 +245,4 @@ Separate from VEX status. `suppressed=true` removes a vuln from SLA tracking, se
 - `docs/user-manual.md` — Consultant SOP (8-step workflow + common scenarios)
 - `docs/phase2-spec.md` — Phase 2 specs: CSAF import, VEX chain inheritance, firmware scan
 - `docs/TISAX_MODULE_PLAN.md` — Planned TISAX module: VDA ISA 6.0 self-assessment (63 controls), maturity scoring 0–5, AL2/AL3 gap analysis
-- `deploy/ORACLE_CLOUD_SETUP.md` — Production server info, firewall setup, deploy steps, ops commands
+- `deploy/MACMINI_SETUP.md` — Mac Mini deployment guide: prerequisites, first-deploy/routine-deploy flows, three connection options (LAN / Tailscale / public+TLS), launchd ops commands

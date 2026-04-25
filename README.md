@@ -1,16 +1,29 @@
 # SBOM Management Platform
 
-適用於 ICS/OT 製造商的 SBOM 管理平台，符合 EU CRA 與 IEC 62443 法規要求。
+適用於 ICS/OT 製造商的 SBOM 管理平台，符合 EU CRA、IEC 62443、NIS2、TISAX 法規要求。
+
+## 重點能力一眼看完
+
+- **SBOM 拆解（生成）** — 內建呼叫 [Trivy](https://github.com/aquasecurity/trivy) 拆解容器映像 / IaC，內建呼叫 [Syft](https://github.com/anchore/syft) 從原始碼 zip 與 binary（`.exe` / `.so` / `.dll` / `.jar` / `.whl` / firmware image）產出 SBOM；支援上傳既有 CycloneDX / SPDX SBOM
+- **漏洞情資** — OSV.dev 自動掃描 + EPSS 利用可能性 + CISA KEV 已知被利用 + NVD CVE 詳情 + GitHub Security Advisories
+- **VEX 與抑制** — open / in_triage / not_affected / affected / fixed 五狀態，可批次更新；獨立 suppression 機制（含到期時間）
+- **多重合規報告** — EU CRA 事件管理、IEC 62443-4-1 / 4-2 / 3-3、TISAX 自評、NIS2 Article 21；全部 PDF + CSAF VEX
+- **多租戶** — 每個 organization 獨立隔離；3 階方案（Starter / Standard / Professional）
+- **企業就緒** — JWT + OIDC SSO、API Token（read/write/admin scope）、稽核日誌、Webhook（Slack / Teams 自動格式化）、Email 通知、Sigstore 簽章驗證、SBOM 脫敏分享連結、持續監控背景掃描
+- **部署** — 開發機（Windows / macOS / Linux）+ 生產 Mac Mini（launchd + Homebrew，無需 sudo / Docker）
 
 ---
 
 ## 系統需求
 
-| 項目 | 版本 |
-|------|------|
-| Python | 3.11 以上 |
-| Node.js | 18 以上 |
-| 作業系統 | Windows 10/11（無 Docker） |
+| 項目 | 開發機 | 生產（Mac Mini） |
+|------|-------|------------------|
+| Python | 3.11+ | 3.11+（`brew install python@3.11`） |
+| Node.js | 18+ | 不需要（前端在開發機 build） |
+| 資料庫 | SQLite（內建） | PostgreSQL 16（推薦）/ SQLite |
+| 反向代理 | 不需要 | nginx（必裝 — backend 綁 127.0.0.1） |
+| 作業系統 | Windows 10/11、macOS、Linux | macOS（已驗證 Mac Mini） |
+| Docker | 不需要 | 不需要（純 launchd + venv） |
 
 ---
 
@@ -47,6 +60,19 @@ cd ../frontend
 npm install
 ```
 
+### 5.（可選）啟用 SBOM 拆解能力
+
+平台本體只負責「消費 SBOM 與管理漏洞」，實際的拆解動作由外部工具承擔。三條路自由組合：
+
+| 拆解對象 | 工具 | License | 啟用 |
+|---------|------|---------|------|
+| 容器映像 / IaC | Trivy | Apache-2.0 ✅ | `brew install trivy`（macOS）/ apt|dnf |
+| 原始碼 zip → SBOM | Syft | Apache-2.0 ✅ | `brew install syft` |
+| Binary / firmware → SBOM | Syft | Apache-2.0 ✅ | `brew install syft` |
+| 韌體深度解包（需要時） | EMBA | **GPL-3.0** ⚠️ | 自行 `git clone` 或 `docker pull embeddedanalyzer/emba`；本產品**不打包**，詳見 [`NOTICE.md`](NOTICE.md) §3 |
+
+裝好後對應端點直接可用 — `POST /api/releases/{id}/sbom-from-source` 等。沒裝時 503 + 安裝指引。
+
 ---
 
 ## 啟動平台
@@ -72,11 +98,28 @@ npm run dev
 
 ---
 
+## 部署到生產（Mac Mini）
+
+開發機與生產分離 — 開發機跑 Vite dev server，生產 Mac Mini 跑 launchd + nginx。一鍵部署：
+
+```bash
+# 一次裝齊：Postgres + nginx + Trivy + Syft（其餘 EMBA 因為 GPL-3.0 預設不裝，需要時加 INSTALL_EMBA=1 看安裝指南）
+INSTALL_POSTGRES=1 INSTALL_NGINX=1 INSTALL_TRIVY=1 INSTALL_SYFT=1 \
+SBOM_DEPLOY_HOST=mac-mini.local \
+bash deploy/first-deploy.sh
+```
+
+詳細流程、SSL 設定、Tailscale 等：[`deploy/MACMINI_SETUP.md`](deploy/MACMINI_SETUP.md)
+
+---
+
 ## 預設帳號
 
 | 帳號 | 密碼 |
 |------|------|
 | `admin` | `sbom@2024` |
+
+> **⚠️ 生產環境必改**：自 v2.x 起，當 `DEBUG=false` 時若 `SECRET_KEY` 或 `ADMIN_PASSWORD` 仍是預設值，後端會**拒絕啟動並 `sys.exit(1)`**。請務必在 `backend/.env` 設定強隨機值（`python -c 'import secrets; print(secrets.token_hex(32))'`）。
 
 ---
 
@@ -84,16 +127,19 @@ npm run dev
 
 | 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `SECRET_KEY` | `change-me-in-production` | JWT 簽名金鑰，建議正式環境修改 |
+| `DATABASE_URL` | `sqlite:///./sbom.db` | dev SQLite；生產建議 `postgresql+psycopg2://sbom_user:PASS@127.0.0.1:5432/sbom`（`setup-macos.sh INSTALL_POSTGRES=1` 自動產） |
+| `SECRET_KEY` | `change-me-in-production` | JWT 簽名金鑰，**`DEBUG=false` 時必改**（預設值會讓 backend 拒啟動） |
 | `ADMIN_USERNAME` | `admin` | 管理員帳號 |
-| `ADMIN_PASSWORD` | `sbom@2024` | 管理員密碼 |
+| `ADMIN_PASSWORD` | `sbom@2024` | 管理員密碼，**`DEBUG=false` 時必改** |
+| `DEBUG` | `false` | dev 設為 `true` 跳過上述守衛 |
 | `JWT_EXPIRE_HOURS` | `8` | 登入 Token 有效時間（小時） |
-| `SMTP_HOST` | 空 | Email 通知 SMTP 伺服器 |
-| `SMTP_PORT` | `587` | SMTP 連接埠 |
-| `SMTP_USER` | 空 | SMTP 帳號 |
-| `SMTP_PASSWORD` | 空 | SMTP 密碼 |
-| `SMTP_FROM` | 空 | 寄件人 Email |
-| `NVD_API_KEY` | 空 | NVD API Key（無 key 限速 5 req/30s；有 key 50 req/30s）申請：https://nvd.nist.gov/developers/request-an-api-key |
+| `ALLOWED_ORIGIN` | `http://localhost:3000` | 對外 origin（單一），CORS / OIDC redirect 用 |
+| `SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_TLS` | 空 | Email 通知（可選） |
+| `NVD_API_KEY` | 空 | NVD API Key（無 5 req/30s；有 50 req/30s） |
+| `GITHUB_TOKEN` | 空 | GHSA 查詢 rate limit（無 60/h；有 5000/h） |
+| `OIDC_ISSUER` / `_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URI` | 空 | OIDC SSO（留空關閉） |
+| `FRONTEND_URL` | `http://localhost:3000` | 忘記密碼信件用 |
+| `UPLOAD_DIR` | 空 | SBOM 上傳目錄；空 = `<backend>/uploads`，相對路徑會錨定到 backend/ |
 
 ---
 
@@ -111,14 +157,26 @@ npm run dev
 
 ## 功能一覽
 
+### SBOM 拆解 / 生成
+| 功能 | 端點 | 工具 |
+|------|------|------|
+| 上傳既有 SBOM（CycloneDX / SPDX JSON） | `POST /api/releases/{id}/sbom` | 內建 parser |
+| SBOM 格式互轉 | `POST /api/convert?target=...` | 內建（CycloneDX JSON ↔ XML ↔ SPDX JSON） |
+| **原始碼 zip → SBOM** | `POST /api/releases/{id}/sbom-from-source` | Syft |
+| **Binary / firmware → SBOM** | `POST /api/releases/{id}/sbom-from-binary` | Syft |
+| 容器映像 → SBOM | `POST /api/releases/{id}/scan-image` | Trivy |
+| IaC（Terraform / K8s / Dockerfile）→ SBOM + misconfig | `POST /api/releases/{id}/scan-iac` | Trivy |
+| 韌體深度解包 | （獨立 firmware scan 流程） | EMBA（GPL-3.0，自選） |
+| Reachability（漏洞函式可達性分析） | `POST /api/releases/{id}/upload-source` | 內建 Python AST |
+
 ### 核心功能
 | 功能 | 說明 |
 |------|------|
-| SBOM 上傳 | 支援 CycloneDX JSON、SPDX JSON |
 | CVE 掃描 | 透過 OSV.dev API 自動掃描 |
 | VEX 狀態管理 | open / in_triage / not_affected / affected / fixed |
 | 批次 VEX 更新 | 多選漏洞一次更新狀態 |
 | 重新掃描 | 對現有元件重新查詢最新 CVE |
+| 漏洞抑制（Suppression） | 獨立於 VEX，含到期時間，自動觸發到期通知 |
 
 ### 漏洞情資
 | 功能 | 說明 |
@@ -130,11 +188,16 @@ npm run dev
 ### 報告與匯出
 | 功能 | 說明 |
 |------|------|
-| PDF 報告 | 含品牌 Logo、公司名稱、主題色 |
-| CSV 匯出 | 漏洞清單 CSV |
+| PDF 報告 | 含品牌 Logo、公司名稱、主題色（CJK 字型自動偵測） |
+| CSV 匯出 | 漏洞清單 / 稽核日誌（formula injection 防護） |
 | CSAF VEX | CSAF 2.0 格式 VEX 文件 |
 | 證據包 ZIP | PDF + CSAF + SBOM 原始檔 + 清單 |
-| IEC 62443 報告 | 11 項 SM/DM/SUM 要求評估 PDF |
+| IEC 62443-4-1 SDL | SM-9 / DM-1~5 / SUM-1~5 |
+| IEC 62443-4-2 元件層級 | CR-1~4 |
+| IEC 62443-3-3 系統層級 | FR-1~7 |
+| NIS2 Article 21 | 5 項可量化控制項 |
+| TISAX VDA ISA 6.0 | 69 控制項自評（含 GDPR 個資保護模組） |
+| SBOM 脫敏分享連結 | 時效 token、可選擇隱藏內部元件、無需登入下載 |
 
 ### 合規與管理
 | 功能 | 說明 |
@@ -168,10 +231,10 @@ npm run dev
 ## 技術架構
 
 ```
-後端：FastAPI + SQLAlchemy + SQLite（port 9100）
-前端：React + Vite + Tailwind CSS（port 3000）
-資料庫：SQLite（backend/sbom.db）
-Schema 遷移：main.py 啟動時 ALTER TABLE（無 Alembic）
+後端：FastAPI + SQLAlchemy + Pydantic v2（port 9100）
+前端：React 18 + Vite + Tailwind CSS（port 3000）
+資料庫：SQLite（dev）/ PostgreSQL 16（生產推薦）
+Schema 遷移：main.py 啟動時 ALTER TABLE 跨 SQLite/Postgres helper（無 Alembic）
 ```
 
 ### 資料模型（cascade delete）
@@ -210,9 +273,26 @@ User / PolicyRule / BrandConfig / AlertConfig（全域）
 | [docs/api-reference.md](docs/api-reference.md) | 完整 API 端點參考 |
 | [docs/db-schema.md](docs/db-schema.md) | 資料表欄位說明 |
 | [docs/phase2-spec.md](docs/phase2-spec.md) | Phase 2 功能規格 |
-| [deploy/ORACLE_CLOUD_SETUP.md](deploy/ORACLE_CLOUD_SETUP.md) | 生產環境部署指南 |
+| [deploy/MACMINI_SETUP.md](deploy/MACMINI_SETUP.md) | 生產環境部署指南（Mac Mini + launchd + Homebrew + Postgres + nginx + Trivy + Syft） |
+| [NOTICE.md](NOTICE.md) | 第三方開源元件清單與授權聲明 |
 
 平台內建說明中心：登入後點選導覽列 **說明**，或直接開啟 `http://localhost:3000/help`
+
+---
+
+## 開源授權與合規
+
+本平台建構於開源元件之上。完整清單與授權義務說明於：
+
+- [`NOTICE.md`](NOTICE.md) — 所有依賴的版本、license、源碼 URL，分 7 節含**下游使用者合規 checklist**
+- 線上版（產品執行中可訪問）：`http://<your-host>/about` 或 `GET /api/notice`（公開、無需登入）
+
+**License 摘要**：
+- **核心依賴 95% 為 permissive license**（MIT / BSD / Apache-2.0）— 商業閉源使用無限制
+- **2 個 LGPL 元件**（`fpdf2` PDF 生成、`psycopg2-binary` Postgres driver）— Python dynamic import 滿足 LGPL §4 條件，**不會讓本產品 source 變成 LGPL**
+- **EMBA 為 GPL-3.0**，本產品**從不打包 EMBA**；透過 subprocess 在使用者自願安裝後呼叫，arms-length 模式不會讓 GPL 義務擴及本產品
+
+如需將本平台整合進企業產品 / OEM 出貨，請參考 [`NOTICE.md`](NOTICE.md) §7「下游使用者合規 checklist」。
 
 ---
 

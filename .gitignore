@@ -18,6 +18,10 @@ backend/sbom.db
 backend/sbom.db-shm
 backend/sbom.db-wal
 backend/uploads/
+# Repo-root SQLite leftover (when backend cwd is repo root by accident)
+/sbom.db
+/sbom.db-shm
+/sbom.db-wal
 
 # Node
 frontend/node_modules/

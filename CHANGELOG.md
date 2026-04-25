@@ -6,8 +6,31 @@
 
 ## [Unreleased]
 
-### 修正（安全性 / 生產就緒）
-- **依賴套件升級**：清除 9 個已知 CVE（`pip-audit` 掃描結果）
+### 修正(安全強化 — Phase 0:14 項 Critical/High)
+- **C-1 multi-tenant breach**:`releases.py:upload_sbom` 接收 `org_scope` 但未呼叫 `_assert_release_org`,viewer 知道 release_id(UUID)即可覆寫他組 SBOM。**僅補 1 行 `_assert_release_org(release, org_scope, db)` 即修復**
+- **C-2 path traversal**:`firmware.py:upload_firmware` 直接拼接使用者 `file.filename`,改 `Path(file.filename).name` 過濾路徑分隔符
+- **H-1/H-2 firmware 全面加固**:upload/list/get 改 `require_admin`;500MB 大小上限(`await file.read(MAX+1)` 防 OOM);`import-as-release` 改用 product 真實 `organization_id`,不信 client `payload.org_id`
+- **H-3 share.py IDOR**:create/list/revoke share-link 三端點全加 `_assert_release_org` 檢查 release 是否屬於 caller 組織
+- **H-4 Content-Disposition header injection**:share.py / convert.py / releases.py CSV 匯出全套用新 `safe_attachment_filename()` 過濾 `"`/`\r`/`\n`/`\\`
+- **H-5 settings 寫入端點缺 admin 守衛**:PATCH /alerts、test-webhook、test-email、PATCH /brand、POST/DELETE /brand/logo、POST /monitor/trigger 等 6 個端點全加 `require_admin`
+- **H-6 webhook SSRF**:`alerts.send_webhook()` 加 `_validate_webhook_url()` ── DNS 解析所有 A/AAAA 拒絕 loopback/private/link-local/multicast/reserved + 雲端 metadata(`169.254.169.254`);關掉 redirect-follow 防 302 繞過
+- **H-7 Logo 上傳 SVG XSS**:副檔名白名單 `{.png/.jpg/.jpeg/.gif/.webp}`;拒收 SVG;`media_type` 由 server 從副檔名決定,不信 client content-type
+- **H-8 OIDC JWT in URL**:callback 從 `?sso_token=xxx`(query string,落 Referer/proxy log/瀏覽器歷史)改為 `#sso_token=xxx`(URL fragment,不送 server);前端 `Login.jsx` 讀完立刻 `replaceState` 清除
+- **H-9 OIDC empty username**:userinfo 缺 email/name/preferred_username/sub 時 502 拒絕,避免建立空字串 username 的殼帳戶
+- **H-10 vuln history IDOR**:`get_vuln_history` 加 `_assert_vuln_org` 檢查,viewer 不能跨組讀 VEX 異動史
+- **H-11 SECRET_KEY/ADMIN_PASSWORD 預設值守衛**:啟動時若 `DEBUG=false` 且 `SECRET_KEY ∈ {change-me-in-production, please-change-this-to-a-random-64-char-string, ...}` 或 `ADMIN_PASSWORD ∈ {sbom@2024, please-change-this-password, ...}`,直接 `sys.exit(1)`;`DEBUG=true` 仍只 warning
+- **H-12 plist 綁定與文檔不一致**:保留 `127.0.0.1` 綁定(最小暴露原則),改文檔說明對外存取**必須**經 nginx / SSH tunnel / Tailscale + nginx;`deploy.sh` 末「直連 backend」誤導訊息修正
+
+### 修正(Phase 1:6 項 Medium/Low)
+- **M-1 CORS 收緊**:`allow_methods=["*"]` → 列出 6 個動詞;`allow_headers=["*"]` → 列出 5 個必要 header;新增 `expose_headers=["content-disposition"]` 支援檔案下載
+- **M-6 CSV formula injection**:新 `csv_safe()` helper(OWASP-recommended `'` 前綴),套用到 `admin.py` 稽核匯出、`releases.py` 漏洞匯出、`tisax.py` 三個 CSV 端點
+- **M-7 密碼策略統一**:抽出 `is_password_acceptable()` + `PASSWORD_POLICY_MESSAGE` 到 `core/security.py`,replace 所有 5 處(create_org/create_user/update_user/change-password/reset-password) ── 一致 10 字元 + 字母 + 數字
+- **M-8 delete_product 缺 require_admin**:加 1 行守衛,與 `update_product` 對齊
+- **M-13 UPLOAD_DIR 相對路徑風險**:新 `BACKEND_DIR` + `resolve_under_backend()` helper;UPLOAD_DIR / FIRMWARE_UPLOAD_DIR / BRAND_UPLOAD_DIR 全錨定到 backend/ 絕對路徑,cwd 變動不影響
+- **L-4 convert.py Content-Disposition CRLF**:套用 `safe_attachment_filename`(同 H-4 共用 helper)
+
+### 修正(安全性 / 生產就緒)
+- **依賴套件升級**:清除 9 個已知 CVE(`pip-audit` 掃描結果)
   - `fastapi` 0.115.0 → 0.120.4
   - `starlette` 0.38.6 → 0.49.2（CVE-2024-47874、CVE-2025-54121、CVE-2025-62727）
   - `python-multipart` 0.0.12 → 0.0.26（CVE-2024-53981、CVE-2026-24486、CVE-2026-40347）
@@ -18,15 +41,53 @@
 - **從 `@app.on_event` 遷移至 `lifespan` context manager**：`on_event` 自 FastAPI 0.109 deprecated,改成 `@asynccontextmanager` 統一管理 startup/shutdown
 - **FastAPI `version` 欄位同步**:`FastAPI(version="0.1.0")` → `"2.0.0"`,與 `/health` 回傳的 `version` 一致
 
+### 變更（部署目標調整）
+- **棄用 Oracle Cloud,改部署到 Mac Mini**:刪除 `deploy/ORACLE_CLOUD_SETUP.md` / `deploy/sbom-backend.service`(systemd) / `deploy/setup.sh`(dnf)
+- **新增 launchd 服務定義**:`deploy/com.sbom.backend.plist`(KeepAlive on Crash、ResidentSetSize ~400MB、user-level agent)
+- **新增 macOS bootstrap**:`deploy/setup-macos.sh`(Homebrew python@3.11 + 建目錄 + venv + plist 安裝;`INSTALL_NGINX=1` 可選裝 nginx)
+- **重寫 deploy 腳本**:`deploy.sh` / `first-deploy.sh` 改 env 變數驅動(`SBOM_DEPLOY_HOST` / `_USER` / `_DIR` / `_SSH_KEY` / `_SSH_OPTS`),不再硬編碼伺服器 IP
+- **新增部署指南**:`deploy/MACMINI_SETUP.md`(前置 SSH/Homebrew、首次部署、三種對外連線:LAN-only / Tailscale / 公網+TLS、launchd 維運指令、Postgres 切換)
+- **更新預設路徑**:部署根從 `/var/www/sbom` 改為 `$HOME/sbom`(無需 sudo);`backup.sh` 路徑同步更新
+- **修整文件**:`CLAUDE.md` / `README.md` / `NEXT_TASK.md` / `docs/architecture.md` / `docs/competitor-gap.md` 的 Oracle Cloud / `opc` / `161.33.130.101` 等痕跡全數移除;`backend/app/services/font_manager.py` 字型路徑註解去掉 "Oracle Linux"
+
+### 變更（資料庫:Postgres 為新預設,SQLite 仍支援）
+- **修 SQLite-specific bug**:`stats.py:74` 的 `func.julianday(...)` 在 Postgres 不存在(會 500),抽成 `core/database.py:days_between(later, earlier)` cross-DB helper(SQLite 走 `julianday()` 差,Postgres 走 `extract('epoch', ...) / 86400`)
+- **`setup-macos.sh` 加 Postgres 自動安裝**:`INSTALL_POSTGRES=1` 觸發 `brew install postgresql@16` + `brew services start` + 建立 `sbom_user` role(隨機 32 字元密碼)+ `sbom` database + `GRANT ON SCHEMA public`(Postgres 15+ 必要)+ 印出完整 `DATABASE_URL` 給使用者貼進 `.env`;支援 `PG_USER`/`PG_PASS`/`PG_DB` 覆寫
+- **新增 SQLite → Postgres 遷移腳本**:`deploy/migrate-sqlite-to-postgres.py`(SQLAlchemy `Base.metadata.sorted_tables` 處理 FK 順序、欄位交集處理 schema 演進、單一 transaction 全成或全 rollback、`--force` 強制覆寫 / `--dry-run` 試跑)
+- **`backup.sh` 雙模式**:自動讀 `backend/.env` 偵測 `DATABASE_URL` scheme,SQLite 走 `sqlite3 .backup`(產 `.db`),Postgres 走 `pg_dump --format=custom --no-owner --no-acl`(產壓縮 `.dump`,可 `pg_restore`),兩者都自動輪替 `KEEP_DAYS`(預設 14)
+- **`.env.production` 預設改 Postgres**:`DATABASE_URL=postgresql+psycopg2://sbom_user:CHANGE_ME_FROM_setup-macos.sh@127.0.0.1:5432/sbom`(SQLite 保留為註解選項)
+- **`first-deploy.sh` 同步攜帶遷移腳本**:把 `migrate-sqlite-to-postgres.py` 一併 scp 到 Mac Mini 的 `~/sbom-bootstrap/`
+- **`MACMINI_SETUP.md` 新增「資料庫」章節**:SQLite vs Postgres 對照表、自動/手動安裝、SQLite 遷移流程、psql 互動操作、切回 SQLite 提示;FAQ 更新對應 Postgres 服務排錯
+- **驗證範圍**:Step 1(`days_between` cross-DB 抽象)在 SQLite 上跑 54/54 全綠,dashboard `/api/stats/` 200 OK;Postgres 端驗證受 Windows 開發機 WDAC 政策阻擋(已記錄 `.knowledge/pitfalls/wdac-blocks-unsigned-binaries.md`),延後到 Mac Mini 部署時做 ground-truth
+
+### 新增(SBOM 拆解能力 — Syft 整合)
+- **`syft_scanner.py` service**:`is_syft_available()` / `scan_source(zip_bytes)` / `scan_binary(file_bytes, filename)`,內含 zip-bomb 防護(500MB 累計上限 + 路徑沙箱拒絕 `..` / 絕對路徑 / 解壓溢出)
+- **新端點 `POST /api/releases/{id}/sbom-from-source`**:接受原始碼 zip,Syft 識別 manifest(`package.json` / `requirements.txt` / `go.mod` / `Cargo.toml` / `pom.xml` 等)→ CycloneDX → 合併進現有元件清單(by purl,additive)→ 自動 OSV/EPSS/KEV;100MB 上限;`require_plan("syft")`
+- **新端點 `POST /api/releases/{id}/sbom-from-binary`**:接受單一 binary(`.exe` / `.so` / `.dll` / `.jar` / `.whl` / firmware image),Syft binary cataloguers 抽 Go/.NET/Java/Python/Rust 嵌入版本資訊;200MB 上限;`require_plan("syft")`
+- **共用 `_import_syft_cdx()` helper**:parse → upsert components by purl → OSV scan → EPSS/KEV enrich → audit;與 `scan-image` 的 pipeline 一致,downstream 無差別
+- **plan 註冊**:`FEATURE_PLAN["syft"] = "professional"`
+- **填補能力缺口**:此前僅有 reachability(`upload-source` 是分析既有 SBOM,不產 SBOM)、Trivy(只能容器/IaC)、EMBA(GPL-3.0,需自選);Syft 補上**原始碼 → SBOM** 與 **binary → SBOM** 兩個重要場景,且 license 乾淨(Apache-2.0)
+
+### 新增(OSS 合規 / 路線 A 完成)
+- **`NOTICE.md`**(186 行):完整盤點所有 OSS 元件、License、版本、源碼 URL;分 7 節 ── permissive 14 個 / LGPL 2 個(`fpdf2`/`psycopg2-binary`,SaaS 動態 import 場景無源碼公開義務)/ 外部 subprocess 工具(Trivy/Syft Apache-2.0 + EMBA GPL-3.0 但**不打包**)/ 外部資料來源(OSV/NVD/KEV/EPSS/GHSA)/ CycloneDX & SPDX spec / License 全文索引 / **下游使用者合規 checklist**(4 條給整合本產品的客戶)
+- **`GET /api/notice` 公開端點**:`backend/app/api/notice.py`,回 `text/markdown; charset=utf-8`,**無認證**(auditors / 法務不需帳號即可驗證合規);快取於 import time 避免重複 I/O
+- **前端 About 頁(路徑 `/about`,公開)**:`frontend/src/pages/About.jsx` 抓 `/api/notice` 渲染;不引入 markdown 套件(遵守 CLAUDE.md「No new npm packages」),改用內建 monospace + 自動 linkify URL
+- **Layout footer 加入連結**:`SBOM Platform · v2.0.0 │ 開源授權聲明 · NOTICE.md`,i18n 中英對應 key 已加 (`nav.openSourceNotices`)
+- **`INSTALL_TRIVY=1` / `INSTALL_SYFT=1` 旗標**(setup-macos.sh):`brew install` 對應工具,Apache-2.0 license 直接安裝
+- **`INSTALL_EMBA=1` 旗標**:**只印安裝指南**,本產品從不下載 / 打包 EMBA(GPL-3.0)。明確劃清 license 邊界 ── arms-length subprocess 模式不會把 GPL 義務擴及產品本體
+- **`MACMINI_SETUP.md` 新增「拆解能力啟用」章節**:Trivy / Syft / EMBA 三表並列,標清各自 license 風險與啟用方式
+
 ### 文件
 - `SECURITY.md`:版本支援表更新(1.5.x → 2.0.x 為最新)
-- `CLAUDE.md`:Python 版本 3.9 → 3.11 更正;測試數 39 → 54 更正
+- `CLAUDE.md`:Python 版本 3.9 → 3.11 更正;測試數 39 → 54 更正;路由表新增 `/sbom-from-source` `/sbom-from-binary` `/api/notice`;services 表新增 `syft_scanner.py`
 - 新增 `.knowledge/`:跨輪次知識庫(ADR / patterns / pitfalls / references)
+- 新增 `NOTICE.md`(見上「OSS 合規」章節)
 
 ### 計畫中
-- 部署 Oracle Cloud 生產環境（所有功能已完成）
-- Binary SBOM 生成（Syft，等客戶需求）
-- FDA Pre-market 合規報告（等醫材客戶）
+- 部署到自家 Mac Mini 生產環境(所有功能已完成)
+- ~~Binary SBOM 生成(Syft,等客戶需求)~~ ✅ 已完成 ── Syft 整合(原始碼 + binary 兩個端點)
+- FDA Pre-market 合規報告(等醫材客戶)
+- (進企業 OEM 客戶時)路線 B:替換 fpdf2 → reportlab、psycopg2 → asyncpg/pg8000,徹底剔除 LGPL 義務;前端 JWT 改 httpOnly cookie
 
 ---
 

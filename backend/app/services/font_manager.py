@@ -69,7 +69,7 @@ _WINDOWS_CJK_FONTS = [
 
 # System font search paths
 _SYSTEM_PATHS = [
-    # Linux (Oracle Linux / Ubuntu)
+    # Linux
     Path("/usr/share/fonts"),
     Path("/usr/local/share/fonts"),
     # macOS
