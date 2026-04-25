@@ -1,16 +1,63 @@
 """
 Send webhook and email alerts when new vulnerabilities are found.
 """
+import ipaddress
 import logging
 import smtplib
+import socket
 import time
 from email.mime.text import MIMEText
+from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_webhook_url(url: str) -> str:
+    """SSRF guard: reject non-http(s) schemes, private/loopback/link-local IPs,
+    and cloud metadata endpoints.  Returns "" on success or an error message.
+    DNS is resolved here so attackers can't bypass via a public-looking hostname
+    that points at 127.0.0.1 / 169.254.169.254."""
+    if not url:
+        return "Webhook URL is empty"
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        return f"Invalid URL: {e}"
+
+    if parsed.scheme not in ("http", "https"):
+        return f"Only http/https are allowed (got {parsed.scheme!r})"
+    host = parsed.hostname
+    if not host:
+        return "Webhook URL has no host"
+
+    # Resolve all A/AAAA records for the hostname; reject if ANY resolves into
+    # a forbidden range (defense-in-depth — a hostile DNS that returns one
+    # public + one private answer must not slip through).
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror as e:
+        return f"DNS resolution failed: {e}"
+
+    for info in infos:
+        ip_str = info[4][0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        if (
+            ip.is_loopback
+            or ip.is_private
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_unspecified
+            or ip.is_reserved
+        ):
+            return f"Webhook host resolves to a non-routable address ({ip_str})"
+    return ""
 
 
 def _get_config(db):
@@ -95,7 +142,13 @@ def _teams_payload(payload: dict) -> dict:
 
 def send_webhook(url: str, payload: dict, max_retries: int = 3) -> str:
     """POST payload to webhook URL with exponential backoff.
-    Auto-detects Slack / Teams URLs and reformats payload accordingly."""
+    Auto-detects Slack / Teams URLs and reformats payload accordingly.
+    Refuses to send to private / loopback / metadata endpoints (SSRF guard)."""
+    err = _validate_webhook_url(url)
+    if err:
+        logger.warning("Webhook rejected: %s (url=%s)", err, url)
+        return err
+
     if _is_slack_url(url):
         body = _slack_payload(payload)
     elif _is_teams_url(url):
@@ -106,7 +159,9 @@ def send_webhook(url: str, payload: dict, max_retries: int = 3) -> str:
     last_err = ""
     for attempt in range(max_retries):
         try:
-            resp = httpx.post(url, json=body, timeout=10)
+            # Disable redirect following so the server can't bounce us to a
+            # private address after the validation has already passed.
+            resp = httpx.post(url, json=body, timeout=10, follow_redirects=False)
             resp.raise_for_status()
             return ""
         except Exception as e:

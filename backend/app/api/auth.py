@@ -19,7 +19,13 @@ from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.rate_limit import check_login_rate_limit, login_limiter, _client_ip
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    PASSWORD_POLICY_MESSAGE,
+    create_access_token,
+    hash_password,
+    is_password_acceptable,
+    verify_password,
+)
 from app.models.organization import Organization
 from app.models.password_reset_token import PasswordResetToken
 from app.models.revoked_token import RevokedToken
@@ -214,23 +220,32 @@ def oidc_callback(
     # Get user info
     userinfo = _get_userinfo(access_token)
     sub      = userinfo.get("sub", "")
-    email    = userinfo.get("email", "")
-    name     = userinfo.get("name") or userinfo.get("preferred_username") or email.split("@")[0]
+    email    = (userinfo.get("email") or "").strip()
+    name_raw = (userinfo.get("name") or userinfo.get("preferred_username") or "").strip()
+    # Pick a non-empty username — never auto-provision an account with ""
+    username = email or name_raw or (sub if sub else "")
 
     if not sub:
         raise HTTPException(status_code=502, detail="OIDC userinfo 缺少 sub 欄位")
+    if not username:
+        # Provider returned no email, name, preferred_username, or sub usable
+        # as a display handle. Refuse to provision a phantom account.
+        raise HTTPException(
+            status_code=502,
+            detail="OIDC 回傳的使用者資訊不足以建立帳號（缺 email / name / sub）",
+        )
 
     # Find or create local user
     db_user = db.query(UserModel).filter(UserModel.oidc_sub == sub).first()
     if not db_user:
         # Try matching by email/username
-        db_user = db.query(UserModel).filter(UserModel.username == (email or name)).first()
+        db_user = db.query(UserModel).filter(UserModel.username == username).first()
         if db_user:
             db_user.oidc_sub = sub
         else:
             # Auto-provision SSO user — inactive until admin approves
             db_user = UserModel(
-                username=email or name,
+                username=username,
                 email=email or None,
                 hashed_password=None,
                 role="viewer",
@@ -256,9 +271,12 @@ def oidc_callback(
                  ip=request.client.host if request.client else "unknown")
     db.commit()
 
-    # Redirect to /login?sso_token=xxx — Login.jsx reads it, stores in localStorage, then navigates
+    # Redirect to /login#sso_token=xxx — pass token in the URL FRAGMENT, not
+    # query string.  Fragments are not sent to the server, not logged by
+    # proxies, and not put in the Referer header, so the JWT stays in the
+    # browser only.  Login.jsx reads window.location.hash and clears it.
     frontend_url = settings.ALLOWED_ORIGIN.rstrip("/")
-    return RedirectResponse(url=f"{frontend_url}/login?sso_token={jwt_token}")
+    return RedirectResponse(url=f"{frontend_url}/login#sso_token={jwt_token}")
 
 
 # ── Logout (token revocation) ─────────────────────────────────────────────────
@@ -302,8 +320,8 @@ class ChangePasswordPayload(BaseModel):
 
 @router.post("/change-password", status_code=204)
 def change_password(payload: ChangePasswordPayload, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
-    if len(payload.new_password) < 8:
-        raise HTTPException(status_code=400, detail="新密碼至少 8 個字元")
+    if not is_password_acceptable(payload.new_password):
+        raise HTTPException(status_code=400, detail=PASSWORD_POLICY_MESSAGE)
     db_user = db.query(UserModel).filter(UserModel.username == user["username"]).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="帳號不存在")
@@ -379,8 +397,8 @@ def reset_password(payload: ResetPasswordPayload, db: Session = Depends(get_db))
     """Validate token and set new password."""
     from datetime import datetime, timezone
 
-    if len(payload.new_password) < 8:
-        raise HTTPException(status_code=400, detail="新密碼至少 8 個字元")
+    if not is_password_acceptable(payload.new_password):
+        raise HTTPException(status_code=400, detail=PASSWORD_POLICY_MESSAGE)
 
     token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
     rec = db.query(PasswordResetToken).filter(

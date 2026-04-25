@@ -57,7 +57,8 @@ def update_product(product_id: str, payload: ProductUpdate,
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(product_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def delete_product(product_id: str, _admin: dict = Depends(require_admin),
+                   org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")

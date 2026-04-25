@@ -1,4 +1,29 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+# `backend/` directory — contains app/, requirements.txt, venv/, sbom.db, etc.
+# Resolved from this file's location so it's invariant under cwd changes
+# (matters for ad-hoc scripts, the migration tool, pytest harnesses, etc.).
+BACKEND_DIR: Path = Path(__file__).resolve().parent.parent.parent
+
+
+def resolve_under_backend(path: str | Path | None) -> Path | None:
+    """Resolve `path` to an absolute filesystem location.
+
+    - empty / None       → None (caller picks a default)
+    - absolute           → kept as-is
+    - relative           → interpreted relative to BACKEND_DIR
+
+    Use for upload directories so they always end up in the same place
+    regardless of the process cwd.
+    """
+    if not path:
+        return None
+    p = Path(path)
+    if p.is_absolute():
+        return p
+    return (BACKEND_DIR / p).resolve()
 
 
 class Settings(BaseSettings):

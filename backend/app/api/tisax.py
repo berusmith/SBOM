@@ -13,6 +13,7 @@ from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_org_scope
 from app.core.plan import require_plan as _require_plan
+from app.core.security import csv_safe
 from app.models.organization import Organization
 from app.models.tisax import TISAXAssessment, TISAXControl
 from app.services import tisax_pdf
@@ -302,9 +303,11 @@ def export_csv(
             "compliant": "達標", "near": "接近", "gap": "缺口", "unassessed": "未評"
         }.get(c.status, c.status)
         writer.writerow([
-            c.control_number, c.chapter, c.name, c.requirement_summary or "",
+            csv_safe(c.control_number), csv_safe(c.chapter), csv_safe(c.name),
+            csv_safe(c.requirement_summary),
             c.current_maturity, c.target_maturity, status_label,
-            c.evidence_note or "", c.owner or "", c.due_date or "", c.remarks or "",
+            csv_safe(c.evidence_note), csv_safe(c.owner),
+            c.due_date or "", csv_safe(c.remarks),
         ])
 
     return Response(

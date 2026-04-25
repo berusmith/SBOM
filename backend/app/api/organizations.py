@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core import audit
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin
-from app.core.security import hash_password
+from app.core.security import PASSWORD_POLICY_MESSAGE, hash_password, is_password_acceptable
 from app.core.plan import check_starter_limit
 from app.models.organization import Organization
 from app.models.product import Product
@@ -25,8 +25,8 @@ class OrganizationUpdate(BaseModel):
 def create_organization(payload: OrganizationCreate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):  # noqa: E501
     if payload.username and len(payload.username.strip()) < 3:
         raise HTTPException(status_code=400, detail="帳號至少 3 個字元")
-    if payload.password and len(payload.password) < 6:
-        raise HTTPException(status_code=400, detail="密碼至少 6 個字元")
+    if payload.password and not is_password_acceptable(payload.password):
+        raise HTTPException(status_code=400, detail=PASSWORD_POLICY_MESSAGE)
     if payload.username and db.query(User).filter(User.username == payload.username.strip()).first():
         raise HTTPException(status_code=409, detail="帳號名稱已存在")
 

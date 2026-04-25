@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses, firmware, tokens, convert, share
+from app.api import auth, organizations, products, releases, vulnerabilities, stats, cra, search, settings, policies, users, admin, tisax, licenses, firmware, tokens, convert, share, notice
 from app.models import vex_history as _vex_history_model  # noqa: F401 — ensure table is registered
 from app.models import license_rule as _license_rule_model  # noqa: F401
 from app.models import brand_config as _brand_config_model  # noqa: F401
@@ -177,19 +177,40 @@ with engine.connect() as conn:
 # Create any missing tables (new tables like audit_events)
 Base.metadata.create_all(bind=engine, checkfirst=True)
 
-# Security: warn on weak SECRET_KEY at startup
+# Security: refuse to boot with an insecure SECRET_KEY in production.
+# DEBUG=true keeps the warning-only behavior so dev / test envs stay easy to run.
 import logging as _logging
+import sys as _sys
 _startup_log = _logging.getLogger("sbom.startup")
-if _cfg.SECRET_KEY in ("change-me-in-production", "", "secret"):
-    _startup_log.warning(
-        "⚠️  SECRET_KEY is using an insecure default. "
-        "Set a strong random value in backend/.env before production deployment."
-    )
-if len(_cfg.SECRET_KEY.encode()) < 32:
-    _startup_log.warning(
-        "⚠️  SECRET_KEY is shorter than 32 bytes. "
-        "JWT tokens can be brute-forced. Use at least 32 random bytes."
-    )
+_INSECURE_SECRETS = {"change-me-in-production", "", "secret", "please-change-this-to-a-random-64-char-string"}
+_secret_is_default = _cfg.SECRET_KEY in _INSECURE_SECRETS
+_secret_too_short = len(_cfg.SECRET_KEY.encode()) < 32
+
+if _secret_is_default or _secret_too_short:
+    if _cfg.DEBUG:
+        if _secret_is_default:
+            _startup_log.warning("⚠️  SECRET_KEY is using an insecure default (DEBUG=true → boot allowed).")
+        if _secret_too_short:
+            _startup_log.warning("⚠️  SECRET_KEY is shorter than 32 bytes (DEBUG=true → boot allowed).")
+    else:
+        _startup_log.error(
+            "FATAL: SECRET_KEY is %s. Set a strong random value (>= 32 bytes) "
+            "in backend/.env before starting in production. Generate one with: "
+            "python -c 'import secrets; print(secrets.token_hex(32))'",
+            "an insecure default" if _secret_is_default else "shorter than 32 bytes",
+        )
+        _sys.exit(1)
+
+# Same policy for the admin password — refuse the public default unless DEBUG.
+if _cfg.ADMIN_PASSWORD in ("sbom@2024", "please-change-this-password", "admin", ""):
+    if _cfg.DEBUG:
+        _startup_log.warning("⚠️  ADMIN_PASSWORD is the default — change before production.")
+    else:
+        _startup_log.error(
+            "FATAL: ADMIN_PASSWORD is using a known default value. "
+            "Set ADMIN_PASSWORD to a strong password in backend/.env before production."
+        )
+        _sys.exit(1)
 
 # Seed initial admin user from env vars if users table is empty
 _seed_db = SessionLocal()
@@ -238,8 +259,24 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[_cfg.ALLOWED_ORIGIN],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Whitelist exact methods used by this API rather than `*`.  CORS spec
+    # treats `*` + allow_credentials=True as ambiguous in some browsers, and
+    # restricting the surface follows defense-in-depth.
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    # Whitelist headers the SPA actually sends.  Notable inclusions:
+    #   - authorization        : Bearer JWT
+    #   - content-type         : JSON & multipart
+    #   - x-requested-with     : axios sets this for XHR
+    #   - accept / accept-language : standard browser
+    allow_headers=[
+        "authorization",
+        "content-type",
+        "accept",
+        "accept-language",
+        "x-requested-with",
+    ],
+    expose_headers=["content-disposition"],   # used by file-download flows
+    max_age=600,
 )
 
 # General API rate limit: 300 req/min per IP (excludes static files)
@@ -281,6 +318,9 @@ app.include_router(convert.router, dependencies=_auth)
 # share router: create/list/delete require auth (handled inside router via Depends)
 # GET /api/share/{token} is public — no global auth dependency
 app.include_router(share.router)
+# notice router: GET /api/notice is intentionally public so auditors and
+# downstream users can verify OSS attribution without authenticating.
+app.include_router(notice.router)
 
 
 @app.get("/health", tags=["health"])

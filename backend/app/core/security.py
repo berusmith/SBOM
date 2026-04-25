@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -7,6 +8,41 @@ from passlib.context import CryptContext
 from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Single source of truth for password complexity: at least 10 chars,
+# containing both letters and digits.  Used by /api/users (admin-managed
+# accounts), /api/organizations (auto-provisioned viewer at org creation),
+# /api/auth/change-password, and /api/auth/reset-password.
+_PWD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{10,}$")
+PASSWORD_POLICY_MESSAGE = "密碼至少 10 個字元，且須包含英文字母與數字"
+
+
+def is_password_acceptable(password: str) -> bool:
+    """Centralized password policy check."""
+    return bool(_PWD_RE.match(password or ""))
+
+
+def safe_attachment_filename(name: str, default: str = "download") -> str:
+    """Strip CR / LF / quote / backslash before placing into a Content-Disposition
+    `filename="..."` value, to prevent header injection / response splitting."""
+    cleaned = "".join(c for c in (name or "") if c not in ('"', "\r", "\n", "\\"))
+    return cleaned or default
+
+
+# Characters that Excel / LibreOffice will treat as the start of a formula when
+# encountered at the very start of a cell (after CSV unquoting).  Prepending a
+# single quote — the OWASP-recommended mitigation — converts the cell to a text
+# literal without changing its visible content materially.
+_CSV_FORMULA_LEADERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def csv_safe(value) -> str:
+    """Escape a cell so spreadsheet apps cannot interpret it as a formula.
+    Pass any value through this before writing it into a CSV row."""
+    s = "" if value is None else str(value)
+    if s and s[0] in _CSV_FORMULA_LEADERS:
+        return "'" + s
+    return s
 
 
 def hash_password(plain: str) -> str:

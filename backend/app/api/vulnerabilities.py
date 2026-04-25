@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import require_admin, get_current_user
+from app.core.deps import require_admin, get_current_user, get_org_scope
 from app.models.component import Component
+from app.models.product import Product
 from app.models.release import Release
 from app.models.vex_history import VexHistory
 from app.models.vulnerability import Vulnerability
@@ -20,6 +21,21 @@ def _check_not_locked(vuln: Vulnerability, db: Session):
         rel = db.query(Release).filter(Release.id == comp.release_id).first()
         if rel and rel.locked:
             raise HTTPException(status_code=409, detail="版本已鎖定，無法修改 VEX 狀態")
+
+
+def _assert_vuln_org(vuln: Vulnerability, org_scope: str | None, db: Session) -> None:
+    """Raise 403 if the caller (viewer) is touching a vuln in another org."""
+    if not org_scope:
+        return
+    comp = db.query(Component).filter(Component.id == vuln.component_id).first()
+    if not comp:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    rel = db.query(Release).filter(Release.id == comp.release_id).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    product = db.query(Product).filter(Product.id == rel.product_id).first()
+    if not product or product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此漏洞")
 
 router = APIRouter(prefix="/api/vulnerabilities", tags=["vulnerabilities"])
 
@@ -181,10 +197,15 @@ def suppress_vuln(vuln_id: str, payload: SuppressUpdate, _admin: dict = Depends(
 
 
 @router.get("/{vuln_id}/history")
-def get_vuln_history(vuln_id: str, db: Session = Depends(get_db)):
+def get_vuln_history(
+    vuln_id: str,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
     vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
+    _assert_vuln_org(vuln, org_scope, db)
     return [
         {
             "id": h.id,

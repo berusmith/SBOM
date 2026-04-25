@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_admin
+from app.core.security import csv_safe
 from app.models.audit_event import AuditEvent
 from app.models.organization import Organization
 
@@ -95,12 +96,12 @@ def export_activity_csv(
     for e in rows:
         writer.writerow([
             e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
-            e.username or "",
-            e.org_name or "",
-            e.event_type or "",
-            e.resource_id or "",
-            e.resource_label or "",
-            e.ip_address or "",
+            csv_safe(e.username),
+            csv_safe(e.org_name),
+            csv_safe(e.event_type),
+            csv_safe(e.resource_id),
+            csv_safe(e.resource_label),
+            csv_safe(e.ip_address),
         ])
 
     filename = f"audit_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"

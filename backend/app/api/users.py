@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -9,11 +8,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_admin_scope as require_admin
-from app.core.security import hash_password
+from app.core.security import PASSWORD_POLICY_MESSAGE, hash_password, is_password_acceptable
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
-_PWD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{10,}$")
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -60,8 +58,8 @@ def create_user(payload: UserCreate, admin: dict = Depends(require_admin), db: S
         raise HTTPException(status_code=400, detail="viewer 帳號必須綁定組織")
     if not payload.username.strip():
         raise HTTPException(status_code=400, detail="使用者名稱不能為空")
-    if not _PWD_RE.match(payload.password):
-        raise HTTPException(status_code=400, detail="密碼至少 10 個字元，且須包含英文字母與數字")
+    if not is_password_acceptable(payload.password):
+        raise HTTPException(status_code=400, detail=PASSWORD_POLICY_MESSAGE)
     if db.query(User).filter(User.username == payload.username).first():
         raise HTTPException(status_code=409, detail="使用者名稱已存在")
     user = User(

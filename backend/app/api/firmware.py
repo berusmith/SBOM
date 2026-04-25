@@ -2,8 +2,11 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks,
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
+from app.core.config import BACKEND_DIR
 from app.core.database import SessionLocal, get_db
+from app.core.deps import get_current_user, get_org_scope, require_admin
 from app.models.firmware_scan import FirmwareScan
+from app.models.organization import Organization
 from app.models.release import Release
 from app.models.component import Component
 from app.models.product import Product
@@ -13,8 +16,13 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-FIRMWARE_UPLOAD_DIR = Path("backend/firmware_uploads")
+# Anchor under backend/ so the location doesn't depend on process cwd.
+FIRMWARE_UPLOAD_DIR = BACKEND_DIR / "firmware_uploads"
 FIRMWARE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Firmware blobs are large by nature (router/IoT images often 100-300MB), but
+# we still need an upper bound to prevent memory-exhaustion DoS.
+MAX_FIRMWARE_SIZE = 500 * 1024 * 1024   # 500 MB
 
 router = APIRouter(prefix="/api/firmware", tags=["firmware"])
 firmware_service = FirmwareService()
@@ -22,25 +30,34 @@ firmware_service = FirmwareService()
 class ImportAsReleaseRequest(BaseModel):
     product_id: str
     version: str
-    org_id: str
+
 
 @router.post("/upload")
-async def upload_firmware(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+async def upload_firmware(
+    file: UploadFile = File(...),
+    background_tasks: BackgroundTasks = None,
+    _admin: dict = Depends(require_admin),
+):
     """上傳韌體檔案並開始掃描"""
     db = SessionLocal()
     try:
         scan_id = str(uuid.uuid4())
 
-        # Save file
-        file_path = str(FIRMWARE_UPLOAD_DIR / f"{scan_id}_{file.filename}")
-        contents = await file.read()
+        # Read with hard cap to avoid OOM (read 1 byte over the limit so we can detect overflow)
+        contents = await file.read(MAX_FIRMWARE_SIZE + 1)
+        if len(contents) > MAX_FIRMWARE_SIZE:
+            raise HTTPException(status_code=400, detail=f"韌體檔案超過 {MAX_FIRMWARE_SIZE // (1024*1024)}MB 上限")
+
+        # Strip path separators from filename to prevent traversal
+        safe_name = Path(file.filename or "firmware.bin").name
+        file_path = str(FIRMWARE_UPLOAD_DIR / f"{scan_id}_{safe_name}")
         with open(file_path, "wb") as f:
             f.write(contents)
 
         # Create scan record
         scan = FirmwareScan(
             id=scan_id,
-            filename=file.filename,
+            filename=safe_name,
             file_path=file_path,
             status="pending",
             progress=0
@@ -55,18 +72,20 @@ async def upload_firmware(file: UploadFile = File(...), background_tasks: Backgr
 
         return {
             "scan_id": scan_id,
-            "filename": file.filename,
+            "filename": safe_name,
             "status": "pending",
             "created_at": scan.created_at.isoformat() if scan.created_at else None
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         db.close()
 
 @router.get("/scans")
-async def list_scans():
-    """列出所有韌體掃描任務"""
+async def list_scans(_admin: dict = Depends(require_admin)):
+    """列出所有韌體掃描任務 (admin only — firmware scans are not org-scoped)"""
     db = SessionLocal()
     try:
         scans = db.query(FirmwareScan).order_by(desc(FirmwareScan.created_at)).all()
@@ -85,7 +104,7 @@ async def list_scans():
         db.close()
 
 @router.get("/scans/{scan_id}")
-async def get_scan_status(scan_id: str):
+async def get_scan_status(scan_id: str, _admin: dict = Depends(require_admin)):
     """檢查掃描進度與結果"""
     db = SessionLocal()
     try:
@@ -107,11 +126,10 @@ async def get_scan_status(scan_id: str):
         # Parse components from EMBA output if available
         if scan.status == "completed" and scan.emba_output_json:
             try:
-                import json
                 emba_output = json.loads(scan.emba_output_json)
                 components = firmware_service.parse_emba_components(emba_output)
                 result["components"] = components
-            except:
+            except Exception:
                 result["components"] = []
         else:
             result["components"] = []
@@ -124,7 +142,9 @@ async def get_scan_status(scan_id: str):
 async def import_scan_as_release(
     scan_id: str,
     payload: ImportAsReleaseRequest,
-    db: Session = Depends(get_db)
+    user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
 ):
     """將韌體掃描結果匯入為產品版本"""
     try:
@@ -135,10 +155,12 @@ async def import_scan_as_release(
         if scan.status != "completed":
             raise HTTPException(status_code=400, detail="Scan not completed")
 
-        # Verify product exists
+        # Verify product exists AND belongs to caller's org (server-side, not from payload)
         product = db.query(Product).filter(Product.id == payload.product_id).first()
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
+        if org_scope and product.organization_id != org_scope:
+            raise HTTPException(status_code=403, detail="無權在此產品建立版本")
 
         # Create release
         release = Release(
@@ -167,7 +189,7 @@ async def import_scan_as_release(
                     )
                     db.add(component)
                     components_list.append(component)
-            except Exception as e:
+            except Exception:
                 pass
 
         db.commit()
@@ -178,7 +200,7 @@ async def import_scan_as_release(
             "product_id": payload.product_id,
             "version": payload.version,
             "component_count": len(components_list),
-            "org_id": payload.org_id
+            "org_id": product.organization_id,
         }
     except HTTPException:
         raise

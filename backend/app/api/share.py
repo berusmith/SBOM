@@ -21,13 +21,25 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_org_scope
 from app.core.plan import require_plan
+from app.core.security import safe_attachment_filename
 from app.models.component import Component
+from app.models.organization import Organization
+from app.models.product import Product
 from app.models.release import Release
 from app.models.share_link import SbomShareLink
 
 router = APIRouter(tags=["share"])
+
+
+def _assert_release_org(release: Release, org_scope: str | None, db: Session) -> None:
+    """Raise 403 if a viewer is touching another org's release."""
+    if not org_scope:
+        return  # admin
+    product = db.query(Product).filter(Product.id == release.product_id).first()
+    if not product or product.organization_id != org_scope:
+        raise HTTPException(status_code=403, detail="無權存取此版本")
 
 _INTERNAL_PREFIXES = ("internal://", "private://", "pkg:internal/", "pkg:private/")
 
@@ -81,11 +93,13 @@ def create_share_link(
     body: ShareLinkCreate,
     _plan=Depends(require_plan("signature")),   # Professional only
     user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         raise HTTPException(status_code=400, detail="此版本尚未上傳 SBOM，無法建立分享連結")
 
@@ -129,8 +143,13 @@ def list_share_links(
     release_id: str,
     _plan=Depends(require_plan("signature")),
     _user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     links = db.query(SbomShareLink).filter(SbomShareLink.release_id == release_id).all()
     now = datetime.now(timezone.utc)
     return [
@@ -156,8 +175,13 @@ def revoke_share_link(
     link_id: str,
     _plan=Depends(require_plan("signature")),
     _user: dict = Depends(get_current_user),
+    org_scope: str | None = Depends(get_org_scope),
     db: Session = Depends(get_db),
 ):
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    _assert_release_org(release, org_scope, db)
     lk = db.query(SbomShareLink).filter(
         SbomShareLink.id == link_id,
         SbomShareLink.release_id == release_id,
@@ -201,7 +225,7 @@ def download_shared_sbom(token: str, db: Session = Depends(get_db)):
     lk.download_count += 1
     db.commit()
 
-    filename = f"sbom_{release.version or lk.release_id[:8]}.json"
+    filename = safe_attachment_filename(f"sbom_{release.version or lk.release_id[:8]}.json", default="sbom.json")
     return Response(
         content=json.dumps(sbom, ensure_ascii=False, indent=2).encode(),
         media_type="application/json",

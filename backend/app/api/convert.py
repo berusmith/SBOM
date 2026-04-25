@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from app.core.deps import get_current_user
+from app.core.security import safe_attachment_filename
 from app.services.converter import convert as _convert, SUPPORTED_TARGETS
 
 router = APIRouter(prefix="/api/convert", tags=["convert"])
@@ -39,8 +40,9 @@ async def convert_sbom(
         raise HTTPException(status_code=400, detail=str(e))
 
     mime = _MIME.get(target, "application/octet-stream")
+    safe_name = safe_attachment_filename(suggested_name, default="sbom.out")
     return Response(
         content=out_bytes,
         media_type=mime,
-        headers={"Content-Disposition": f'attachment; filename="{suggested_name}"'},
+        headers={"Content-Disposition": f'attachment; filename="{safe_name}"'},
     )

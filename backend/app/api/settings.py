@@ -7,16 +7,30 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
+from app.core.config import BACKEND_DIR, settings
 from app.core.database import get_db
+from app.core.deps import require_admin
 from app.models.alert_config import AlertConfig
 from app.models.brand_config import BrandConfig
 from app.services.alerts import send_email, send_webhook
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-BRAND_UPLOAD_DIR = "uploads/brand"
+# Anchor under backend/ so the location doesn't depend on process cwd.
+BRAND_UPLOAD_DIR = str(BACKEND_DIR / "uploads" / "brand")
 os.makedirs(BRAND_UPLOAD_DIR, exist_ok=True)
+
+# Logo upload: only well-known raster formats. SVG is excluded — it can carry
+# JavaScript that would execute when rendered as <img> in some browsers /
+# directly in a tab, so allowing it would create a stored-XSS vector.
+_ALLOWED_LOGO_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+_ALLOWED_LOGO_MIME = {
+    ".png":  "image/png",
+    ".jpg":  "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif":  "image/gif",
+    ".webp": "image/webp",
+}
 
 
 def _get_or_create_alert(db: Session) -> AlertConfig:
@@ -69,7 +83,7 @@ def get_monitor_status():
 
 
 @router.post("/monitor/trigger")
-def trigger_monitor():
+def trigger_monitor(_admin: dict = Depends(require_admin)):
     from app.services.monitor import trigger
     return trigger()
 
@@ -84,7 +98,7 @@ class AlertSettingsUpdate(BaseModel):
 
 
 @router.patch("/alerts")
-def update_alert_settings(payload: AlertSettingsUpdate, db: Session = Depends(get_db)):
+def update_alert_settings(payload: AlertSettingsUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     cfg = _get_or_create_alert(db)
     if payload.webhook_url is not None:
         cfg.webhook_url = payload.webhook_url.strip()
@@ -111,7 +125,7 @@ def update_alert_settings(payload: AlertSettingsUpdate, db: Session = Depends(ge
 
 
 @router.post("/alerts/test-webhook")
-def test_webhook(db: Session = Depends(get_db)):
+def test_webhook(_admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     cfg = _get_or_create_alert(db)
     if not cfg.webhook_url:
         raise HTTPException(status_code=400, detail="尚未設定 Webhook URL")
@@ -125,7 +139,7 @@ def test_webhook(db: Session = Depends(get_db)):
 
 
 @router.post("/alerts/test-email")
-def test_email(db: Session = Depends(get_db)):
+def test_email(_admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     cfg = _get_or_create_alert(db)
     if not cfg.alert_email_to or not cfg.alert_email_to.strip():
         raise HTTPException(status_code=400, detail="尚未設定收件信箱")
@@ -166,7 +180,7 @@ class BrandUpdate(BaseModel):
 
 
 @router.patch("/brand")
-def update_brand(payload: BrandUpdate, db: Session = Depends(get_db)):
+def update_brand(payload: BrandUpdate, _admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     cfg = _get_or_create_brand(db)
     if payload.company_name is not None:
         cfg.company_name = payload.company_name.strip()
@@ -184,24 +198,45 @@ def update_brand(payload: BrandUpdate, db: Session = Depends(get_db)):
 
 
 @router.post("/brand/logo")
-async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="請上傳圖片檔案（PNG / JPG）")
-    data = await file.read()
+async def upload_logo(
+    file: UploadFile = File(...),
+    _admin: dict = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    # Extension is the source of truth — content-type is client-supplied and
+    # easily spoofed.  Reject SVG explicitly: SVG can embed <script>.
+    raw_name = file.filename or "logo.png"
+    ext = os.path.splitext(raw_name)[1].lower()
+    if ext not in _ALLOWED_LOGO_EXT:
+        raise HTTPException(
+            status_code=400,
+            detail="僅支援 PNG / JPG / JPEG / GIF / WebP（不接受 SVG 等可執行格式）",
+        )
+
+    # 2 MB cap (read 1 byte over to detect overflow without buffering more)
+    data = await file.read(2 * 1024 * 1024 + 1)
     if len(data) > 2 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Logo 大小不可超過 2MB")
-    ext = os.path.splitext(file.filename or "logo.png")[1] or ".png"
+
+    # Drop the old file if present so we don't leak deleted formats.
+    cfg = _get_or_create_brand(db)
+    if cfg.logo_path and os.path.exists(cfg.logo_path):
+        try:
+            os.remove(cfg.logo_path)
+        except OSError:
+            pass
+
+    # Always write under a server-controlled name; never reuse user filename.
     logo_path = os.path.join(BRAND_UPLOAD_DIR, f"logo{ext}")
     with open(logo_path, "wb") as f:
         f.write(data)
-    cfg = _get_or_create_brand(db)
     cfg.logo_path = logo_path
     db.commit()
     return {"ok": True, "has_logo": True}
 
 
 @router.delete("/brand/logo")
-def delete_logo(db: Session = Depends(get_db)):
+def delete_logo(_admin: dict = Depends(require_admin), db: Session = Depends(get_db)):
     cfg = _get_or_create_brand(db)
     if cfg.logo_path and os.path.exists(cfg.logo_path):
         os.remove(cfg.logo_path)
@@ -215,4 +250,8 @@ def get_logo(db: Session = Depends(get_db)):
     cfg = _get_or_create_brand(db)
     if not cfg.logo_path or not os.path.exists(cfg.logo_path):
         raise HTTPException(status_code=404, detail="尚未上傳 Logo")
-    return FileResponse(cfg.logo_path)
+    # Pin media_type from the on-disk extension (server-controlled), not from
+    # libmagic / mimetypes guessing on user-supplied bytes.
+    ext = os.path.splitext(cfg.logo_path)[1].lower()
+    media_type = _ALLOWED_LOGO_MIME.get(ext, "application/octet-stream")
+    return FileResponse(cfg.logo_path, media_type=media_type)
