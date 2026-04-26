@@ -29,7 +29,7 @@ jobs:
 
       # SEC-022 — pin python-version at CI level (packaging-level lock
       # via pyproject.toml lands in SEC-022 commit; CI lock is here).
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'   # provides 3.11.x latest; ≥ 3.11.4 since June 2023
 
@@ -122,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -160,7 +160,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - run: pip install pyyaml
