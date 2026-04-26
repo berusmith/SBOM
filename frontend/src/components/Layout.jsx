@@ -156,9 +156,12 @@ export default function Layout({ children }) {
 
             {/* Mobile hamburger */}
             <div className="md:hidden flex items-center gap-2 ml-auto">
+              {/* UX-009 — mobile lang toggle bumped to py-2 (~32px) +
+                  min-w-touch (44px) so the touch target meets Apple HIG. */}
               <button
                 onClick={toggleLang}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-2.5 py-1.5 rounded"
+                aria-label={i18n.language === "zh" ? "Switch to English" : "切換為中文"}
+                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-3 py-2 min-w-[44px] rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
               </button>
@@ -194,7 +197,7 @@ export default function Layout({ children }) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setMenuOpen(false)}
-                  className={`block px-3 py-2.5 rounded text-sm ${
+                  className={`block px-3 py-3 rounded text-sm ${
                     isActive(item.path)
                       ? "bg-blue-600 text-white"
                       : "text-gray-300 hover:text-white hover:bg-gray-700"
@@ -224,13 +227,13 @@ export default function Layout({ children }) {
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="block px-3 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded"
+                className="block px-3 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded"
               >
                 {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
-                className="block w-full text-left px-3 py-2.5 text-sm text-gray-600 hover:text-white hover:bg-gray-700 rounded"
+                className="block w-full text-left px-3 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {t("nav.logout")}
               </button>
