@@ -1,4 +1,5 @@
 import { useRef, useId } from "react";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
@@ -45,6 +46,7 @@ export function Modal({
   initialFocusRef,        // optional: ref to element to focus first
   ariaDescribedBy,        // optional: id of element describing the dialog
 }) {
+  const { t } = useTranslation();
   const containerRef = useRef(null);
   const titleId = useId();
 
@@ -84,7 +86,7 @@ export function Modal({
             <button
               type="button"
               onClick={() => onClose?.()}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="-mr-1 -mt-1 p-1.5 rounded text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               <X size={18} aria-hidden="true" />

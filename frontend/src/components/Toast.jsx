@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, X, AlertTriangle, Info } from "lucide-react";
 
 const ToastContext = createContext(null);
@@ -27,6 +28,7 @@ const DURATIONS = {
 };
 
 export function ToastProvider({ children }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState([]);
 
   const show = useCallback((message, type = "info") => {
@@ -76,7 +78,7 @@ export function ToastProvider({ children }) {
             <button
               type="button"
               onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
+              aria-label={t("common.dismiss")}
               className="ml-1 opacity-70 hover:opacity-100 shrink-0 text-base leading-none focus:outline-none focus:ring-2 focus:ring-white/60 rounded"
             >
               ×

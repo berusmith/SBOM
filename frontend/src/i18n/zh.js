@@ -30,6 +30,7 @@ const zh = {
     add:         "新增",
     confirm:     "確認",
     close:       "關閉",
+    dismiss:     "關閉通知",
     loading:     "載入中...",
     uploading:   "上傳中...",
     scanning:    "掃描中...",

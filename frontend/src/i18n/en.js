@@ -30,6 +30,7 @@ const en = {
     add:         "Add",
     confirm:     "Confirm",
     close:       "Close",
+    dismiss:     "Dismiss notification",
     loading:     "Loading...",
     uploading:   "Uploading...",
     scanning:    "Scanning...",
