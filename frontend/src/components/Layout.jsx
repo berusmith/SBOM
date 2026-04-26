@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getPlan, hasPlan, PLAN_LABEL, PLAN_COLOR } from "../utils/plan";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 const ALL_NAV = [
   { path: "/",               key: "dashboard",    adminOnly: false, minPlan: null },
@@ -23,6 +24,17 @@ export default function Layout({ children }) {
   const { t, i18n } = useTranslation();
   const [searchQ, setSearchQ] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const mobileMenuRef = useRef(null);
+
+  // UX-021 — when the mobile hamburger menu is open, treat it like a
+  // modal sheet: trap Tab focus within it, close on Escape, lock body
+  // scroll, restore focus to the hamburger button on close.  Re-uses the
+  // shared useFocusTrap hook (same one Modal/ConfirmModal use).
+  useFocusTrap({
+    active: menuOpen,
+    containerRef: mobileMenuRef,
+    onEscape: () => setMenuOpen(false),
+  });
   const role = localStorage.getItem("role") || "viewer";
   const currentPlan = getPlan();
   const navItems = ALL_NAV.filter(item => !item.adminOnly || role === "admin");
@@ -169,7 +181,11 @@ export default function Layout({ children }) {
 
           {/* Mobile menu */}
           {menuOpen && (
-            <div id="mobile-menu" className="md:hidden border-t border-gray-700 py-3 space-y-1">
+            <div
+              id="mobile-menu"
+              ref={mobileMenuRef}
+              className="md:hidden border-t border-gray-700 py-3 space-y-1"
+            >
               {navItems.map((item) => (
                 <Link
                   key={item.path}
