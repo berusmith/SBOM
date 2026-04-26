@@ -11,10 +11,104 @@ status: draft for user review before Phase 5 remediation gate
 
 # Phase 4 — Executive Summary + Risk Heatmap + Top-10 Must-Fix
 
-This file is the synthesis of Phases 1–3. Three sub-sections:
+This file is the synthesis of Phases 1–3. Sub-sections:
+0. **Methodology + AI disclosure** (single source of truth — referenced from every commit)
 1. **Executive summary** (one page, non-technical)
 2. **Risk heatmap** (severity × exploitation_complexity, dual deployment context)
 3. **Top-10 must-fix priority list** (sequenced by Phase 5 ROI)
+4. **Compliance gap summary**
+5. **Phase 5 remediation gating + commit discipline + monitor mode**
+6. **Self-checks**
+
+---
+
+## 0. Methodology + AI Disclosure
+
+```yaml
+methodology:
+  framework:
+    - STRIDE per trust boundary
+    - Attack trees (3 drawn for top-3 paths)
+    - Abuse cases (10 catalogued)
+    - Dynamic PoC for confirmable findings
+    - DREAD-style risk × exploitation_complexity heatmap
+    - Compliance mapping (SOC 2 / ISO 27001 / GDPR / IEC 62443-4-1)
+
+  tooling:
+    static_analysis:
+      - ripgrep (file/symbol search)
+      - manual code review (line-by-line for security-critical paths)
+      - inline DB migration whitelist verification
+      - git log -S / git log -L for first_observed_commit attribution
+    dynamic_testing:
+      - stdlib urllib (no pytest, per CLAUDE.md "stdlib-only ad-hoc scripts")
+      - tracemalloc + isolated process for SEC-002 amplification testing
+      - PoC scripts under .knowledge/audit/poc/ (DO NOT RUN against production warning at top)
+    drafting_assistant:
+      vendor: Anthropic
+      product: Claude Code
+      role: code generation, documentation drafting, PoC scripting,
+            evidence file templates
+      session_window: 1M-token context (allows whole-codebase reads
+                      without summary loss in single session)
+
+  human_oversight:
+    - all severity ratings reviewed by human auditor
+    - all scope decisions (split vs umbrella, finding boundaries)
+      approved by human auditor
+    - 5 rounds of stop-gate review (rev-1 → rev-5) before Phase 5
+      commences:
+        rev-1: SEC-001 umbrella initial draft → user requested split
+        rev-2: split into SEC-001a/b/c/d + SDLC-001 + dual severity
+               + 4-layer recommendation (NIST CSF spelling)
+        rev-3: SDLC-001 narrowed scope + SDLC-002/003 created +
+               SEC-022 split + Top-10 reorder (architecture-first)
+        rev-4: scope_reviewed/not_reviewed/next_audit_trigger structure +
+               SEC-022 finalised + SDLC-001 enforcement test required
+        rev-5: pre-mirror grep check + commit trailer convention change
+               (this revision)
+
+  ai_disclosure: |
+    This audit was produced with LLM tooling (Claude Code, Anthropic)
+    used for: source code grep / read, finding-template drafting,
+    yaml schema construction, PoC script generation, evidence-file
+    templating, and commit-message drafting.
+
+    The following decisions are HUMAN AUDITOR judgment and were not
+    delegated to the LLM:
+      - Severity ratings (severity_lan_only / severity_if_public)
+      - Scope decisions for SDLC findings (cross-cutting vs single-feature)
+      - Top-10 priority ordering (architecture-first vs ROI-first)
+      - Decision to split SEC-022 from SEC-002 fix scope
+      - Decision to use 404 not 403 for IDOR endpoints (oracle prevention)
+      - Severity calibration after SEC-002 PoC self-correction
+      - 6 monitor-mode auto-pause conditions for Phase 5
+
+    LLM output was reviewed at 5 explicit stop-gate rounds before
+    Phase 5 remediation could begin.  See `human_oversight` block
+    above for the per-round delta.
+
+    Final findings, severity ratings, remediation priorities, and
+    compliance mappings reflect the human auditor's judgment.
+    LLM tooling accelerated drafting and code generation only.
+
+  commit_trailer_convention: |
+    Phase 1-4 commits (rev-1 through rev-4) include the legacy
+    `Co-Authored-By: Claude Opus 4.7 (1M context)` trailer.  This is
+    historical and not changed (rewriting history is not worth the
+    cost vs the value of audit-trail integrity).
+
+    Rev-5 onwards uses:
+      Tooling: Claude Code (Anthropic)
+      Methodology-review: see .knowledge/audit/phase-4-summary-2026-04-26.md §0
+
+    Reason for change:`Co-Authored-By` falsely implies the LLM is
+    a judging entity (which it isn't — it's a drafting tool).  The
+    AI disclosure block above is the canonical source for what the
+    LLM did vs what the human auditor decided.  Cross-referencing
+    this block from each commit avoids the trailer convention
+    becoming the de-facto disclosure mechanism.
+```
 
 ---
 
