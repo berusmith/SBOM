@@ -1,0 +1,36 @@
+# Dependabot config — SEC-017 dependency
+# Auto-PR for new vulnerable deps + weekly security check across
+# pip + npm + GitHub Actions ecosystems.
+
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [security, dependencies, python]
+    commit-message:
+      prefix: "deps"
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [security, dependencies, npm]
+    commit-message:
+      prefix: "deps"
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [security, dependencies, ci]
+    commit-message:
+      prefix: "ci"
+      include: scope

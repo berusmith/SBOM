@@ -1,0 +1,60 @@
+# gitleaks config — SEC-017 dependency
+# Whitelisted defaults are documented project sentinels (already public
+# in .env.example committed to github.com/berusmith/SBOM) — gitleaks would
+# otherwise block every PR for noise.
+
+title = "SBOM Platform gitleaks config"
+
+[extend]
+useDefault = true
+
+# ── Allowlists ────────────────────────────────────────────────────────
+# These are documented public defaults that startup_INSECURE_SECRETS
+# guard explicitly refuses to honour in production.  Listing here so
+# gitleaks doesn't report them as leaked secrets in PoC fixtures /
+# .env.example / docs.
+
+[[rules.allowlist]]
+description = "Documented insecure defaults (refused by startup guard)"
+regexes = [
+    '''sbom@2024''',                                   # ADMIN_PASSWORD default
+    '''change-me-in-production''',                     # SECRET_KEY default
+    '''please-change-this-to-a-random-64-char-string''',
+    '''please-change-this-password''',
+]
+paths = [
+    '''^backend/\.env\.example$''',
+    '''^deploy/\.env\.production$''',                  # template only;real .env.server is gitignored
+    '''^\.knowledge/audit/poc/SEC-001[a-d]-.*\.py$''', # PoC scripts use these as fallback
+    '''^\.knowledge/audit/poc/SEC-002-.*\.py$''',
+    '''^\.knowledge/audit/evidence/.*\.md$''',         # evidence files reference defaults
+    '''^\.knowledge/audit/.*\.md$''',                  # audit findings document them
+    '''^backend/app/main\.py$''',                      # _INSECURE_SECRETS list itself
+]
+
+[[rules.allowlist]]
+description = "PoC test fixture passwords — one-shot, no real account uses these"
+regexes = [
+    '''PocViewer2026!''',
+    '''PocAdmin\d+!''',
+    '''CITestAdminPass\d+!''',                         # CI test password in security.yml
+]
+paths = [
+    '''^\.knowledge/audit/poc/.*\.py$''',
+    '''^\.github/workflows/.*\.ya?ml$''',
+]
+
+# ── Custom rules: catch our own foot-guns ─────────────────────────────
+
+[[rules]]
+id = "sbom-real-jwt-token"
+description = "Real-looking JWT in source (3-segment base64)"
+# Triple-base64 with dots, length > 100 — realistic JWT
+regex = '''eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}'''
+keywords = ["eyJ"]
+
+[[rules]]
+id = "sbom-api-token-prefix"
+description = "Real-looking sbom_ API token (CLAUDE.md prefix convention)"
+regex = '''sbom_[A-Za-z0-9_-]{30,}'''
+keywords = ["sbom_"]

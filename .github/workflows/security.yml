@@ -1,0 +1,170 @@
+# Security CI baseline — SEC-017 (rev-5 Top-10 #0)
+# Runs SCA + SAST + secret scan + self-SBOM on every push and PR.
+# Each fix-commit in Phase 5 (and beyond) flows through this pipeline.
+#
+# Methodology + AI disclosure:
+#   see .knowledge/audit/phase-4-summary-2026-04-26.md §0
+#
+# Auto-pause condition cross-reference:
+#   monitor-mode #6 — if this CI workflow itself fails or its config
+#   has a regex/yaml syntax issue blocking PR merge, alert immediately.
+
+name: Security CI
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+# Default permissions — least-privilege; jobs override only when needed.
+permissions:
+  contents: read
+
+jobs:
+  # ── Python deps SCA + Python SAST ─────────────────────────────────
+  python-audit:
+    name: pip-audit + bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # SEC-022 — pin python-version at CI level (packaging-level lock
+      # via pyproject.toml lands in SEC-022 commit; CI lock is here).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'   # provides 3.11.x latest; ≥ 3.11.4 since June 2023
+
+      - name: Install audit tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit==2.7.3 bandit==1.7.10
+
+      # pip-audit on locked requirements.txt — fails CI on any known CVE
+      - name: pip-audit (Python deps)
+        run: pip-audit -r backend/requirements.txt --strict --disable-pip
+        # --disable-pip avoids re-resolving;uses our pinned versions exactly
+
+      # bandit static analysis on backend/app/ — block on Medium and above
+      - name: bandit (Python SAST)
+        run: bandit -r backend/app -ll --exclude backend/app/__pycache__
+        # -ll = report only Low+ severity (info-level noise filtered)
+        # SEC-001 a/b/c/d are authz issues bandit doesn't catch — those
+        # are caught by tests/test_endpoint_decorator_enforcement.py
+        # introduced in SDLC-001 (Phase 5 #1).
+
+  # ── Frontend deps SCA ─────────────────────────────────────────────
+  npm-audit:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci (lockfile-honest install)
+        working-directory: frontend
+        run: npm ci --no-audit
+        # --no-audit during install;explicit audit step below
+
+      - name: npm audit (production deps only, moderate+)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=moderate
+        # --omit=dev skips Vite/Tailwind/PostCSS dev-time vulns;
+        # only production runtime CVEs gate merges.
+
+  # ── Secret scan (blocking) ────────────────────────────────────────
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history for gitleaks to scan all commits
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Config in .gitleaks.toml at repo root — allowlists known-public
+        # defaults like ADMIN_PASSWORD=sbom@2024 in .env.example and PoC
+        # fixture passwords in .knowledge/audit/poc/.
+
+  # ── Self-SBOM + vuln scan ─────────────────────────────────────────
+  self-sbom:
+    name: syft self-SBOM + grype
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SBOM with syft
+        uses: anchore/sbom-action@v0.17.7
+        with:
+          format: cyclonedx-json
+          output-file: sbom-self.cdx.json
+          upload-artifact: true
+          upload-artifact-retention: 30
+
+      - name: Scan SBOM with grype
+        uses: anchore/scan-action@v3.6.4
+        with:
+          sbom: sbom-self.cdx.json
+          severity-cutoff: high
+          fail-build: true
+          # Block merges on any High/Critical CVE in our own SBOM.
+          # The SBOM tool itself shipping with known CVEs would be ironic.
+
+  # ── Backend regression tests ──────────────────────────────────────
+  backend-tests:
+    name: backend test_all.py (54 stdlib tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      # test_all.py runs against a live backend — start it in background.
+      - name: Start backend (DEBUG=true for test SECRET_KEY/ADMIN_PASSWORD)
+        env:
+          DEBUG: "true"
+          DATABASE_URL: "sqlite:///./sbom-ci.db"
+          SECRET_KEY: "ci-test-key-not-for-production-use-32chars"
+          ADMIN_PASSWORD: "CITestAdminPass1!"
+        run: |
+          cd backend
+          python -m uvicorn app.main:app --port 9100 &
+          # wait for backend to bind
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:9100/health && break
+            sleep 1
+          done
+
+      - name: Run regression suite
+        run: python test_all.py
+        env:
+          ADMIN_PASSWORD: "CITestAdminPass1!"
+
+  # ── Reachability fixture corpus baseline ──────────────────────────
+  # The 39-fixture corpus from Wave D pre-work is the ground truth for
+  # any future reachability-related changes.  Run validator on every PR.
+  reachability-corpus:
+    name: reachability corpus validate + stats
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pyyaml
+      - name: validate_meta.py
+        run: python backend/tests/fixtures/reachability/_tools/validate_meta.py
+      - name: corpus_stats.py
+        run: python backend/tests/fixtures/reachability/_tools/corpus_stats.py

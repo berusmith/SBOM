@@ -748,8 +748,8 @@ Mac mini disk failure / theft / compromise → 14 天 backup 全洩漏 = 14 天�
 | field | value |
 |-------|-------|
 | finding_id | SEC-017 |
-| status | open |
-| verification_method | static (`.github/workflows/` empty per Phase 1) |
+| status | **fixed (2026-04-26 by Phase 5 #0 commit)** |
+| verification_method | infrastructure-verify |
 | severity_lan_only | Medium | severity_if_public | High |
 | blocks_commercialization | true (SOC 2 CC8.1) |
 | confidence | High |
@@ -774,6 +774,25 @@ Mac mini disk failure / theft / compromise → 14 天 backup 全洩漏 = 14 天�
 
 - effort: M (~3h initial setup + ongoing maintenance)
 - risk_of_fix: Low (additive)
+
+### Phase 5 #0 fix (2026-04-26)
+
+Files added:
+- `.github/workflows/security.yml` — 6 jobs:python-audit (pip-audit + bandit) / npm-audit / secret-scan (gitleaks) / self-sbom (syft + grype) / backend-tests (test_all.py 54-test regression) / reachability-corpus (Wave D ground-truth validator)
+- `.github/dependabot.yml` — weekly pip + npm + monthly gh-actions updates;label `security`
+- `.gitleaks.toml` — allowlist for documented insecure defaults (sbom@2024 / change-me-in-production / PocViewer2026!) so CI doesn't block PRs on known-public sentinels;adds custom rules for real JWT-shape and `sbom_` API token prefix detection
+
+`actions/setup-python@v5` pinned to `python-version: '3.11'` — locks CI to Python ≥ 3.11.4 (current brew route) → SEC-002's expat amplification defence layer is guaranteed in CI runs. SEC-022 (Phase 5 #7) will mirror this lock at packaging level via pyproject.toml.
+
+**Verification (infrastructure-verify per rev-4 commit discipline)**:
+- `Before fix`:N/A — adding capability, not fixing bug
+- `After fix`:CI workflow lands;subsequent PR triggers all 6 jobs;
+  to validate end-to-end:open PR with `lodash@4.17.20` injected into
+  `frontend/package.json` (known CVE-2019-10744)→ npm-audit job blocks
+- Local YAML lint:`yamllint .github/workflows/security.yml` (manual,
+  no GH runner available without push)
+
+**Phase 5 acceptance**:CI runs green on first push of this commit (no pre-existing CVE in current dep set) AND a follow-up known-bad PR is properly blocked. If first push surfaces a new CVE we didn't expect, treat as a NEW finding (severity TBD), NOT a SEC-017 regression.
 
 ---
 
