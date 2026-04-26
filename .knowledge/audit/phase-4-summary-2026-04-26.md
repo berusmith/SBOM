@@ -199,30 +199,55 @@ Aggregating `compliance_impact` across all 25 findings:
 6. SEC-003 X-Forwarded-For + 7. SEC-002 + 8. SEC-018(small batch)
 9. SEC-014 backup encryption
 
-### Phase 5 commit discipline (rev-3 amendment per user round-3):
+### Phase 5 commit discipline (rev-3 amendment;rev-4 verification type 分類)
 
 **每個 fix commit 必須包含**(non-negotiable):
 
-1. **PoC re-run before/after**:
-   - Fix 之前跑一次 PoC,預期 LEAK CONFIRMED
-   - Fix 之後跑一次 PoC,預期 LEAK NOT REPRODUCED
-   - 兩次結果寫進 commit message 或 evidence file
-   - 沒這個 = 「我覺得我修了」,不是 fix
-2. **Regression suite pass**:
+1. **Verification — 三類擇一**:
+   - **`poc-rerun`**:有可重跑 PoC 的 finding(SEC-001a/b/c/d, SEC-002, SEC-003)。
+     Before fix 跑一次(LEAK CONFIRMED)+ after fix 跑一次(NOT REPRODUCED)。
+   - **`infrastructure-verify`**:新增基礎設施類 fix(SEC-017 CI, SEC-018 nginx headers, SEC-014 backup gpg)。
+     不是修 bug 是新增 capability,verify 改成可重現的 infrastructure check:
+     - CI baseline → 故意 PR 引入 known-vulnerable lodash 看 CI 擋下
+     - nginx headers → `curl -I` 看 5 個 header 都在 + value 對
+     - backup gpg → run + 試解密 + 改 ciphertext 1 byte 看 verify fail
+   - **`structural-verify`**:架構引入類 fix(SDLC-001 middleware introduction)。
+     自身沒 PoC,但「下游 finding 在 commit 之後跑 PoC 應仍 LEAK CONFIRMED
+     (endpoint 還沒套 decorator),套 decorator 的 commit 之後才 NOT REPRODUCED」
+     這條鏈 commit message 要明示。
+
+2. **Regression suite pass**(所有 commit 一律):
    - CI baseline 上線後,每 commit PR 要過 SAST / SCA / 既有 test
    - `python test_all.py` 必須過(54 個 stdlib regression test)
    - 加新測試:positive + negative + boundary + security test 各 1 個
 
-**Commit message format**:
+**Commit message format(rev-4 — 加 Verification type 欄位)**:
 ```
 fix(security): [SEC-NNN] short description
 
-Before fix:
-  <PoC verdict line>
-After fix:
-  <PoC verdict line>
-
+Verification type: poc-rerun | infrastructure-verify | structural-verify
+Before fix: <PoC verdict | "N/A — infrastructure fix">
+After fix:  <PoC verdict | infrastructure check result | "deferred to SEC-NNN commit">
 Regression: test_all.py 54/54 pass + CI green
+```
+
+**Examples**:
+```
+# SEC-017 CI baseline (infrastructure-verify)
+Verification type: infrastructure-verify
+Before fix: N/A — adding capability not fixing bug
+After fix:  test PR with lodash@4.17.20 dep → CI blocked (pip-audit + bandit)
+
+# SDLC-001 middleware introduction (structural-verify)
+Verification type: structural-verify
+Before fix: deferred — SEC-001a-d PoCs still LEAK CONFIRMED at this commit
+After fix:  helper unit tests pass; downstream verification 由 SEC-001a-d
+            commit 接手執行 PoC re-run
+
+# SEC-001a (poc-rerun)
+Verification type: poc-rerun
+Before fix: SEC-001a-licenses-summary-leak.py → LEAK CONFIRMED (admin total=2)
+After fix:  SEC-001a-licenses-summary-leak.py → [NO LEAK] HTTP 403
 ```
 
 **No new dependencies** unless documented(per CLAUDE.md);SEC-010 webhook encryption 可用 `cryptography`(已是 `python-jose[cryptography]` 子依賴,等於 0 新 dep)。

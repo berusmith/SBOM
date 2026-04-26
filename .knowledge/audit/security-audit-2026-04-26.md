@@ -879,26 +879,43 @@ traceability:
   parent_finding: null
   attack_tree_leaf: null          # architectural — enables many leaves
   abuse_cases: []                 # architectural — enables many abuse cases
-  references_findings:
-    - SEC-001a    # symptom: violations summary unauthenticated
-    - SEC-001b    # symptom: violations IDOR
-    - SEC-001c    # symptom: same as 001a in policies
-    - SEC-001d    # symptom: same as 001b in policies
-  expected_recurrence_validated_after_bulk:    # rev-3 update — Phase 3 batch self-check
-    - SEC-003 (TLT-3 X-Forwarded-For)         # confirmed pattern match
-    - SEC-013 (TLT-13 audit log)              # partial pattern match — symptom is missing FEATURE
-                                              # (DB-level append-only constraint) more than missing
-                                              # middleware enforcement;~50% pattern overlap
-    - SEC-018 (TLT-18 nginx security headers) # confirmed pattern match (manual nginx config not
-                                              # policy-defined-and-enforced)
-  predicted_but_not_confirmed:
-    - TLT-7 JWT scope downgrade               # rejected after Phase 3 batch verification.  SEC-007
-                                              # showed scope checks ARE centralised in deps.py
-                                              # (require_admin_scope helper); not SDLC-001 pattern.
-                                              # Removed to avoid over-extending blast radius.
+  references_findings:                  # rev-4 cleaned: only auth-middleware-specific symptoms
+    - SEC-001a    # /api/licenses/violations/summary missing auth middleware
+    - SEC-001b    # /api/licenses/releases/{id}/violations missing release-ownership middleware
+    - SEC-001c    # /api/policies/violations/summary same shape as 001a
+    - SEC-001d    # /api/policies/releases/{id}/violations same shape as 001b
+
+  # rev-4 amend per user round-3 review: replace single "candidate_recurrence (none)"
+  # claim with explicit audit-coverage boundary so future audit knows what was vs wasn't reviewed.
+  candidate_recurrence:
+    status: not_observed_in_current_audit
+    scope_reviewed:
+      - violations endpoint family (licenses.py + policies.py) — 4 confirmed leaks
+      - Phase 1 heuristic 7 zero-`_assert_*_org` files — 5 cleared (stats / products
+        / search / firmware / organizations) + 2 confirmed (licenses / policies)
+      - releases.py 30 callsites of _assert_release_org — pattern correctly applied
+    scope_not_reviewed:
+      - admin endpoints' internal cross-org operations (users.py, admin.py — admin role
+        is by-design cross-org; auth middleware gap could still allow viewer escalation
+        if any non-admin route forgot require_admin_scope)
+      - background threads (monitor.py / firmware async) — query paths not exhaustively
+        traced for org_scope handling; monitor sends notifications across orgs by design
+        but the per-tenant allowlisting hasn't been verified
+      - future routers added after 2026-04-26 — SDLC-001 fix introduces middleware that
+        will catch these automatically once landed, BUT until then any new release-
+        scoped endpoint is at risk
+      - releases.py:30 callsites verified for _assert_release_org call presence;
+        argument-passing correctness (e.g. always passing org_scope, never None
+        accidentally) was sampled not exhaustive
+    next_audit_trigger:
+      - any new router adding release_id / product_id / org_id path parameter
+      - 6-month periodic review (SOC 2 Type II annual audit cadence aligned)
+      - prior to commercialisation deployment (must re-verify entire surface)
+      - any commit touching deps.py (helpers like require_admin / get_org_scope changes
+        could silently regress isolation)
 ```
 
-**rev-3 honesty note** (added after Phase 3 batch):initial Phase 2 prediction listed 4 expected recurrences;Phase 3 batch verification confirmed 2 fully + 1 partially + 1 rejected. Documented here so Phase 4 report doesn't say "predicted 4 / confirmed 2" without rationale.
+**rev-3 honesty note** (added after Phase 3 batch):initial Phase 2 prediction listed 4 expected recurrences;Phase 3 batch verification confirmed 2 fully (SEC-003, SEC-018) + 1 partially (SEC-013) + 1 rejected (TLT-7 JWT scope). After **rev-3 SDLC-001 scope narrowing**, SEC-003 / SEC-013 / SEC-018 were moved to **SDLC-002** (perimeter/transport) and **SDLC-003** (audit/logging maturity) respectively — SDLC-001 now references only auth-middleware-specific findings. The "candidate_recurrence (none)" claim from rev-3 was too absolute; rev-4 replaces with explicit scope_reviewed / scope_not_reviewed / next_audit_trigger so future auditors know what was vs wasn't covered.
 
 **rev-2 rationale**:Phase 4 report will render this in its own "Architectural / SDLC findings" section (separate from per-TLT findings list). Customer due-diligence consumers value architectural findings disproportionately — they signal **process maturity**, not just defect count. Bumping severity reflects that this finding's resolution affects ALL future auth work, not just the 4 SEC-001 children.
 
@@ -1075,8 +1092,28 @@ traceability:
   references_findings:
     - SEC-003 (TLT-3 X-Forwarded-For — perimeter trust boundary mishandled)
     - SEC-018 (TLT-18 nginx security headers — defensive headers not policy-defined)
-  candidate_recurrence:                # findings to verify Phase 5 / 6 against
-    - SEC-005 (TLT-5 webhook DNS-rebinding — same "validate-then-trust" gap at egress)
+
+  # rev-4 amend: explicit audit-coverage boundary
+  candidate_recurrence:
+    status: partial_observation_in_current_audit
+    scope_reviewed:
+      - nginx-sbom.conf (full read);no add_header directives, no rate_limit_zone,
+        no ModSecurity / WAF
+      - rate_limit.py _client_ip flow (X-Forwarded-For trust)
+      - alerts.py _validate_webhook_url (egress validation)
+    scope_not_reviewed:
+      - HTTPS / TLS configuration paths (nginx 預設 80;若客戶部署接 cert 路徑,沒檢查
+        cert pinning / HSTS preload list / OCSP stapling 是否有設)
+      - cors.py / FastAPI CORS middleware vs nginx CORS — 是否有 double-config 衝突
+      - websocket / SSE endpoints(若 frontend 之後加,perimeter rules 可能不適用)
+      - other egress points beyond webhooks(e.g. SMTP outbound to attacker-controlled
+        MX, OIDC token-endpoint outbound, OSV API outbound — SEC-005 covers webhooks
+        but full egress allowlist policy not reviewed)
+    next_audit_trigger:
+      - 任何 nginx config 改動(包括加 HTTPS / 新 location block)
+      - 加任何新 outbound HTTP client(beyond `httpx` 既有用法)
+      - 商業化部署前(對外 perimeter 全面重審 — TLS、WAF、DDoS protection)
+      - 6-month 週期
 ```
 
 ### Observation
@@ -1145,10 +1182,28 @@ traceability:
   parent_finding: null
   references_findings:
     - SEC-013 (TLT-13 audit log tamper / no DB-level append-only constraint)
+
+  # rev-4 amend: explicit audit-coverage boundary
   candidate_recurrence:
-    - SEC-001a/b/c/d monitoring_detection layer — relies on application-level structured log,
-      no central audit-trail mechanism enforcing every cross-tenant access is recorded
-    - SEC-003 X-Forwarded-For — audit_event.ip_address 被 client 污染後,後續 forensic timeline 失靈
+    status: partial_observation_in_current_audit
+    scope_reviewed:
+      - audit_event model schema (no UNIQUE / no INSERT-only constraint)
+      - 21 種 audit event_type list (CLAUDE.md doc + grep-confirmed)
+      - audit.record() callers (releases.py / users.py / cra.py 等)
+      - monitor.py 跳過事件 logging gap (SEC-013 evidence)
+    scope_not_reviewed:
+      - hash chain implementation feasibility on SQLite (vs Postgres native)
+      - GDPR Art.5(1)(e) IP retention — 沒實際測過自動清除是否會影響其他 query
+      - 結構化 log pipeline 整合(Loki / CloudWatch / Sentry — 沒部署所以沒測對接)
+      - SEC-001a/b/c/d 的 monitoring_detection 層完整性 — 如果商業化前真要落地,需驗證
+        log pipeline + alert rule 在實際流量下不誤報 / 不漏報
+      - 第三方工具(Trivy / Syft / EMBA)的 audit log 是否有對應的 platform-side
+        record(目前 trivy_scanner 直接 subprocess.run,沒寫 audit_event)
+    next_audit_trigger:
+      - 任何 audit_event 模型 schema 改動
+      - 部署 log pipeline 後 verify monitoring_detection alerts 真的會觸發
+      - 加新 mutation endpoint 時驗證有 audit.record() 呼叫
+      - 商業化前(SOC 2 Type II audit 必須驗證 audit log 完整 + immutable)
 ```
 
 ### Observation
