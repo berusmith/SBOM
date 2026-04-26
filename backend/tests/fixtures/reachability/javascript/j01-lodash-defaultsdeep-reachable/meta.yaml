@@ -1,0 +1,20 @@
+fixture_type: cve_reachability
+cve_id: CVE-2019-10744
+ghsa_id: GHSA-jf85-cpcp-j695
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.12"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - lodash.defaultsDeep
+notes: |
+  Prototype pollution via defaultsDeep — when src contains a key
+  named "__proto__", merge logic walks up the prototype chain and
+  pollutes Object.prototype, affecting every object in the runtime.
+  Fixed in 4.17.12 by treating __proto__ as a non-mergeable key.
+  Fixture uses CommonJS require + namespace member call to
+  exercise the most common production pattern.

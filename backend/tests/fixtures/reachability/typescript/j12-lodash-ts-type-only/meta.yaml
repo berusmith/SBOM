@@ -1,0 +1,23 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-23337
+ghsa_id: GHSA-35jh-r3h4-6jhm
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.21"
+language: typescript
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - lodash.template
+notes: |
+  TypeScript `import type { TemplateOptions } from 'lodash'` is
+  erased at compile time — no runtime import emitted in the JS
+  output.  Analyzer must recognise the `type` keyword and exclude
+  this import from runtime reachability accounting.
+
+  This is the canonical "naïve regex finds it but it's not actually
+  there at runtime" case.  Sprint #3 must add TS-aware parsing.
+  Without it, every TS project that types-only imports a vulnerable
+  package will register as a false positive.

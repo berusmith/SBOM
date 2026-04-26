@@ -1,0 +1,18 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-23337
+ghsa_id: GHSA-35jh-r3h4-6jhm
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.21"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - lodash.template
+notes: |
+  ES6 named-import alias: `import { template as t } from 'lodash'`
+  rebinds the symbol name in the local scope.  Analyzer must
+  resolve `t(...)` back to lodash.template; a literal name match
+  on `template` would miss this.

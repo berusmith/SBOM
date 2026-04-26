@@ -1,0 +1,22 @@
+fixture_type: framework_mechanism
+language: javascript
+expected_reachable: false
+expected_label: unknown_acceptable
+transitive_only: false
+notes: |
+  Honesty test (no real CVE — exercises the analyzer's handling
+  of computed-property dispatch).
+
+  `handlers[methodName](input)` where `methodName` flows from
+  process.env / config / request body.  Even though the analyzer
+  knows what `handlers` resolves to (a require'd module), it
+  cannot statically determine which property is invoked.  This
+  is the production-realistic plugin / dispatch-table pattern —
+  much more common than dynamic import.
+
+  The honest answer is `unknown`.  An analyzer that flags every
+  property of `handlers` as reachable (over-approximation) or
+  none (under-approximation) is wrong in different ways; only
+  outputting `unknown` reflects the actual epistemic state.
+
+  Same scoring rule as J15 — reported in the honesty track.

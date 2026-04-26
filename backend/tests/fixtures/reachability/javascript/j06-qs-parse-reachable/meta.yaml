@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-24999
+ghsa_id: GHSA-hrpp-h998-j3pp
+package: qs
+import_names: [qs]
+ecosystem: npm
+affected_versions: "<6.10.3"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - qs.parse
+notes: |
+  Prototype pollution via qs.parse on attacker-controlled query
+  strings.  Crafted ?__proto__[polluted]=1 walks up the prototype
+  chain.  Express used to bundle qs as default body-parser, which
+  is why CVE-2022-24999 was assigned to express despite the actual
+  vuln living in qs.

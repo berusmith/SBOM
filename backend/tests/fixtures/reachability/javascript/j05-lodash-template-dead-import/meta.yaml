@@ -1,0 +1,23 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-23337
+ghsa_id: GHSA-35jh-r3h4-6jhm
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.21"
+language: javascript
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - lodash.template
+notes: |
+  ES6 named import `import { template } from 'lodash'` followed by
+  zero call sites — leftover from a refactor that removed templating.
+  Bundler tree-shaking would drop this in production, but at source-
+  level analysis the import is present.  Symbol-aware analyzer must
+  detect that `template` is bound but never invoked, and downgrade
+  to not_found.
+
+  NOTE: known limitation — current package-level analyzer flags
+  lodash as "reachable" purely based on import presence.

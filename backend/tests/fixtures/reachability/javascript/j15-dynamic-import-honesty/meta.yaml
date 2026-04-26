@@ -1,0 +1,22 @@
+fixture_type: framework_mechanism
+language: javascript
+expected_reachable: false
+expected_label: unknown_acceptable
+transitive_only: false
+notes: |
+  Honesty test (no real CVE — exercises the analyzer's handling
+  of statically-unresolvable imports).
+
+  `await import(`./mods/${userChoice}`)` — the imported module
+  name is computed at runtime from user input.  Static analysis
+  CANNOT determine which module is loaded; the only correct
+  answer is "unknown".
+
+  Per the agreed scoring rule:
+    - analyzer outputs `unknown` → PASS (honest defeat)
+    - analyzer outputs `function_reachable` / `reachable` → FAIL
+      (guessed reachable when it shouldn't have)
+    - analyzer outputs `not_found` / `test_only` → FAIL
+      (guessed unreachable when it shouldn't have)
+
+  Reported in its own scorer track, separate from CVE FP/FN.

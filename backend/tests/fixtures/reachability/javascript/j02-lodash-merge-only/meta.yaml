@@ -1,0 +1,22 @@
+fixture_type: cve_reachability
+cve_id: CVE-2019-10744
+ghsa_id: GHSA-jf85-cpcp-j695
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.12"
+language: javascript
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - lodash.defaultsDeep
+notes: |
+  Imports lodash and uses _.merge / _.cloneDeep / _.get — none of
+  which are vulnerable to CVE-2019-10744.  defaultsDeep is the
+  only affected function.  Symbol-level analyzer must downgrade
+  to not_found despite lodash being in main code.
+
+  NOTE: known limitation — current package-level analyzer will
+  flag lodash as "reachable".  Sprint #3 must check for the
+  defaultsDeep call site specifically.

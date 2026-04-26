@@ -1,0 +1,17 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-24999
+ghsa_id: GHSA-hrpp-h998-j3pp
+package: qs
+import_names: [qs]
+ecosystem: npm
+affected_versions: "<6.10.3"
+language: javascript
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - qs.parse
+notes: |
+  qs is imported but only qs.stringify is called — the inverse
+  direction (object → URL string) which never deserialises and
+  therefore cannot trigger the prototype-pollution path.

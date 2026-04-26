@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2019-10744
+ghsa_id: GHSA-jf85-cpcp-j695
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.12"
+language: javascript
+expected_reachable: false
+expected_label: test_only
+transitive_only: false
+vulnerable_symbols:
+  - lodash.defaultsDeep
+notes: |
+  Production code (src/main.js) uses _.merge only.  The test suite
+  (test/__tests__/proto.spec.js) calls _.defaultsDeep to verify
+  prototype-pollution defences in the consumer code.  Symbol-aware
+  test-path filtering must classify the vulnerable symbol as
+  test_only — even though the package itself shows in main code.

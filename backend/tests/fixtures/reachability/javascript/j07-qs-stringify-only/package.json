@@ -1,0 +1,9 @@
+{
+  "name": "fixture-j07",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/url.js",
+  "dependencies": {
+    "qs": "6.10.0"
+  }
+}

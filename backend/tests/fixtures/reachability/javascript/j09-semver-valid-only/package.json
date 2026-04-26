@@ -1,0 +1,9 @@
+{
+  "name": "fixture-j09",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/validate.js",
+  "dependencies": {
+    "semver": "7.5.0"
+  }
+}

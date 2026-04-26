@@ -1,0 +1,9 @@
+{
+  "name": "fixture-j14",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/server.js",
+  "dependencies": {
+    "express": "4.18.0"
+  }
+}

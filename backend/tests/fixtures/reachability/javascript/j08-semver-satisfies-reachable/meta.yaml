@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-25883
+ghsa_id: GHSA-c2qf-rxjj-qqgw
+package: semver
+import_names: [semver]
+ecosystem: npm
+affected_versions: "<7.5.2"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - semver.satisfies
+  - semver.Range
+notes: |
+  ReDoS in semver range parsing — semver.satisfies(version, range)
+  with attacker-controlled `range` triggers catastrophic backtracking
+  in the regex used to parse the range expression.  Same root cause
+  affects `new semver.Range(...)`.

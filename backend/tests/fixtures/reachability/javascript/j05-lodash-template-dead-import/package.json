@@ -1,0 +1,10 @@
+{
+  "name": "fixture-j05",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.mjs",
+  "dependencies": {
+    "lodash": "4.17.20"
+  }
+}

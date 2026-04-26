@@ -27,6 +27,26 @@
     - 5 FP 全部來自同一限制(package-level granularity,無法分辨 `yaml.load` vs `yaml.safe_load`)— 這正是 Wave D sprint #3 要關掉的 gap
 - **下一步**:Phase 2 寫 16 個 JS/TS fixture,Phase 3 寫 13 個 Java fixture,各自獨立 commit
 
+### 文件 / 測試(Reachability Fixture Corpus — Phase 2:JS/TS 16 fixtures)
+- **15 個 JavaScript fixture**(`backend/tests/fixtures/reachability/javascript/`):
+  - J1/J2/J3:CVE-2019-10744 lodash defaultsDeep(prototype pollution)reachable / merge-only / test_only
+  - J4/J5:CVE-2021-23337 lodash template(command injection)ES6 default import / dead named import
+  - J6/J7:CVE-2022-24999 qs.parse(prototype pollution)reachable / stringify-only
+  - J8/J9:CVE-2022-25883 semver.satisfies(ReDoS)reachable / valid-only
+  - J10:CommonJS namespace edge(`const _ = require('lodash'); _.template(...)`)— 測 CJS alias tracking
+  - J11:ES6 named alias edge(`import { template as t }; t(...)`)
+  - J13:JSX wiring framework_mechanism — 測 `<VulnComp data={...} />` 是否被認出為 runtime call
+  - J14:CVE-2024-29041 express `res.location` / `res.redirect`(open redirect)
+  - J15:dynamic import honesty test(`await import(\`./mods/${userChoice}\`)`)— 測 analyzer 出 `unknown` 不亂猜
+  - J16:reflective dispatch honesty test(`handlers[methodName](input)`)— production-realistic dispatch table
+- **1 個 TypeScript fixture**(`typescript/`):
+  - J12:`import type { TemplateOptions } from 'lodash'` — TS-only 構造,編譯時消除,naïve regex 會誤判 reachable
+- **Schema 沒新增欄位**:Phase 1 的 `import_names` + `fixture_type` + `transitive_only` 全部夠用,16 個 fixture 全部一次驗證通過
+- **Phase 2 baseline**(現有 Python analyzer 對 JS/TS 全部 skip):
+  - 26 fixtures 中:5 Python PASS / 5 Python FP / 0 FN / 16 SKIP(全部 JS/TS — analyzer 不支援該語言)
+  - 預期 sprint #3 完成後 baseline 變化:13 reachable 全 PASS / ~12 unreachable 全 PASS(現在會是 FP)/ 2 unknown_acceptable 全 PASS(現在 SKIP)
+- **下一步**:Phase 3 寫 13 個 Java fixture(13 = 5 reachable + 6 unreachable + 1 test_only + 1 framework_mechanism),完成後 corpus 達 39 個,Wave D sprint 可正式啟動
+
 ### 效能(OSV 掃描重寫:per-PURL → 批次 + 唯一漏洞詳情並行)
 - `vuln_scanner.scan_components()` 從 N 次 `/v1/query`(每 PURL 一次)改成兩階段:
   - **Phase 1**:`POST /v1/querybatch`,一次最多 1000 個 PURL,只回 `{id, modified}` 輕量 stub

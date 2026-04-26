@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-23337
+ghsa_id: GHSA-35jh-r3h4-6jhm
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.21"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - lodash.template
+notes: |
+  Same vulnerability as J04 but accessed via CommonJS namespace
+  binding: `const _ = require('lodash')` followed by `_.template(...)`.
+  Tests the analyzer's CJS alias-tracking — the bound name `_`
+  must be resolved back to the lodash module so the call site
+  `_.template` is recognised as the vulnerable symbol.

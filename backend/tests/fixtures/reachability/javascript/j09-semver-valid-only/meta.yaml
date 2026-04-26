@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-25883
+ghsa_id: GHSA-c2qf-rxjj-qqgw
+package: semver
+import_names: [semver]
+ecosystem: npm
+affected_versions: "<7.5.2"
+language: javascript
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - semver.satisfies
+  - semver.Range
+notes: |
+  Uses semver.valid (single-version validator) and semver.eq —
+  neither parses a range expression, so the ReDoS regex never
+  runs.  Symbol-aware analyzer must distinguish satisfies/Range
+  from valid/eq/gt/lt.

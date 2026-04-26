@@ -1,0 +1,21 @@
+fixture_type: cve_reachability
+cve_id: CVE-2024-29041
+ghsa_id: GHSA-rv95-896h-c2vc
+package: express
+import_names: [express]
+ecosystem: npm
+affected_versions: "<4.19.2"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - express.response.location
+  - express.response.redirect
+notes: |
+  Open redirect — Express encodes the URL via `encodeurl` before
+  passing to the Location header.  Malformed URLs can bypass
+  redirect allowlist checks, enabling open-redirect attacks.
+  res.redirect calls res.location internally, so reachability of
+  either marks the CVE reachable.  Verified via WebFetch on
+  GHSA-rv95-896h-c2vc — symbols confirmed in advisory text.

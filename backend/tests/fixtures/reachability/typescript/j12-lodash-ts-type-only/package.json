@@ -1,0 +1,13 @@
+{
+  "name": "fixture-j12",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/types.ts",
+  "dependencies": {
+    "lodash": "4.17.20"
+  },
+  "devDependencies": {
+    "@types/lodash": "4.14.0",
+    "typescript": "5.0.0"
+  }
+}

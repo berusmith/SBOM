@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-23337
+ghsa_id: GHSA-35jh-r3h4-6jhm
+package: lodash
+import_names: [lodash]
+ecosystem: npm
+affected_versions: "<4.17.21"
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - lodash.template
+notes: |
+  Command injection via crafted template options.sourceURL —
+  lodash.template would interpolate the sourceURL into eval'd
+  code without sanitisation.  Fixture uses ES6 default import
+  syntax (import _ from 'lodash') which is the canonical
+  webpack/Vite-bundled JS form.

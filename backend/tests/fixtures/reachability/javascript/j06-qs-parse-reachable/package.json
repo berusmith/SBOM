@@ -1,0 +1,9 @@
+{
+  "name": "fixture-j06",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/parse.js",
+  "dependencies": {
+    "qs": "6.10.0"
+  }
+}

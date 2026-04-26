@@ -1,0 +1,18 @@
+fixture_type: framework_mechanism
+language: javascript
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+import_names: [vuln-react-comp]
+notes: |
+  Framework-mechanism test (no real CVE — exercises JSX recognition).
+
+  A React component imported from `vuln-react-comp` is rendered as
+  <VulnComp data={userInput} />.  In JSX semantics this is a runtime
+  function call: React.createElement(VulnComp, { data: userInput }).
+  An analyzer that only recognises function-call syntax (foo()) and
+  not JSX-element syntax (<Foo />) would miss this and incorrectly
+  classify the component as imported-but-unused.
+
+  Reported in the framework_mechanism scorer track so a JSX miss
+  here doesn't get filed as a "missed CVE false negative".
