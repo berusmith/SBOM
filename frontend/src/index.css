@@ -40,4 +40,24 @@
   :focus:not(:focus-visible) {
     outline: none;
   }
+
+  /*
+   * UX-003 / UX-028 — iOS Safari auto-zooms in when a form control
+   * with computed font-size < 16px is focused, and does NOT zoom back
+   * out automatically.  Force every input/select/textarea on phone-sized
+   * viewports to render at 16px so the zoom never triggers.
+   *
+   * Constrained to (max-width: 640px) — the sm: breakpoint — so dense
+   * desktop tables can still use text-sm inputs at their preferred 14px.
+   *
+   * This single rule retires the per-component "remember to use
+   * text-base on mobile" mental tax we'd been applying ad-hoc.
+   */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
