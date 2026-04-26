@@ -47,12 +47,15 @@ function ViewerOrgRedirect() {
 }
 
 function PageLoading() {
-  // i18n is initialized at app boot, but this component renders inside a
-  // <Suspense fallback> while a route's chunk is loading.  We can't safely
-  // call useTranslation here in older React-i18next setups (no <Trans>
-  // available pre-init).  Read directly from localStorage to keep it safe.
-  const lang = (typeof window !== "undefined" && window.localStorage.getItem("lang")) || "zh";
-  const label = lang === "en" ? "Loading..." : "載入中...";
+  // UX-020 — Read <html lang> rather than localStorage.  UX-001 keeps
+  // <html lang> in sync with the active i18n language at all times,
+  // so this is now the single source of truth and avoids the
+  // localStorage-vs-i18n-bootstrap race the previous implementation
+  // was working around.  Still no useTranslation() here: this fallback
+  // can render before react-i18next finishes init for the first lazy
+  // chunk on a cold cache.
+  const lang = typeof document !== "undefined" ? document.documentElement.lang : "zh-Hant";
+  const label = lang.startsWith("en") ? "Loading..." : "載入中...";
   return (
     <div
       role="status"
