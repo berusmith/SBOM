@@ -160,9 +160,9 @@ export default function Products() {
             <table className="w-full text-sm min-w-[360px]">
               <thead className="bg-gray-50 text-gray-500 text-left">
                 <tr>
-                  <th className="px-4 py-3">{t("products.name")}</th>
-                  <th className="px-4 py-3">{t("common.description")}</th>
-                  <th className="px-4 py-3"></th>
+                  <th scope="col" className="px-4 py-3">{t("products.name")}</th>
+                  <th scope="col" className="px-4 py-3">{t("common.description")}</th>
+                  <th scope="col" className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>

@@ -140,12 +140,12 @@ export default function AdminActivity() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-xs">
-                <th className="px-4 py-2 text-left">客戶</th>
-                <th className="px-4 py-2 text-right">登入次數</th>
-                <th className="px-4 py-2 text-right">SBOM 上傳</th>
-                <th className="px-4 py-2 text-right hidden sm:table-cell">漏洞掃描</th>
-                <th className="px-4 py-2 text-right hidden sm:table-cell">報告下載</th>
-                <th className="px-4 py-2 text-left">最後登入</th>
+                <th scope="col" className="px-4 py-2 text-left">客戶</th>
+                <th scope="col" className="px-4 py-2 text-right">登入次數</th>
+                <th scope="col" className="px-4 py-2 text-right">SBOM 上傳</th>
+                <th scope="col" className="px-4 py-2 text-right hidden sm:table-cell">漏洞掃描</th>
+                <th scope="col" className="px-4 py-2 text-right hidden sm:table-cell">報告下載</th>
+                <th scope="col" className="px-4 py-2 text-left">最後登入</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -221,12 +221,12 @@ export default function AdminActivity() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-xs border-b">
-                <th className="px-4 py-2.5 text-left">時間</th>
-                <th className="px-4 py-2.5 text-left">使用者</th>
-                <th className="px-4 py-2.5 text-left hidden sm:table-cell">客戶</th>
-                <th className="px-4 py-2.5 text-left">事件</th>
-                <th className="px-4 py-2.5 text-left hidden md:table-cell">操作對象</th>
-                <th className="px-4 py-2.5 text-left hidden lg:table-cell">IP</th>
+                <th scope="col" className="px-4 py-2.5 text-left">時間</th>
+                <th scope="col" className="px-4 py-2.5 text-left">使用者</th>
+                <th scope="col" className="px-4 py-2.5 text-left hidden sm:table-cell">客戶</th>
+                <th scope="col" className="px-4 py-2.5 text-left">事件</th>
+                <th scope="col" className="px-4 py-2.5 text-left hidden md:table-cell">操作對象</th>
+                <th scope="col" className="px-4 py-2.5 text-left hidden lg:table-cell">IP</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

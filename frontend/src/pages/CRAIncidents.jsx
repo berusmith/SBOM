@@ -89,12 +89,12 @@ export default function CRAIncidents() {
           <table className="w-full text-sm min-w-[280px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3">事件標題</th>
-                <th className="px-4 py-3 hidden sm:table-cell">觸發 CVE</th>
-                <th className="px-4 py-3">狀態</th>
-                <th className="px-4 py-3">時限</th>
-                <th className="px-4 py-3">建立時間</th>
-                <th className="px-4 py-3"></th>
+                <th scope="col" className="px-4 py-3">事件標題</th>
+                <th scope="col" className="px-4 py-3 hidden sm:table-cell">觸發 CVE</th>
+                <th scope="col" className="px-4 py-3">狀態</th>
+                <th scope="col" className="px-4 py-3">時限</th>
+                <th scope="col" className="px-4 py-3">建立時間</th>
+                <th scope="col" className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>

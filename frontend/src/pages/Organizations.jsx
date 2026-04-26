@@ -224,11 +224,11 @@ export default function Organizations() {
           <table className="w-full text-sm min-w-[280px]">
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
-                <th className="px-4 py-3">{t("organizations.name")}</th>
-                <th className="px-4 py-3 hidden sm:table-cell">授權狀態</th>
-                <th className="px-4 py-3">方案</th>
-                <th className="px-4 py-3 hidden md:table-cell">建立時間</th>
-                <th className="px-4 py-3"></th>
+                <th scope="col" className="px-4 py-3">{t("organizations.name")}</th>
+                <th scope="col" className="px-4 py-3 hidden sm:table-cell">授權狀態</th>
+                <th scope="col" className="px-4 py-3">方案</th>
+                <th scope="col" className="px-4 py-3 hidden md:table-cell">建立時間</th>
+                <th scope="col" className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>

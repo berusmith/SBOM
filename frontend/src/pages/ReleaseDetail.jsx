@@ -1011,10 +1011,10 @@ export default function ReleaseDetail() {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="text-left text-indigo-700 border-b border-indigo-200">
-                      <th className="py-1 pr-3 font-medium">ID</th>
-                      <th className="py-1 pr-3 font-medium">嚴重度</th>
-                      <th className="py-1 pr-3 font-medium">描述</th>
-                      <th className="py-1 font-medium">建議</th>
+                      <th scope="col" className="py-1 pr-3 font-medium">ID</th>
+                      <th scope="col" className="py-1 pr-3 font-medium">嚴重度</th>
+                      <th scope="col" className="py-1 pr-3 font-medium">描述</th>
+                      <th scope="col" className="py-1 font-medium">建議</th>
                     </tr>
                   </thead>
                   <tbody>

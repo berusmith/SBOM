@@ -281,9 +281,9 @@ export default function FirmwareUpload() {
                           <table className="w-full text-xs">
                             <thead className="bg-gray-50">
                               <tr>
-                                <th className="px-3 py-2 text-left">名稱</th>
-                                <th className="px-3 py-2 text-left">版本</th>
-                                <th className="px-3 py-2 text-left">類型</th>
+                                <th scope="col" className="px-3 py-2 text-left">名稱</th>
+                                <th scope="col" className="px-3 py-2 text-left">版本</th>
+                                <th scope="col" className="px-3 py-2 text-left">類型</th>
                               </tr>
                             </thead>
                             <tbody>

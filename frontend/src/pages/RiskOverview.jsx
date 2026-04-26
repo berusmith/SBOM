@@ -99,19 +99,18 @@ export default function RiskOverview() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-gray-500 font-medium w-8">#</th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium w-8">#</th>
                 {SORT_FIELDS.map((f) => (
-                  <th
-                    key={f.key}
+                  <th scope="col" key={f.key}
                     onClick={() => handleSort(f.key)}
                     className="px-4 py-3 text-left text-gray-500 font-medium cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
                   >
                     {f.label}<SortIcon field={f.key} />
                   </th>
                 ))}
-                <th className="px-4 py-3 text-left text-gray-500 font-medium whitespace-nowrap">修補率</th>
-                <th className="px-4 py-3 text-left text-gray-500 font-medium hidden sm:table-cell">進行中事件</th>
-                <th className="px-4 py-3"></th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium whitespace-nowrap">修補率</th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium hidden sm:table-cell">進行中事件</th>
+                <th scope="col" className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

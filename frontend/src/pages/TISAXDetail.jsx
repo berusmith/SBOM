@@ -360,13 +360,13 @@ export default function TISAXDetail() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-xs text-gray-500">
-                        <th className="px-4 py-2 text-left">編號</th>
-                        <th className="px-4 py-2 text-left">控制項</th>
-                        <th className="px-4 py-2 text-center">當前</th>
-                        <th className="px-4 py-2 text-center">目標</th>
-                        <th className="px-4 py-2 text-center">差距</th>
-                        <th className="px-4 py-2 text-left hidden sm:table-cell">負責人</th>
-                        <th className="px-4 py-2 text-left hidden sm:table-cell">預計完成</th>
+                        <th scope="col" className="px-4 py-2 text-left">編號</th>
+                        <th scope="col" className="px-4 py-2 text-left">控制項</th>
+                        <th scope="col" className="px-4 py-2 text-center">當前</th>
+                        <th scope="col" className="px-4 py-2 text-center">目標</th>
+                        <th scope="col" className="px-4 py-2 text-center">差距</th>
+                        <th scope="col" className="px-4 py-2 text-left hidden sm:table-cell">負責人</th>
+                        <th scope="col" className="px-4 py-2 text-left hidden sm:table-cell">預計完成</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -395,10 +395,10 @@ export default function TISAXDetail() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-xs text-gray-500">
-                        <th className="px-4 py-2 text-left">編號</th>
-                        <th className="px-4 py-2 text-left">控制項</th>
-                        <th className="px-4 py-2 text-center">當前</th>
-                        <th className="px-4 py-2 text-center">目標</th>
+                        <th scope="col" className="px-4 py-2 text-left">編號</th>
+                        <th scope="col" className="px-4 py-2 text-left">控制項</th>
+                        <th scope="col" className="px-4 py-2 text-center">當前</th>
+                        <th scope="col" className="px-4 py-2 text-center">目標</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">

@@ -794,7 +794,7 @@ function renderBlock(block, idx, query) {
           <thead>
             <tr className="bg-gray-100">
               {block.headers.map((h, i) => (
-                <th key={i} className="text-left px-3 py-2 border border-gray-200 font-semibold text-gray-700">{hl(h)}</th>
+                <th scope="col" key={i} className="text-left px-3 py-2 border border-gray-200 font-semibold text-gray-700">{hl(h)}</th>
               ))}
             </tr>
           </thead>

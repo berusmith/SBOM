@@ -177,8 +177,8 @@ function SimpleCompTable({ items }) {
     <table className="w-full text-sm bg-white min-w-[280px]">
       <thead className="bg-gray-50 text-gray-500 text-left">
         <tr>
-          <th className="px-4 py-2">元件名稱</th>
-          <th className="px-4 py-2">版本</th>
+          <th scope="col" className="px-4 py-2">元件名稱</th>
+          <th scope="col" className="px-4 py-2">版本</th>
         </tr>
       </thead>
       <tbody>
@@ -200,11 +200,11 @@ function VulnTable({ items }) {
     <table className="w-full text-sm bg-white min-w-[480px]">
       <thead className="bg-gray-50 text-gray-500 text-left">
         <tr>
-          <th className="px-4 py-2">CVE ID</th>
-          <th className="px-4 py-2">元件</th>
-          <th className="px-4 py-2">嚴重度</th>
-          <th className="px-4 py-2 hidden sm:table-cell">CVSS</th>
-          <th className="px-4 py-2 hidden sm:table-cell">EPSS</th>
+          <th scope="col" className="px-4 py-2">CVE ID</th>
+          <th scope="col" className="px-4 py-2">元件</th>
+          <th scope="col" className="px-4 py-2">嚴重度</th>
+          <th scope="col" className="px-4 py-2 hidden sm:table-cell">CVSS</th>
+          <th scope="col" className="px-4 py-2 hidden sm:table-cell">EPSS</th>
         </tr>
       </thead>
       <tbody>

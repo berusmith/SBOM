@@ -83,14 +83,14 @@ export default function Search() {
               <table className="w-full text-sm min-w-[320px]">
                 <thead className="bg-gray-50 text-gray-500 text-left">
                   <tr>
-                    <th className="px-4 py-3">元件名稱</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">版本</th>
-                    <th className="px-4 py-3 hidden md:table-cell">客戶</th>
-                    <th className="px-4 py-3 hidden md:table-cell">產品</th>
-                    <th className="px-4 py-3 hidden sm:table-cell">版本號</th>
-                    <th className="px-4 py-3">漏洞數</th>
-                    <th className="px-4 py-3">最高風險</th>
-                    <th className="px-4 py-3">KEV</th>
+                    <th scope="col" className="px-4 py-3">元件名稱</th>
+                    <th scope="col" className="px-4 py-3 hidden sm:table-cell">版本</th>
+                    <th scope="col" className="px-4 py-3 hidden md:table-cell">客戶</th>
+                    <th scope="col" className="px-4 py-3 hidden md:table-cell">產品</th>
+                    <th scope="col" className="px-4 py-3 hidden sm:table-cell">版本號</th>
+                    <th scope="col" className="px-4 py-3">漏洞數</th>
+                    <th scope="col" className="px-4 py-3">最高風險</th>
+                    <th scope="col" className="px-4 py-3">KEV</th>
                   </tr>
                 </thead>
                 <tbody>

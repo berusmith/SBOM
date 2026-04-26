@@ -425,11 +425,11 @@ export default function Dashboard() {
                 <table className="w-full text-xs min-w-[320px]">
                   <thead className="text-left text-gray-500 border-b">
                     <tr>
-                      <th className="pb-2 pr-3">{t("organizations.name")}</th>
-                      <th className="pb-2 pr-3">{t("products.name")}</th>
-                      <th className="pb-2 pr-3">{t("releases.version")}</th>
-                      <th className="pb-2 pr-3">{t("dashboard.component")}</th>
-                      <th className="pb-2">{t("releaseDetail.vulns.severity")}</th>
+                      <th scope="col" className="pb-2 pr-3">{t("organizations.name")}</th>
+                      <th scope="col" className="pb-2 pr-3">{t("products.name")}</th>
+                      <th scope="col" className="pb-2 pr-3">{t("releases.version")}</th>
+                      <th scope="col" className="pb-2 pr-3">{t("dashboard.component")}</th>
+                      <th scope="col" className="pb-2">{t("releaseDetail.vulns.severity")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -512,11 +512,11 @@ export default function Dashboard() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-600 border-b">
-                    <th className="pb-2 pr-4">CVE</th>
-                    <th className="pb-2 pr-4">EPSS</th>
-                    <th className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
-                    <th className="pb-2 pr-4">{t("dashboard.component")}</th>
-                    <th className="pb-2">KEV</th>
+                    <th scope="col" className="pb-2 pr-4">CVE</th>
+                    <th scope="col" className="pb-2 pr-4">EPSS</th>
+                    <th scope="col" className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
+                    <th scope="col" className="pb-2 pr-4">{t("dashboard.component")}</th>
+                    <th scope="col" className="pb-2">KEV</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -558,10 +558,10 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
-                  <th className="pb-2 pr-4">{t("dashboard.riskyCol")}</th>
-                  <th className="pb-2 pr-4 text-center">{t("dashboard.riskyColVersions")}</th>
-                  <th className="pb-2 pr-4 text-center">{t("dashboard.riskyColUnpatched")}</th>
-                  <th className="pb-2 text-center">{t("dashboard.riskyColEpss")}</th>
+                  <th scope="col" className="pb-2 pr-4">{t("dashboard.riskyCol")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskyColVersions")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskyColUnpatched")}</th>
+                  <th scope="col" className="pb-2 text-center">{t("dashboard.riskyColEpss")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -613,13 +613,13 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
-                  <th className="pb-2 pr-4">客戶</th>
-                  <th className="pb-2 pr-4 text-center">產品</th>
-                  <th className="pb-2 pr-4 text-center">總漏洞</th>
-                  <th className="pb-2 pr-4 text-center">未修 Critical</th>
-                  <th className="pb-2 pr-4 text-center">未修 High</th>
-                  <th className="pb-2 pr-4 text-center">修補率</th>
-                  <th className="pb-2 text-center">風險評分</th>
+                  <th scope="col" className="pb-2 pr-4">客戶</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">產品</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">總漏洞</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">未修 Critical</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">未修 High</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">修補率</th>
+                  <th scope="col" className="pb-2 text-center">風險評分</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
