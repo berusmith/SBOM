@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Cross-cutting base rules.
+ *
+ * UX-004 — Honour the OS-level Reduce Motion preference globally.
+ *   This single block neutralises every animation and transition on the
+ *   site, regardless of which utility class triggered them.  We use
+ *   !important here because Tailwind utility classes have higher
+ *   specificity than naked element selectors; without it the animate-*
+ *   utilities would still apply their own keyframes.
+ *
+ * UX-010 — Replace browser-default focus ring (which we suppress with
+ *   `outline-none`) with one that only appears for KEYBOARD users.
+ *   This means clicking a button no longer leaves a blue ring; tabbing
+ *   to it does.  Existing `focus:ring-2` utility classes continue to
+ *   work — they layer on top of this base rule for additional emphasis.
+ *   The ring color comes from the design-token `ring-focus` defined in
+ *   tailwind.config.js.
+ */
+@layer base {
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      /* annotate: !important required to override Tailwind animate-* / transition-* utilities */
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.ring-focus');
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
