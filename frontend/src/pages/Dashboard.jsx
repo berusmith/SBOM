@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
@@ -8,7 +8,6 @@ import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
 
 function TopVulns() {
   const [items, setItems] = useState(null);
-  const navigate = useNavigate();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -28,24 +27,32 @@ function TopVulns() {
         <table className="w-full text-sm min-w-[320px]">
           <thead>
             <tr className="text-left text-xs text-gray-600 border-b">
-              <th className="pb-2 pr-4">CVE</th>
-              <th className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
-              <th className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
-              <th className="pb-2 pr-4">{t("dashboard.component")}</th>
-              <th className="pb-2 pr-4 hidden sm:table-cell">{t("dashboard.product")}</th>
-              <th className="pb-2 pr-4 hidden lg:table-cell">{t("dashboard.customer")}</th>
-              <th className="pb-2">{t("common.status")}</th>
+              <th scope="col" className="pb-2 pr-4">CVE</th>
+              <th scope="col" className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
+              <th scope="col" className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
+              <th scope="col" className="pb-2 pr-4">{t("dashboard.component")}</th>
+              <th scope="col" className="pb-2 pr-4 hidden sm:table-cell">{t("dashboard.product")}</th>
+              <th scope="col" className="pb-2 pr-4 hidden lg:table-cell">{t("dashboard.customer")}</th>
+              <th scope="col" className="pb-2">{t("common.status")}</th>
             </tr>
           </thead>
           <tbody>
+            {/*
+              UX-007 — row navigation moved off <tr onClick> (which is
+              keyboard-inaccessible) and onto a <Link> wrapping the CVE
+              identifier.  Mouse users now click the CVE; the row still
+              hover-highlights for visual continuity.  Keyboard users
+              tab through the focusable CVE links.
+            */}
             {items.map((v) => (
-              <tr
-                key={v.vuln_id}
-                className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
-                onClick={() => navigate(`/releases/${v.release_id}`)}
-              >
-                <td className="py-3 pr-4 font-mono text-xs text-blue-700">
-                  {v.cve_id}
+              <tr key={v.vuln_id} className="border-b last:border-0 hover:bg-gray-50">
+                <td className="py-3 pr-4 font-mono text-xs">
+                  <Link
+                    to={`/releases/${v.release_id}`}
+                    className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
+                  >
+                    {v.cve_id}
+                  </Link>
                   {v.is_kev && (
                     <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold text-xs">KEV</span>
                   )}
@@ -58,9 +65,9 @@ function TopVulns() {
                 <td className="py-3 pr-4 text-gray-600 hidden md:table-cell">{v.cvss_score ?? "—"}</td>
                 <td className="py-3 pr-4 text-gray-700">{v.component_name} <span className="text-gray-600">{v.component_version}</span></td>
                 <td className="py-3 pr-4 text-gray-700 hidden sm:table-cell">{v.product_name} <span className="text-gray-600 text-xs">{v.release_version}</span></td>
-                <td className="py-3 pr-4 text-gray-500 hidden lg:table-cell">{v.org_name}</td>
+                <td className="py-3 pr-4 text-gray-600 hidden lg:table-cell">{v.org_name}</td>
                 <td className="py-3">
-                  <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600">{v.status}</span>
+                  <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-700">{v.status}</span>
                 </td>
               </tr>
             ))}

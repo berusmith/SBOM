@@ -63,8 +63,16 @@ function ControlRow({ ctrl, onSave }) {
 
   return (
     <div className="border-b border-gray-100 last:border-0">
-      <div
-        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer"
+      {/*
+        UX-007 — replaced <div onClick> with <button> so the row is
+        keyboard-activatable.  Button + text-align reset gives the same
+        visual hit area as the previous div but with semantic correctness.
+        aria-expanded reflects the disclosure state.
+      */}
+      <button
+        type="button"
+        className="flex items-center gap-3 px-4 py-3 w-full text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 focus:ring-2 focus:ring-blue-400 focus:ring-inset"
+        aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
       >
         <span className="text-xs font-mono text-gray-600 w-16 shrink-0">{ctrl.control_number}</span>
@@ -75,9 +83,9 @@ function ControlRow({ ctrl, onSave }) {
           )}
           <span className="text-xs text-gray-500">{ctrl.current_maturity}/{ctrl.target_maturity}</span>
           <StatusBadge status={ctrl.status} />
-          <span className="text-gray-300 text-xs">{expanded ? "▲" : "▼"}</span>
+          <span className="text-gray-400 text-xs" aria-hidden="true">{expanded ? "▲" : "▼"}</span>
         </div>
-      </div>
+      </button>
 
       {expanded && (
         <div className="px-4 pb-4 bg-gray-50/50">
