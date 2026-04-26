@@ -1007,8 +1007,87 @@ def release_violations(release: Release = Depends(require_release_in_scope), db:
 
 Apply to all release-scoped endpoints. Migrate `releases.py:_assert_release_org` callers progressively (each migration is independent).
 
-- **effort**: M (~4h — write dependency, migrate ~30 callers in releases.py + the 4 SEC-001a-d sites)
-- **risk_of_fix**: Low-Medium (extensive surface; per-router migration; covered by `tests/test_multi_tenant_isolation.py`)
+**Mandatory enforcement test (rev-4 amendment per user round-4 review)**:
+
+Middleware introduction is necessary but not sufficient — 30+ existing callsites + future endpoints could still miss the decorator. Phase 5 SDLC-001 fix MUST include a CI-runnable enforcement test:
+
+```python
+# tests/test_endpoint_decorator_enforcement.py
+"""
+Enforces SDLC-001's invariant at CI time: every release-scoped
+endpoint MUST use Depends(require_release_in_scope) or have an
+explicit require_admin override.  Forgetting becomes a CI failure,
+not a silent runtime leak.
+"""
+import inspect
+from fastapi import FastAPI
+
+from app.main import app
+from app.core.deps import require_release_in_scope, require_admin
+
+
+_RELEASE_PARAM_NAMES = {"release_id"}                # path/query parameter names
+_PRODUCT_PARAM_NAMES = {"product_id"}                # extends to other ownership-scoped resources
+_OWNERSHIP_DEPENDENCIES = {require_release_in_scope, require_admin}
+
+
+def _has_ownership_dep(endpoint) -> bool:
+    """Walk the endpoint signature; return True if any parameter's
+    Depends() target is in _OWNERSHIP_DEPENDENCIES (or transitively)."""
+    sig = inspect.signature(endpoint)
+    for param in sig.parameters.values():
+        # FastAPI Depends marker is in default value
+        default = param.default
+        if hasattr(default, "dependency") and default.dependency in _OWNERSHIP_DEPENDENCIES:
+            return True
+    return False
+
+
+def test_all_release_scoped_endpoints_have_ownership_dependency():
+    """Every route whose path contains {release_id} (or other
+    ownership-scoped resource id) must use require_release_in_scope
+    or explicitly opt out via require_admin (admin sees all by design)."""
+    missing = []
+    for route in app.routes:
+        if not hasattr(route, "path"):
+            continue
+        path = route.path
+        # Match templated path params for release-scoped resources
+        if any(f"{{{name}}}" in path for name in _RELEASE_PARAM_NAMES | _PRODUCT_PARAM_NAMES):
+            endpoint = getattr(route, "endpoint", None)
+            if endpoint is None or not _has_ownership_dep(endpoint):
+                missing.append(f"{route.methods} {path} → endpoint {endpoint.__qualname__}")
+    assert not missing, (
+        "Endpoints missing ownership decorator (SDLC-001 invariant violated):\n"
+        + "\n".join(f"  - {m}" for m in missing)
+    )
+
+
+def test_decorator_argument_consistency():
+    """The path parameter name must match what the dependency expects.
+    Common bug: route says {release_id} but endpoint signature uses
+    'release_uuid' or similar — dependency won't bind."""
+    errors = []
+    for route in app.routes:
+        if not hasattr(route, "path") or not _has_ownership_dep(getattr(route, "endpoint", None)):
+            continue
+        sig = inspect.signature(route.endpoint)
+        path_params_in_url = {n for n in _RELEASE_PARAM_NAMES | _PRODUCT_PARAM_NAMES
+                              if f"{{{n}}}" in route.path}
+        path_params_in_sig = {p.name for p in sig.parameters.values()
+                              if p.name in _RELEASE_PARAM_NAMES | _PRODUCT_PARAM_NAMES}
+        # Each URL param must appear in the endpoint signature
+        for url_param in path_params_in_url:
+            if url_param not in path_params_in_sig and url_param not in {p.name for p in sig.parameters.values()}:
+                errors.append(f"{route.path} URL param {{{url_param}}} not in endpoint signature")
+    assert not errors, "Decorator argument inconsistency:\n" + "\n".join(f"  - {e}" for e in errors)
+```
+
+This test runs in the SEC-017 CI pipeline. Phase 5 considers SDLC-001 NOT done until both tests are merged AND green for at least one CI run on `master`.
+
+- **effort**: M (~5h — write dependency, migrate ~30 callers, write enforcement tests, get CI green)
+- **risk_of_fix**: Low-Medium (extensive surface; tests catch regressions; rollback = revert per file)
+- **rev-4 monitor-mode escalation**: if the enforcement test catches any missing endpoint at first run, audit pauses (per "auto-pause condition #4 — enforcement test fails") so the full set of misses can be reviewed before proceeding.
 
 #### defense_in_depth
 - **CI lint rule**: ban `release_id: str` route parameter in any function whose signature does not include `Depends(require_release_in_scope)` or `Depends(require_admin)`. Implementation: simple grep-based check in `tools/lint/check-release-scope.py`.
@@ -1204,6 +1283,11 @@ traceability:
       - 部署 log pipeline 後 verify monitoring_detection alerts 真的會觸發
       - 加新 mutation endpoint 時驗證有 audit.record() 呼叫
       - 商業化前(SOC 2 Type II audit 必須驗證 audit log 完整 + immutable)
+      - **DB engine migration (SQLite → PostgreSQL or vice-versa)** ← rev-4 amend
+        per user round-4 review:audit log integrity 機制(append-only constraint /
+        hash chain trigger / IP redaction cron)在 SQLite 與 Postgres 上行為差異
+        極大,migration 必須帶完整重審,否則商業化從 SQLite 切 Postgres 那天 audit
+        log 完整性可能集體 break。
 ```
 
 ### Observation

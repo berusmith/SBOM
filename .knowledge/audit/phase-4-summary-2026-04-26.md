@@ -120,25 +120,30 @@ Each row scored on:
 - **SEC-017 CI baseline 拉到 #0 (sprint 0)**:後續 10+ commit 都需 SAST / SCA / secret scan 在 PR 上跑。沒這層 = 閉著眼睛改 security code。SDLC-001 大改動沒 SAST 攔截尤其風險高。
 - **SDLC-001 拉到 #1**:若先修 SEC-001a/b/c/d 才做 SDLC-001,4 個 endpoint 要 refactor 兩次(先手動 fix,再轉 middleware)。SDLC-001 先做、4 個 sub-finding 直接套用新 middleware = 一次到位,commit 少,Phase 6 verification 簡單(只驗 middleware 本身 + 4 個 endpoint 都套用)。
 
+**rev-4 amendment**:SEC-022(Python version floor)拆出獨立 finding(從 SEC-002 secondary fix 中分離出),排在 SEC-017 與 SEC-002 之間。維持 Top-10 規模,**SEC-014 backup encryption 移到 P2 backlog**(仍追蹤,但不在這次 Phase 5 sprint 衝刺範圍)。
+
 | # | finding | severity (lan/pub) | effort | rationale |
 |---|---------|--------------------|--------|-----------|
 | **0** | **SEC-017** (CI SCA + SAST + secret scan) | Med / High | M (~3h) | **腳手架** — sprint 0 先架,後續每 fix commit 在 CI 監督下進。SOC 2 CC8.1 evidence 同步 unlock。沒這層 SDLC-001 大改動風險不可控 |
-| **1** | **SDLC-001** (auth/scope mandatory middleware,**rev-3 縮 scope**) | Med / High | M | **architecture-first** — 引入 `require_release_in_scope` Depends-based 守衛;SEC-001a/b/c/d 直接套用 |
+| **1** | **SDLC-001** (auth/scope mandatory middleware,**rev-3 縮 scope** + **rev-4 加 enforcement test**) | Med / High | M (~5h) | **architecture-first** — 引入 `require_release_in_scope` Depends-based 守衛 + CI enforcement test 防 30 個 callsite 漏掉;SEC-001a/b/c/d 直接套用 |
 | 2 | SEC-001a (licenses summary disclosure)        | Med / High | S | 用 SDLC-001 helper 一行套上;LEAK_CONFIRMED PoC 已有 |
 | 3 | SEC-001b (licenses release IDOR)              | Med / High | S | 用 `assert_release_in_scope` + 404 not 403 |
 | 4 | SEC-001c (policies summary disclosure)        | Med / High | S | 同 #2 pattern |
 | 5 | SEC-001d (policies release IDOR)              | Med / High | S | 同 #3 pattern;封閉 violations endpoint family |
 | 6 | SEC-003 (X-Forwarded-For spoof)               | Low / High | S | nginx + rate_limit;trivial complexity → 最 cost-effective |
-| 7 | SEC-002 (XML billion-laughs DoS)              | Low / Med  | S | 2-line pre-parse rejection;PARTIAL_DEFENSE_CONFIRMED(Python 3.12 expat 擋 depth ≥ 7,depth 6 仍漏 5MB) |
-| 8 | SEC-018 (nginx security headers)              | Info / Med | S | 5-line nginx config;CSP 留待 frontend audit |
-| 9 | SEC-014 (backup at-rest encryption)           | Med / High | M | gpg-encrypt SQLite backup + off-host transfer;ISO 27001 A.8.13 |
+| **7** | **SEC-022** (Python version floor in pyproject.toml) — **rev-4 NEW** | Low / Med | S | 拆自 SEC-002 — supply-chain 類別獨立 commit;與 SEC-017 互鎖(CI lock + packaging lock 雙防);SEC-002 application fix 在此之後跑安全 |
+| 8 | SEC-002 (XML billion-laughs DoS)              | Low / Med  | S | 2-line pre-parse rejection;application-level guard。**rev-4** 移除原本的 secondary python_requires fix(改 SEC-022 處理) |
+| 9 | SEC-018 (nginx security headers)              | Info / Med | S | 5-line nginx config;CSP 留待 frontend audit |
 
-### Total estimated effort:**~3 sprints(1.5 senior engineer-weeks)**(rev-3 down from rev-2's 6,因為 SDLC-001 先做後 4 個 sub-finding 各只剩 1-line)
+**P2 backlog**(rev-4 移出 Top-10 但仍追蹤):
+- SEC-014 (backup at-rest encryption) | Med / High | M | gpg-encrypt SQLite backup + off-host transfer;ISO 27001 A.8.13。Phase 5 結束後立刻動,商業化部署前必修。
+
+### Total estimated effort:**~3 sprints(1.5 senior engineer-weeks)**(rev-3 數值維持;SDLC-001 加 enforcement test 多 1h,SEC-022 補回 30min,SEC-014 移到 P2 抵消)
 - Sprint 0:**SEC-017 CI baseline**,~3h(腳手架)
-- Sprint 1:**SDLC-001 middleware + SEC-001a/b/c/d 套用**,~1.5d(architecture + 4 個 sub-finding 一起 land)
-- Sprint 2:SEC-003 + SEC-002 + SEC-018 batch,~1d
-- Sprint 3:SEC-014 backup encryption,~1d
+- Sprint 1:**SDLC-001 middleware + enforcement test + SEC-001a/b/c/d 套用**,~2d
+- Sprint 2:SEC-003 + SEC-022 + SEC-002 + SEC-018 batch,~1d
 - Phase 6 verification(re-run all PoCs + new tests):0.5d
+- P2 backlog clearance(SEC-014 backup):~1d (post-Phase-6)
 
 ### Findings 11–25 (deferred to subsequent sprints)
 
@@ -251,6 +256,19 @@ After fix:  SEC-001a-licenses-summary-leak.py → [NO LEAK] HTTP 403
 ```
 
 **No new dependencies** unless documented(per CLAUDE.md);SEC-010 webhook encryption 可用 `cryptography`(已是 `python-jose[cryptography]` 子依賴,等於 0 新 dep)。
+
+### Monitor mode (rev-4 amend per user round-4)
+
+Phase 5 動工後 stop gate 撤掉,Claude Code 自主推進。但**任一條件**自動暫停回報:
+
+1. **Python version regression** — fix 過程發現實際 runtime <3.11.4 → SEC-002 翻 High,Top-10 順序動
+2. **PoC re-run after-fix 沒出 NOT REPRODUCED** — fix 失敗,需 root-cause
+3. **Regression suite 有 test fail** — `test_all.py` 不再 54/54
+4. **Enforcement test 跑出 missing decorator endpoint** — SDLC-001 scope_not_reviewed 盲點落實,需重新評估 review boundary
+5. **任何 finding fix 過程發現 severity 估錯一級以上** — 例如 SEC-XXX 從 Low 變 Critical
+6. **Mirror push 失敗 / grep check 有可疑 hit** — Phase 5 動工 hard gate
+
+其他全不停。Phase 6 verification 完成才下次回報。
 
 Phase 6 verification produces final report with before/after evidence + Top-10 全 commit hash 列表 + 執行過的 PoC 列表。
 

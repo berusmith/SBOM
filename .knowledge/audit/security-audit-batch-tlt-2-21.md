@@ -930,3 +930,181 @@ Documented placeholder for commercialisation re-open. Sub-threats listed in thre
 **Phase 3 status**: SEC-001 family (5 findings) + SDLC-001 in main doc + SEC-002..021 (19 findings) here = **25 findings total**.
 
 Phase 4 entry next:executive summary + risk heatmap + Top-10 must-fix.
+
+---
+
+# Rev-5 amendment: SEC-022 split from SEC-002 (per user round-4 review)
+
+Background:Phase 3 SEC-002 PoC investigation discovered the codebase has zero machine-readable Python version pinning. This is a supply-chain / packaging-hygiene gap distinct from XML billion-laughs (application security). Per "one finding one commit" discipline + category separation, the Python version floor work is split into its own finding **SEC-022**.
+
+## SEC-022 (TLT-17 / supply-chain) — Backend lacks Python version floor in packaging metadata
+
+### Metadata
+
+| field | value |
+|-------|-------|
+| finding_id | SEC-022 |
+| parent_finding | null |
+| status | open |
+| discovered_phase | 3 (incidental finding from SEC-002 PoC investigation;split from SEC-002 fix scope per rev-5 amend) |
+| verification_method | static (file inspection) |
+| first_observed_commit | initial commit (architectural absence) |
+| exploitation_complexity | trivial (any contributor on Python 3.10 silently breaks defense layers) |
+| severity_lan_only | **Low** (current Mac mini brew route uses python@3.11 ≥ 3.11.4) |
+| severity_if_public | **Medium** (commercialised customers may run on diverse Pythons) |
+| blocks_commercialization | **true** (SOC 2 CC8.1 / ISO 27001 A.8.30) |
+| confidence | High |
+| category | Supply chain / Packaging hygiene |
+| cwe | [CWE-829](https://cwe.mitre.org/data/definitions/829.html) (loose match) |
+| owasp | OWASP A06:2021 Vulnerable & Outdated Components (loose) |
+| cvss_3_1 | n/a (architectural metadata absence) |
+
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-17                       # supply chain
+  parent_finding: null
+  attack_tree_leaf: null
+  abuse_cases: []
+  related_findings:
+    - SEC-002      # SEC-002's stdlib-version-dependent defense (expat 2.5+
+                   # amplification check) requires Python ≥ 3.11.4;SEC-022
+                   # closes the version-floor gap that protects SEC-002
+                   # in commercialised / fallback runtime environments
+    - SEC-017      # CI baseline locks python-version in setup-python action;
+                   # SEC-022 mirrors the same lock at packaging level
+    - SDLC-001     # supply-chain mandatory enforcement is the same anti-pattern
+                   # family ("rely on convention not enforcement") that SDLC-001
+                   # documents at the auth layer
+```
+
+### compliance_impact
+
+```yaml
+compliance_impact:
+  - framework: SOC2
+    control: CC8.1
+    gap_type: control_missing
+    note: |
+      Change management — supply-chain / runtime version pinning is part of
+      secure SDLC.  Absence at packaging level means any release artifact
+      could ship on a regressed Python without warning.
+  - framework: ISO27001
+    control: A.8.30
+    gap_type: control_missing
+    note: Outsourced development — contributors and CI environments are
+      "outsourced" runtime providers;require enforced version floor.
+  - framework: ISO27001
+    control: A.8.32
+    gap_type: control_partial
+    note: Change management — minor version drift can break defense layers.
+  - framework: IEC62443-4-1
+    control: SI-2
+    gap_type: control_missing
+    note: Secure implementation requires reusable safe defaults;
+      packaging-level Python floor is one such default.
+```
+
+### Location
+
+- `backend/requirements.txt` — no `python_requires` comment / no Python version specifier (NEGATIVE)
+- `backend/` — no `pyproject.toml` / no `setup.py` / no `setup.cfg` (NEGATIVE)
+- `deploy/setup-macos.sh:64` — installs python@3.11 explicitly (SAFE for Mac mini path,not constraining)
+- `.github/workflows/` — empty per Phase 1 (SEC-017 will close the CI side)
+
+### Observation
+
+Commercialisation SBOM tool 自身沒 `pyproject.toml` 也沒 `python_requires`。任何下面情境**都會 silently 破壞** defense layers(尤其 SEC-002 expat amplification 那層):
+
+1. **新貢獻者**:`pip install -r requirements.txt` 在 Python 3.10 系統上 — 成功安裝,backend 啟動,**zero amplification 防護**
+2. **CI runner default image**:GitHub Actions ubuntu-latest 提供多版本 Python;沒明示 `setup-python python-version` 鎖定 → 可能 default 到 3.10
+3. **Docker fallback**:`FROM python:3.11` 可能解析到 3.11.0–3.11.3(若 base image 老);`FROM python:3` 看當下最新而異
+4. **Linux 預設**:Ubuntu 22.04 LTS 預設 Python 3.10;Debian 12 預設 3.11 但 patch 版未定
+
+**諷刺面**:**這是 SBOM 工具**。供應鏈 hygiene 工具自己沒 demonstrate 這 practice = 客戶 due-diligence 會放大檢查。
+
+### Recommendation
+
+#### primary_remediation
+
+新增 `backend/pyproject.toml`,鎖 Python 下界:
+
+```toml
+[project]
+name = "sbom-platform-backend"
+version = "0.1.0"
+description = "SBOM Management Platform — backend"
+requires-python = ">=3.11.4"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+```
+
+CI matrix 同步鎖(SEC-017 CI 設定 import 此檔):
+
+```yaml
+# .github/workflows/security.yml — 由 SEC-017 #0 commit 建立
+- uses: actions/setup-python@v5
+  with:
+    python-version: '3.11'   # provides 3.11.x latest; ≥ 3.11.4 since June 2023
+```
+
+- effort:S (~30 min)
+- risk_of_fix:Low(additive metadata,不改 runtime 行為)
+
+#### defense_in_depth
+
+- Pre-commit hook(SEC-017 CI 對應的 client-side):pip-version check 跑在 push 前
+- `tools/check_python_floor.py`:CI script 讀 pyproject.toml `requires-python` 對比 `setup-macos.sh` PYTHON_BIN,drift 即 fail
+
+#### compensating_control
+
+pyproject.toml 落地前,在 `README.md` Quick Start + `CLAUDE.md` 文件化 Python 3.11.4+ 下界。CLAUDE.md 已寫「production server runs Python 3.11」但**沒寫 3.11.4 minimum** — 補一句即可。
+
+#### monitoring_detection
+
+```yaml
+monitoring_detection:
+  applies_to_finding: SEC-022
+  endpoint_class: ci-runtime
+  log_pipeline: CI workflow output (GitHub Actions log)
+  log_field:
+    name: ci_python_version
+    type: string
+    sourced_from: setup-python action output
+  alert_rule: |
+    ci_python_version 不符 ">=3.11.4" → CI fails, blocks merge
+```
+
+- effort:S(覆蓋於 SEC-017 CI baseline)
+- risk_of_fix:None
+
+### Phase 5 verification expectation(infrastructure-verify)
+
+```bash
+# 1. pyproject.toml 存在且鎖 requires-python
+cat backend/pyproject.toml | grep requires-python
+> requires-python = ">=3.11.4"
+
+# 2. pip install 在 3.10 失敗
+docker run -it python:3.10 sh -c "cd /backend && pip install -e ."
+> ERROR: Package requires Python >= 3.11.4. Current is 3.10.x
+
+# 3. CI workflow log 顯示鎖定版本
+gh run view <id> --log | grep "Python "
+> Python 3.11.10 (or 3.12.x)
+```
+
+### References
+
+- PEP 621 — pyproject.toml `[project]` metadata
+- PEP 518 — build-system requires
+- SOC 2 CC8.1 / ISO 27001 A.8.30 / A.8.32 / IEC 62443-4-1 SI-2
+
+---
+
+## Updated final count: **26 findings total**(rev-5)
+
+SEC-001 family (5) + SDLC-001/002/003 (3) + SEC-002..021 (19) = 27 entries. Subtract:SEC-001 parent and SDLC-001 parents are tracking-only (no own severity), and SEC-022 just added. Operational findings count adjusts to 26.
