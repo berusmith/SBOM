@@ -1,0 +1,21 @@
+# Audit PoC scripts can be committed (logic only).
+# Anything that holds runtime credentials must NEVER enter git.
+# Add new patterns here as PoC scripts grow.
+
+# Env files
+*.env
+*.env.*
+
+# Tokens / sessions
+*.token
+*-creds.json
+*-creds.yaml
+*.session
+
+# Per-PoC secrets (e.g. SEC-001b-creds.json with viewer token)
+*-secrets.*
+
+# Temp run outputs (re-run PoC, don't commit results)
+*.run.log
+runs/
+output/

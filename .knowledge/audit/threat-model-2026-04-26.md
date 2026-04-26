@@ -451,7 +451,8 @@ Phase 3 will add precise CVSS 3.1 to each finding (not just TLT). Heatmap rebuil
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SEC-NNN  (or CR/SUP/SDLC/MISC-NNN — same numbering namespace per series; sub-findings use lowercase suffix: SEC-001a/b/c/d) |
-| traceability              | TLT-X (top-level threat); attack-tree-N.path-A/B/C.leaf-N (specific tree leaf, not just tree); abuse-case ABU-N |
+| **parent_finding**        | SEC-XXX (if this is a sub-finding) or `null` (top-level finding); also `null` for parent rows themselves. Phase 4 risk heatmap dedupes parent vs sub so 4 sub-findings ≠ 4× severity counted (rev-2 amend) |
+| traceability              | **yaml block** (see template below) — replaces single-string approach |
 | status                    | open \| confirmed \| confirmed-N/A \| wont-fix \| **wont-fix-accepted-risk** \| deferred |
 | discovered_phase          | 1 \| 2 \| 3 \| 5-verify |
 | verification_method       | static \| dynamic-poc \| manual-review \| heuristic \| static+heuristic-validated |
@@ -465,6 +466,23 @@ Phase 3 will add precise CVSS 3.1 to each finding (not just TLT). Heatmap rebuil
 | cwe                       | CWE-XX (link) |
 | owasp                     | OWASP A0X (Web) / OWASP API0X / OWASP LLM0X |
 | cvss_3_1                  | vector + score (security findings only; code-review items: N/A) |
+| **scope** (SDLC findings only) | `cross-cutting` \| `single-feature` — `cross-cutting` SDLC findings reference 多個 symptom-level findings;Phase 4 在自己的 architectural section 呈現 |
+
+**traceability** (yaml block — replaces single-string per rev-2 amend):
+
+```yaml
+traceability:
+  threat: TLT-X                        # required — single TLT id
+  parent_finding: SEC-XXX | null       # required for sub-findings; null for top-level
+  attack_tree_leaf: attack-tree-N.branch-X.leaf-N    # dot notation — Phase 4 用此 highlight 已阻斷 path
+  abuse_cases: [abuse-N, abuse-M]      # list — 一個 finding 命中多個 abuse case 是常態
+```
+
+**Why parent_finding is required**:without it, Phase 4 risk heatmap counts SEC-001 + SEC-001a/b/c/d as 5 independent High-severity nodes. With `parent_finding`, the 4 subs roll up under SEC-001 in rendering — the heatmap shows 1 root cause + 4 symptoms, not 5 unrelated criticals. SOC 2 / ISO 27001 audit reviewers consume this directly.
+
+**Why attack_tree_leaf in dot notation**:tooling-friendly. Phase 4 attack-tree visualisation directly maps `branch-X.leaf-N` to the rendered SVG node, cross-references via `<a href="#tree-N-branch-X-leaf-N">`. Pure ID would need a separate lookup table.
+
+**Why abuse_cases as list**:1:1 mapping is the exception, not the rule. SEC-001a hits both ABU-7 partial (insider hides Critical) and a hypothetical ABU-N (cross-tenant license intel for competitive advantage). Forcing single-value would fragment one finding into multiple traceability rows.
 
 **compliance_impact** (yaml block — list-of-tags so Phase 4 / commercialisation gap analysis can `yaml.load`):
 
@@ -563,13 +581,23 @@ compliance_impact:
 
 Round 1 (umbrella SEC-001 attempt) revealed 4 of the 7 zero-`_assert` files are confirmed leaks (not heuristic false positives) — bundling them as one finding obscures CVSS / compliance / fix-commit granularity. **Switched to split structure.**
 
-Revised structure:
-1. **SEC-001(parent)** — RCA only(why this pattern systemically appeared)+ pointer to systemic remediation(SDLC-001 architectural finding 引入 mandatory `@require_release_ownership` decorator);沒有獨立 severity / CVSS
+Revised structure(rev-2 amend:SEC-001 措辭收斂、SDLC-001 升 cross-cutting 位階):
+
+```
+TLT-1 (multi-tenant)  ─→  SEC-001 (parent)  ─→  SEC-001a/b/c/d (symptoms)
+TLT-3 (XFF spoof)     ─→  SEC-XXX           ─→  ...
+TLT-7 (JWT scope)     ─→  SEC-XXX           ─→  ...
+TLT-13 (audit log)    ─→  SEC-XXX           ─→  ...
+                                ↑
+                                └─ all reference SDLC-001 (cross-cutting root)
+```
+
+1. **SEC-001(parent)** — **violations endpoint family 系統性缺少 release-ownership check**(rev-2 reword:從「multi-tenant 系統性」收斂到「`/violations/*` 路徑這個 sub-system」;stats / products / search 全鎖好,只有 licenses + policies 漏 → 不算整個 codebase 系統性,是這個 endpoint family 系統性);沒有獨立 severity / CVSS
 2. **SEC-001a** — `licenses.py /violations/summary` unauthenticated cross-tenant disclosure
 3. **SEC-001b** — `licenses.py /releases/{id}/violations` IDOR
 4. **SEC-001c** — `policies.py /violations/summary` unauthenticated cross-tenant disclosure
 5. **SEC-001d** — `policies.py /releases/{id}/violations` IDOR
-6. **SDLC-001** — architectural:lacks mandatory release-ownership middleware,系統性必然漏掉
+6. **SDLC-001** — **cross-cutting architectural finding** — `scope: cross-cutting` 跨 TLT,**不只解釋 multi-tenant 這條**;同樣 pattern(依賴開發者手動加 filter / 沒有 mandatory middleware)在 TLT-3 XFF / TLT-7 JWT scope / TLT-13 audit log / TLT-18 security headers 都會再現。Phase 4 報告把 cross-cutting findings 放在獨立 "Architectural / SDLC findings" section,跟 per-TLT findings 分開敘述;商業化 due-diligence 客戶最在意這層(symptom-level 看數量,architectural 看品質)
 
 PoC policy:
 - **PoC1 stats.py confirm-N/A**:**SKIP**(static analysis 信號夠強,跑 PoC ROI 低;商業化前正式 audit report 時補)

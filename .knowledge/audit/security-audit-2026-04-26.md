@@ -17,7 +17,7 @@ status: in-progress (parent SEC-001 + SEC-001a + SDLC-001 written; b/c/d skeleto
 Schema and structure per Phase 3 review amendment(`audit(phase-3)` commit `09728a8` was umbrella v0;this is split v1).
 
 Active findings:
-- **SEC-001 (parent)** — multi-tenant isolation pattern failure;RCA + systemic remediation pointer;no own severity
+- **SEC-001 (parent)** — `/violations/*` endpoint family systemically lacks release-ownership check (rev-2 reworded from "multi-tenant pattern" to the more precise endpoint-family scope);RCA + sub-system remediation pointer;no own severity
 - **SEC-001a** — `licenses.py /violations/summary` cross-tenant disclosure
 - **SEC-001b** — `licenses.py /releases/{id}/violations` IDOR
 - **SEC-001c** — `policies.py /violations/summary` cross-tenant disclosure
@@ -28,11 +28,12 @@ Schema-review gate per user direction:**SEC-001a written fully(含 PoC2 evidence
 
 ---
 
-## SEC-001 (parent) — Multi-tenant isolation: pattern failure across release-scoped endpoints
+## SEC-001 (parent) — `/violations/*` endpoint family systemically lacks release-ownership check
 
 **Status:**parent / tracking only / no own severity / no own CVSS
+**Scope correction (rev-2 amend)**:**not** a "multi-tenant systemic" issue across the whole codebase — `stats.py`, `products.py`, `search.py`, `firmware.py`, `organizations.py` all have isolation in place. The systemic pattern is **confined to the violations-endpoint family** (`/api/licenses/violations/*` + `/api/policies/violations/*`). The broader cross-codebase systemic gap (no mandatory middleware) is captured in **SDLC-001** at cross-cutting scope, not here.
 
-This finding is the parent for SEC-001a/b/c/d. It exists to record the systemic pattern, not to be patched directly. Patches happen on the children.
+This finding is the parent for SEC-001a/b/c/d. It exists to record the family pattern, not to be patched directly. Patches happen on the children.
 
 ### Root-cause analysis
 
@@ -99,20 +100,32 @@ compliance_impact:
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SEC-001a |
-| traceability              | TLT-1 (multi-tenant); attack-tree-#1.path-A.leaf-2 (cross-tenant exfil via stats / aggregate endpoint); abuse-case ABU-7 partial |
+| parent_finding            | SEC-001 |
 | status                    | open |
 | discovered_phase          | 3 |
 | verification_method       | static + dynamic-poc |
 | first_observed_commit     | `4bb8a75` (2026-04-22, "feat: license compliance policy engine") |
-| exploitation_complexity   | **low** (requires authenticated viewer JWT; one GET request; no payload crafting) |
+| exploitation_complexity   | **low** (authenticated viewer JWT; one GET request; no payload crafting) |
 | severity_lan_only         | **Medium** |
 | severity_if_public        | **High** |
 | blocks_commercialization  | **true** |
-| confidence                | **High** (4 confirmed lines of code, no inference; PoC scripted; LAN exposure window 4 days from commit to audit) |
+| confidence                | **High** (4 confirmed lines of code, no inference; PoC executed 2026-04-26 LEAK confirmed; LAN exposure window 4 days from commit to audit) |
 | category                  | Multi-tenant / Authz / Information Disclosure |
 | cwe                       | [CWE-285 Improper Authorization](https://cwe.mitre.org/data/definitions/285.html) + [CWE-200 Information Exposure](https://cwe.mitre.org/data/definitions/200.html) |
 | owasp                     | OWASP API3:2023 Broken Object Property Level Authorization + A01:2021 Broken Access Control |
 | cvss_3_1                  | `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` = **6.5 (Medium)** lan_only;`AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N` = **7.7 (High)** if_public(scope changes when tenants are competitors)|
+
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-1                             # multi-tenant isolation
+  parent_finding: SEC-001                   # /violations endpoint family
+  attack_tree_leaf: attack-tree-1.branch-A.leaf-2   # cross-tenant aggregate-endpoint exfil
+  abuse_cases: [abuse-7]                    # insider hides Critical to bypass Policy Gate (partial)
+  # Note: there's no current ABU entry for "competitive intelligence via license posture";
+  # future amendment may add ABU-11 and link here.
+```
 
 ### compliance_impact
 
@@ -257,13 +270,39 @@ If frontend currently calls this endpoint as a viewer (verify in `frontend/src/p
 - **effort**: S (single line; same as primary_remediation Patch A above)
 - **risk_of_fix**: Low
 
-#### monitoring_detection
-- Structured log on each call to `/api/licenses/violations/summary`: `caller_user_id`, `caller_org_id`, `returned_record_count`. **Alert** when `returned_record_count > (count of components in caller's org)` — this catches any future regression that re-introduces cross-tenant leak.
-- Phase 6 verification: PoC2 re-run after Phase 5 patch must produce 403 (compensating) or scoped result (primary_remediation).
-- Long term: SOC 2 Type II evidence — quarterly run of `tests/test_multi_tenant_isolation.py` against production-like staging, log retained.
+#### monitoring_detection (rev-2:aggregate-endpoint pattern,async pipeline)
 
-- **effort**: M (~2h for log+alert; ~1h for quarterly cron)
-- **risk_of_fix**: None (pure observability)
+SEC-001a is an aggregate endpoint — no per-record `caller_org_id` to compare to. Per-request DB count of viewer's owned releases is too heavy for the request critical path. Move alerting to the application log pipeline (Loki / CloudWatch / OpenSearch — whatever lands in commercialisation), do post-response async comparison.
+
+```yaml
+monitoring_detection:
+  applies_to_finding: SEC-001a
+  endpoint_class: aggregate                  # not record-level — see SEC-001b/d for IDOR pattern
+  log_pipeline: post-response, async, structured (JSON)
+  log_field:
+    name: result_org_ids
+    type: List[UUID]
+    sourced_from: |
+      SQL trace of the resolved Component query — capture the
+      DISTINCT organisation_id values that ended up contributing
+      to the per-rule counts.  Implementation: wrap the
+      _matches() loop with an org_id collector populated from
+      `comp.release.product.organization_id`.
+  alert_rule: |
+    any(org_id != caller_org_id for org_id in result_org_ids)
+    # i.e. if the response was constructed from any org other
+    # than the caller's, raise alert.
+  notes: |
+    For admin callers (org_scope=null), suppress alert — admin
+    seeing all orgs is by design.  Filter on
+    `caller_role != "admin"` before applying the rule.
+```
+
+- **effort**: M (~2h for the log + ~1h for alert wire-up in chosen log pipeline)
+- **risk_of_fix**: None (post-response async log, never blocks the request)
+
+Phase 6 verification: PoC2 re-run after Phase 5 patch must produce 403 (compensating_control) or scoped 0-count result (primary_remediation).
+Long term: SOC 2 Type II evidence — quarterly run of `tests/test_multi_tenant_isolation.py` against production-like staging, log retained.
 
 ### References
 
@@ -286,7 +325,7 @@ If frontend currently calls this endpoint as a viewer (verify in `frontend/src/p
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SEC-001b |
-| traceability              | TLT-1; attack-tree-#1.path-C.leaf-2 (cross-tenant via guessable resource id); abuse-case — N/A |
+| parent_finding            | SEC-001 |
 | status                    | open |
 | discovered_phase          | 3 |
 | verification_method       | static + dynamic-poc-pending |
@@ -301,7 +340,19 @@ If frontend currently calls this endpoint as a viewer (verify in `frontend/src/p
 | owasp                     | OWASP API1:2023 BOLA + A01:2021 |
 | cvss_3_1                  | `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` = **6.5** lan_only / **7.7** if_public |
 
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-1
+  parent_finding: SEC-001
+  attack_tree_leaf: attack-tree-1.branch-C.leaf-2   # cross-tenant via guessable resource id
+  abuse_cases: []                                    # no current ABU entry; see SEC-001a notes
+```
+
 ### compliance_impact
+
+**(differentiated from SEC-001a — IDOR with viewer auth hits CC6.3 + A.5.18, not just A.5.15)**
 
 ```yaml
 compliance_impact:
@@ -311,6 +362,16 @@ compliance_impact:
   - framework: SOC2
     control: CC6.3
     gap_type: control_missing
+    note: |
+      Need-to-know failure at object level (release_id is the key);
+      SEC-001a is at aggregate level (no per-object key).
+  - framework: ISO27001
+    control: A.5.18      # rev-2: differentiated from SEC-001a's A.5.15
+    gap_type: control_missing
+    note: |
+      Access rights — explicitly the wrong granularity (object level
+      access without ownership check). Distinct from A.5.15 access
+      control policy gap that hits the aggregate endpoint.
   - framework: ISO27001
     control: A.5.15
     gap_type: control_partial
@@ -413,11 +474,39 @@ Same as SEC-001a:CI lint rule + `tests/test_multi_tenant_isolation.py`.
 - effort: S
 - risk_of_fix: Low (returning 403 to forged release_ids has no legitimate caller impact)
 
-#### monitoring_detection
-Structured log: `caller_user_id`, `caller_org_id`, `release_id`, `release.product.organization_id`. Alert when `caller_org_id ≠ release.product.organization_id` (which after fix should never happen → alert on >0 occurrences).
+#### monitoring_detection (rev-2:IDOR-endpoint pattern,in-handler blocking — implementation cost ≈ 0)
 
-- effort: M (~2h log + alert)
-- risk_of_fix: None
+SEC-001b is a record-level IDOR — `release.product.organization_id` is already loaded by the handler (the primary_remediation patch has the handler check it before the 403). The monitoring is a logging side-effect of the same query, not extra DB work.
+
+```yaml
+monitoring_detection:
+  applies_to_finding: SEC-001b
+  endpoint_class: idor                          # record-level — opposite of SEC-001a's aggregate
+  log_pipeline: in-handler, blocking            # because primary_remediation needs the same value
+  log_fields:
+    - name: caller_user_id
+      type: UUID
+    - name: caller_org_id
+      type: UUID
+    - name: requested_release_id
+      type: UUID
+    - name: target_release_org_id              # === release.product.organization_id
+      type: UUID
+  alert_rule: |
+    target_release_org_id != caller_org_id
+    # After fix this can never produce a 200; it WILL trigger if the fix
+    # regresses (release loaded but check skipped) or if a different
+    # endpoint reuses the same anti-pattern.
+  notes: |
+    Admin (caller_org_id == null OR caller_role == "admin"): suppress
+    alert — admin cross-org access is by design.
+    Implementation cost ≈ 0 because the load + ownership check is
+    already in the primary_remediation patch; this layer just adds
+    structured-log emission of the same fields.
+```
+
+- effort: S (~30min — adds structured log line at the same point as the 403 raise)
+- risk_of_fix: None (logging only)
 
 ### References
 Same as SEC-001a + Postgres Row-Level Security (long-term defence in depth) — https://www.postgresql.org/docs/current/ddl-rowsecurity.html
@@ -431,12 +520,12 @@ Same as SEC-001a + Postgres Row-Level Security (long-term defence in depth) — 
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SEC-001c |
-| traceability              | TLT-1; attack-tree-#1.path-A.leaf-2; abuse-case — N/A |
+| parent_finding            | SEC-001 |
 | status                    | open |
 | discovered_phase          | 3 |
 | verification_method       | static + dynamic-poc-pending |
 | first_observed_commit     | `e207d53` (2026-04-21) |
-| exploitation_complexity   | **low** (same as SEC-001a — one GET with viewer JWT) |
+| exploitation_complexity   | **trivial** (rev-2 differentiation:exposes vuln state directly,no per-CVE crafting needed,one GET) |
 | severity_lan_only         | **Medium** |
 | severity_if_public        | **High** (slightly higher than SEC-001a because policy violations expose vuln state, not just license posture; competitive intelligence richer) |
 | blocks_commercialization  | **true** |
@@ -445,6 +534,16 @@ Same as SEC-001a + Postgres Row-Level Security (long-term defence in depth) — 
 | cwe                       | CWE-285 + CWE-200 |
 | owasp                     | OWASP API3:2023 + A01:2021 |
 | cvss_3_1                  | `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` = **6.5** lan_only / **7.7** if_public |
+
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-1
+  parent_finding: SEC-001
+  attack_tree_leaf: attack-tree-1.branch-A.leaf-2   # same aggregate-endpoint exfil branch as 001a
+  abuse_cases: [abuse-7]                            # insider hides Critical to bypass Policy Gate
+```
 
 ### compliance_impact
 
@@ -496,8 +595,60 @@ Identical shape to SEC-001a: no `org_scope`, returns aggregate over all tenants.
 ### Evidence / PoC
 PoC script: `.knowledge/audit/poc/SEC-001c-policies-summary-leak.py`. Same shape as SEC-001a PoC.
 
-### Impact, Recommendation, References
-**Same as SEC-001a** modulo the data type (vuln-policy violations vs license violations). Defer to SEC-001a body for full text; primary_remediation is again `require_admin` plus per-tenant `/violations/my-summary` if frontend needs viewer access.
+### Impact
+
+**Higher than SEC-001a** because policy violations directly expose vuln state (e.g. "Critical-older-than-7d" rule count), not just license posture. For B2B SaaS commercialisation, this is competitive-intelligence rich:
+- "Tenant X has 47 Critical-older-than-7d violations" → security maturity inferred
+- Per-rule counts allow attacker to identify the worst-managed tenant (highest counts) and target social engineering / supply-chain attack at it
+
+### Recommendation (per rev-2 sub-finding折衷:reuse SEC-001a layers, monitoring differs by endpoint class)
+
+#### primary_remediation
+**See SEC-001 §primary_remediation pattern** — same `require_admin` shape as SEC-001a's Patch A. Patch text:
+
+```diff
+-@router.get("/violations/summary")
+-def violations_summary(db: Session = Depends(get_db)):
++@router.get("/violations/summary")
++def violations_summary(_admin: dict = Depends(require_admin),
++                       db: Session = Depends(get_db)):
+     """Platform-wide policy violation counts per rule (admin only)."""
+```
+
+- effort: S
+- risk_of_fix: Low
+
+#### defense_in_depth
+See SEC-001a §defense_in_depth(同 lint rule + 同 isolation test suite,both endpoints covered)。
+
+#### compensating_control
+See SEC-001a §compensating_control(同 hot-patch `require_admin`)。
+
+#### monitoring_detection (rev-2:aggregate endpoint pattern,reuses SEC-001a structure)
+
+See **SEC-001a §monitoring_detection** for the full schema. SEC-001c uses the same aggregate-endpoint async-pipeline pattern; only the source SQL changes:
+
+```yaml
+monitoring_detection:
+  applies_to_finding: SEC-001c
+  endpoint_class: aggregate
+  log_pipeline: post-response, async, structured (JSON)
+  log_field:
+    name: result_org_ids
+    type: List[UUID]
+    sourced_from: |
+      Wrap _evaluate_rule loop with org_id collector populated from
+      `vuln.component.release.product.organization_id`.
+  alert_rule: |
+    any(org_id != caller_org_id for org_id in result_org_ids)
+    # Suppress for caller_role == "admin"
+```
+
+- effort: M (~3h — slightly more than SEC-001a because vuln→component→release→product chain has 3 joins)
+- risk_of_fix: None
+
+### References
+Same as SEC-001a + OWASP Multi-tenancy Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenancy_Cheat_Sheet.html
 
 ---
 
@@ -508,12 +659,12 @@ PoC script: `.knowledge/audit/poc/SEC-001c-policies-summary-leak.py`. Same shape
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SEC-001d |
-| traceability              | TLT-1; attack-tree-#1.path-C.leaf-2; abuse-case — N/A |
+| parent_finding            | SEC-001 |
 | status                    | open |
 | discovered_phase          | 3 |
 | verification_method       | static + dynamic-poc-pending |
 | first_observed_commit     | `e207d53` (2026-04-21) |
-| exploitation_complexity   | **low** (worse than SEC-001b because there's not even an org_scope param to confuse a future maintainer) |
+| exploitation_complexity   | **low** (worse than SEC-001b in code-readability terms — no org_scope param at all in signature so a future maintainer can't tell isolation was intended; same exploit shape) |
 | severity_lan_only         | **Medium** |
 | severity_if_public        | **High** |
 | blocks_commercialization  | **true** |
@@ -523,8 +674,57 @@ PoC script: `.knowledge/audit/poc/SEC-001c-policies-summary-leak.py`. Same shape
 | owasp                     | OWASP API1:2023 BOLA + A01:2021 |
 | cvss_3_1                  | `CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N` = **6.5** lan_only / **7.7** if_public |
 
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-1
+  parent_finding: SEC-001
+  attack_tree_leaf: attack-tree-1.branch-C.leaf-2   # same IDOR branch as 001b
+  abuse_cases: []
+```
+
 ### compliance_impact
-Same as SEC-001b plus IEC 62443-4-1 SM-9 (process gap — same defect in two routers).
+
+**(differentiated from SEC-001c — IDOR shape hits the same controls as SEC-001b plus the SM-9 process-gap finding from "same defect in two routers")**
+
+```yaml
+compliance_impact:
+  - framework: SOC2
+    control: CC6.1
+    gap_type: control_partial
+  - framework: SOC2
+    control: CC6.3
+    gap_type: control_missing
+    note: |
+      Need-to-know failure at object level — same gap as SEC-001b
+      but with the additional code-readability degradation (no
+      org_scope param means future maintainer can't even tell
+      isolation was supposed to be there).
+  - framework: ISO27001
+    control: A.5.18
+    gap_type: control_missing
+    note: Object-level access rights — same as SEC-001b.
+  - framework: ISO27001
+    control: A.5.15
+    gap_type: control_partial
+  - framework: GDPR
+    control: Art.32
+    gap_type: control_partial
+  - framework: IEC62443-4-1
+    control: SI-1
+    gap_type: control_partial
+  - framework: IEC62443-4-1
+    control: SM-9
+    gap_type: control_partial
+    note: |
+      Process-gap signal: identical defective shape across
+      licenses.py + policies.py = code review process did not
+      catch the pattern.  Counted here (not in SEC-001b) because
+      this finding closes the recurrence loop — single occurrence
+      could be a slip; same pattern in TWO modules is a process
+      finding.
+```
 
 ### Location
 - `backend/app/api/policies.py:184-218`
@@ -545,8 +745,10 @@ def release_violations(release_id: str, db: Session = Depends(get_db)):
 
 Worse than SEC-001b: `org_scope` is not even in the signature, so a maintainer reading the file can't tell isolation was intended.
 
-### Recommendation
-Same as SEC-001b: introduce `assert_release_in_scope` helper, use it after the lookup, plus add `org_scope: str | None = Depends(get_org_scope)` to the function signature.
+### Recommendation (per rev-2 sub-finding 折衷)
+
+#### primary_remediation
+Same shape as SEC-001b but adds the missing `org_scope` to signature first:
 
 ```diff
  @router.get("/releases/{release_id}/violations")
@@ -561,31 +763,80 @@ Same as SEC-001b: introduce `assert_release_in_scope` helper, use it after the l
 +    assert_release_in_scope(release, org_scope)
 ```
 
-monitoring_detection / defense_in_depth / compensating_control identical to SEC-001b.
+- effort: S
+- risk_of_fix: Low
+
+#### defense_in_depth
+See SEC-001b §defense_in_depth(同 lint rule + 同 isolation test suite,both endpoints covered)。
+
+#### compensating_control
+See SEC-001b §compensating_control(IDOR 沒有乾淨 compensating;hot-fix == primary_remediation)。
+
+#### monitoring_detection (rev-2:IDOR endpoint pattern,reuses SEC-001b structure)
+
+See **SEC-001b §monitoring_detection** for the full schema. SEC-001d uses identical IDOR-endpoint in-handler-blocking pattern; only the source endpoint differs:
+
+```yaml
+monitoring_detection:
+  applies_to_finding: SEC-001d
+  endpoint_class: idor
+  log_pipeline: in-handler, blocking
+  log_fields: [caller_user_id, caller_org_id, requested_release_id, target_release_org_id]
+  alert_rule: target_release_org_id != caller_org_id
+  notes: |
+    Implementation cost ≈ 0 — adds structured log line at the same
+    point where primary_remediation raises 403.  Same as SEC-001b.
+```
+
+- effort: S (~30min)
+- risk_of_fix: None
 
 ---
 
-## SDLC-001 — Architectural: lacks mandatory release-ownership middleware; release-scoped endpoints rely on per-developer manual filter (root cause of SEC-001a/b/c/d)
+## SDLC-001 — Architectural cross-cutting: codebase lacks mandatory authorization-enforcement middleware (manifests in multiple TLT classes, not just multi-tenant)
 
 ### Metadata
 
 | field                     | value |
 |---------------------------|-------|
 | finding_id                | SDLC-001 |
-| traceability              | TLT-1 (parent threat); attack-tree-#1 (entire tree); SEC-001a/b/c/d (symptoms) |
+| parent_finding            | null (top-level architectural finding) |
+| **scope**                 | **cross-cutting** (rev-2 elevation:references multiple TLTs;Phase 4 報告放在 "Architectural / SDLC findings" section,不放在 per-TLT 列表)|
 | status                    | open |
-| discovered_phase          | 3 (extracted from SEC-001 RCA) |
+| discovered_phase          | 3 (extracted from SEC-001 RCA;**位階提升**:不只是 SEC-001 的 root cause,是跨 TLT 的 systemic gap)|
 | verification_method       | manual-review (process / architecture finding, not a runtime bug per se) |
 | first_observed_commit     | n/a (architectural absence is "since beginning of project") |
-| exploitation_complexity   | n/a (this enables future SEC-001-type bugs; itself not exploitable) |
-| severity_lan_only         | **Low** (no immediate exploit beyond SEC-001a/b/c/d) |
-| severity_if_public        | **Medium** (recurrence likelihood high; SOC 2 evidence finding) |
-| blocks_commercialization  | **partial** (SOC 2 Type II will note "no preventive control for the SEC-001 pattern") |
+| exploitation_complexity   | n/a (this enables future authorization bugs across multiple endpoint classes; itself not exploitable) |
+| severity_lan_only         | **Medium** (rev-2 raised from Low — recurrence already happened twice in violations endpoints, will keep happening at TLT-3 / TLT-7 / TLT-13 / TLT-18 surface as Phase 3 progresses) |
+| severity_if_public        | **High** (rev-2 raised from Medium — SOC 2 Type II auditor will treat "no preventive control for systemic auth check" as a control deficiency, not a single-finding issue) |
+| blocks_commercialization  | **true** (rev-2 raised from partial — without this finding being remediated, every new endpoint added by future engineers can re-introduce SEC-001-class bugs;client due-diligence will identify this as the highest-leverage SDLC fix) |
 | confidence                | High |
 | category                  | SDLC / Architecture |
-| cwe                       | n/a (architectural;CWE-285 is what it enables)|
+| cwe                       | n/a (architectural; CWE-285 / CWE-639 are what it enables) |
 | owasp                     | n/a |
 | cvss_3_1                  | n/a (not a runtime vulnerability) |
+
+### traceability
+
+```yaml
+traceability:
+  threat: cross-cutting           # not single TLT; references multiple
+  parent_finding: null
+  attack_tree_leaf: null          # architectural — enables many leaves
+  abuse_cases: []                 # architectural — enables many abuse cases
+  references_findings:
+    - SEC-001a    # symptom: violations summary unauthenticated
+    - SEC-001b    # symptom: violations IDOR
+    - SEC-001c    # symptom: same as 001a in policies
+    - SEC-001d    # symptom: same as 001b in policies
+  expected_recurrence:        # findings YET TO BE WRITTEN that will cite SDLC-001
+    - SEC-XXX (TLT-3 X-Forwarded-For client spoof — same "rely on convention not enforcement" pattern)
+    - SEC-XXX (TLT-7 JWT scope downgrade — every endpoint manually checks scope)
+    - SEC-XXX (TLT-13 audit log row tamper — no DB-level append-only constraint)
+    - SEC-XXX (TLT-18 nginx security headers — manual not policy-defined)
+```
+
+**rev-2 rationale**:Phase 4 report will render this in its own "Architectural / SDLC findings" section (separate from per-TLT findings list). Customer due-diligence consumers value architectural findings disproportionately — they signal **process maturity**, not just defect count. Bumping severity reflects that this finding's resolution affects ALL future auth work, not just the 4 SEC-001 children.
 
 ### compliance_impact
 

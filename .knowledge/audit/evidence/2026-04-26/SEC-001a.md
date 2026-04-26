@@ -2,10 +2,25 @@
 finding_id: SEC-001a
 verification_method: dynamic-poc
 poc_script: ../../poc/SEC-001a-licenses-summary-leak.py
-run_at: 2026-04-26
-backend_version: master @ 91a5599 (pre-audit-fix)
-deployment_mode: lan_only (test against running dev backend on :9100)
 verdict: LEAK_CONFIRMED
+
+poc_metadata:
+  poc_id: SEC-001a
+  executed_at: 2026-04-26T22:34:23+08:00     # local TZ; Asia/Taipei
+  executor: claude-code-instance             # auditor agent (not human, not CI)
+  environment: local-dev (commit 91a5599, pre-fix)
+  deployment_mode: lan_only                  # backend on 127.0.0.1:9100, dev sbom.db
+  destructive: false                         # creates 2 temp orgs, deletes them at end
+  cleanup_verified: true                     # cascade-delete via Organization.cascade="all,delete-orphan"
+  side_effects:
+    - 2 transient orgs created in dev sbom.db (deleted at end)
+    - 1 product / 1 release / 1 component / 1 SBOM file created (cascade-deleted)
+    - audit_events rows generated for org_create×2, product_create, release_create, sbom_upload, org_delete×2 — these PERSIST (by design, audit log is append-only)
+  reproducibility:
+    seed_data_required: false                # PoC creates its own data
+    backend_must_be_running: true
+    admin_credentials_required: true
+    runtime_seconds: ~3
 ---
 
 # SEC-001a — Dynamic PoC evidence
