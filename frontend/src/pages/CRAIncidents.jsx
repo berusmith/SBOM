@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
@@ -167,6 +167,9 @@ function CreateForm({ onClose, onCreated }) {
   const [cveIds, setCveIds] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const titleId = useId();
+  const cveIdsId = useId();
+  const descriptionId = useId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -191,8 +194,9 @@ function CreateForm({ onClose, onCreated }) {
     <Modal isOpen={true} title="新增 CRA 事件" onClose={onClose} size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">事件標題 <span className="text-red-600" aria-hidden="true">*</span></label>
+          <label htmlFor={titleId} className="block text-sm font-medium text-gray-700 mb-1">事件標題 <span className="text-red-600" aria-hidden="true">*</span></label>
           <input
+            id={titleId}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="例：Log4Shell 影響評估"
@@ -201,8 +205,9 @@ function CreateForm({ onClose, onCreated }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-700 font-normal">(逗號分隔)</span></label>
+          <label htmlFor={cveIdsId} className="block text-sm font-medium text-gray-700 mb-1">觸發 CVE <span className="text-gray-700 font-normal">(逗號分隔)</span></label>
           <input
+            id={cveIdsId}
             value={cveIds}
             onChange={(e) => setCveIds(e.target.value)}
             placeholder="CVE-2021-44228,CVE-2021-45046"
@@ -210,8 +215,9 @@ function CreateForm({ onClose, onCreated }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-700 font-normal">(選填)</span></label>
+          <label htmlFor={descriptionId} className="block text-sm font-medium text-gray-700 mb-1">說明 <span className="text-gray-700 font-normal">(選填)</span></label>
           <textarea
+            id={descriptionId}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}

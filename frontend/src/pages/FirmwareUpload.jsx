@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useId, useState } from "react";
 import { Upload, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -22,6 +22,10 @@ export default function FirmwareUpload() {
   const [organizations, setOrganizations] = useState([]);
   const [products, setProducts] = useState([]);
   const [importLoading, setImportLoading] = useState(false);
+  const fileInputId = useId();
+  const orgSelectId = useId();
+  const productSelectId = useId();
+  const versionInputId = useId();
 
   const fetchScans = async () => {
     try {
@@ -185,9 +189,10 @@ export default function FirmwareUpload() {
           </div>
         )}
         <div className="flex gap-3 justify-center">
-          <label className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 cursor-pointer">
+          <label htmlFor={fileInputId} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 cursor-pointer">
             選擇檔案
             <input
+              id={fileInputId}
               type="file"
               accept=".bin,.img,.zip"
               className="hidden"
@@ -321,8 +326,9 @@ export default function FirmwareUpload() {
         <div className="space-y-4">
           {/* Organization Select */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">組織</label>
+            <label htmlFor={orgSelectId} className="block text-sm font-medium text-gray-700 mb-1">組織</label>
             <select
+              id={orgSelectId}
               value={importData.org}
               onChange={(e) => handleOrgChange(e.target.value)}
               disabled={importLoading}
@@ -339,8 +345,9 @@ export default function FirmwareUpload() {
 
           {/* Product Select */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">產品</label>
+            <label htmlFor={productSelectId} className="block text-sm font-medium text-gray-700 mb-1">產品</label>
             <select
+              id={productSelectId}
               value={importData.product}
               onChange={(e) => setImportData({ ...importData, product: e.target.value })}
               disabled={importLoading || !importData.org}
@@ -357,8 +364,9 @@ export default function FirmwareUpload() {
 
           {/* Version Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">版本號</label>
+            <label htmlFor={versionInputId} className="block text-sm font-medium text-gray-700 mb-1">版本號</label>
             <input
+              id={versionInputId}
               type="text"
               value={importData.version}
               onChange={(e) => setImportData({ ...importData, version: e.target.value })}

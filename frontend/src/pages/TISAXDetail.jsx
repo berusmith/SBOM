@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
@@ -39,6 +39,12 @@ function ControlRow({ ctrl, onSave }) {
     remarks:          ctrl.remarks || "",
   });
   const [saving, setSaving] = useState(false);
+  const curMatId = useId();
+  const tgtMatId = useId();
+  const evidenceId = useId();
+  const ownerId = useId();
+  const dueDateId = useId();
+  const remarksId = useId();
 
   const handleSave = async () => {
     setSaving(true);
@@ -112,8 +118,8 @@ function ControlRow({ ctrl, onSave }) {
             <div className="space-y-3" onClick={e => e.stopPropagation()}>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="text-xs text-gray-600 block mb-1">當前成熟度</label>
-                  <select value={form.current_maturity}
+                  <label htmlFor={curMatId} className="text-xs text-gray-600 block mb-1">當前成熟度</label>
+                  <select id={curMatId} value={form.current_maturity}
                     onChange={e => setForm({ ...form, current_maturity: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full">
                     {[0,1,2,3,4,5].map(n => (
@@ -122,8 +128,8 @@ function ControlRow({ ctrl, onSave }) {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-gray-600 block mb-1">目標成熟度</label>
-                  <select value={form.target_maturity}
+                  <label htmlFor={tgtMatId} className="text-xs text-gray-600 block mb-1">目標成熟度</label>
+                  <select id={tgtMatId} value={form.target_maturity}
                     onChange={e => setForm({ ...form, target_maturity: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full">
                     {[0,1,2,3,4,5].map(n => (
@@ -133,28 +139,28 @@ function ControlRow({ ctrl, onSave }) {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-600 block mb-1">證據說明</label>
-                <textarea value={form.evidence_note}
+                <label htmlFor={evidenceId} className="text-xs text-gray-600 block mb-1">證據說明</label>
+                <textarea id={evidenceId} value={form.evidence_note}
                   onChange={e => setForm({ ...form, evidence_note: e.target.value })}
                   rows={2} placeholder="描述現有的控制措施與佐證..."
                   className="border rounded px-2 py-1 text-sm w-full resize-none" />
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="text-xs text-gray-600 block mb-1">負責人</label>
-                  <input value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })}
+                  <label htmlFor={ownerId} className="text-xs text-gray-600 block mb-1">負責人</label>
+                  <input id={ownerId} value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-gray-600 block mb-1">預計完成日</label>
-                  <input type="date" value={form.due_date}
+                  <label htmlFor={dueDateId} className="text-xs text-gray-600 block mb-1">預計完成日</label>
+                  <input id={dueDateId} type="date" value={form.due_date}
                     onChange={e => setForm({ ...form, due_date: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full" />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-600 block mb-1">備註</label>
-                <input value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })}
+                <label htmlFor={remarksId} className="text-xs text-gray-600 block mb-1">備註</label>
+                <input id={remarksId} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })}
                   className="border rounded px-2 py-1 text-sm w-full" />
               </div>
               <div className="flex gap-2">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "lucide-react";
@@ -38,6 +38,9 @@ export default function TISAXAssessments() {
   const [deleting, setDeleting] = useState(false);
   const isAdmin = localStorage.getItem("role") === "admin";
   const orgId   = localStorage.getItem("org_id");
+  const orgSelectId = useId();
+  const moduleSelectId = useId();
+  const levelSelectId = useId();
 
   const fetchAll = () => {
     const calls = [api.get("/tisax/assessments").then(r => setAssessments(r.data))];
@@ -94,8 +97,8 @@ export default function TISAXAssessments() {
           <h2 className="font-semibold text-gray-700">新增 TISAX 評估</h2>
           {isAdmin && (
             <div>
-              <label className="text-xs text-gray-600 block mb-1">客戶組織</label>
-              <select value={form.organization_id}
+              <label htmlFor={orgSelectId} className="text-xs text-gray-600 block mb-1">客戶組織</label>
+              <select id={orgSelectId} value={form.organization_id}
                 onChange={e => setForm({ ...form, organization_id: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full" required>
                 <option value="">選擇客戶</option>
@@ -105,8 +108,8 @@ export default function TISAXAssessments() {
           )}
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-xs text-gray-600 block mb-1">評估模組</label>
-              <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })}
+              <label htmlFor={moduleSelectId} className="text-xs text-gray-600 block mb-1">評估模組</label>
+              <select id={moduleSelectId} value={form.module} onChange={e => setForm({ ...form, module: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full">
                 <option value="infosec">資訊安全（41 項）</option>
                 <option value="prototype">原型保護（22 項）</option>
@@ -114,8 +117,8 @@ export default function TISAXAssessments() {
               </select>
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-600 block mb-1">評估等級</label>
-              <select value={form.assessment_level}
+              <label htmlFor={levelSelectId} className="text-xs text-gray-600 block mb-1">評估等級</label>
+              <select id={levelSelectId} value={form.assessment_level}
                 onChange={e => setForm({ ...form, assessment_level: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full">
                 <option value="AL1">AL1（自評）</option>

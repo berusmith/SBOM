@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
@@ -9,6 +9,7 @@ export default function ForgotPassword() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const usernameId = useId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,8 +40,11 @@ export default function ForgotPassword() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className="text-sm text-gray-600">請輸入您的帳號（Email），系統將寄送重設連結。</p>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            <label htmlFor={usernameId} className="sr-only">帳號 / Email</label>
             <input
+              id={usernameId}
               type="text"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="帳號 / Email"

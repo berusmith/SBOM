@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
@@ -19,6 +19,10 @@ export default function Profile() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const emailId = useId();
+  const curPwId = useId();
+  const newPwId = useId();
+  const confirmPwId = useId();
 
   useEffect(() => {
     api.get("/auth/me").then((r) => setEmail(r.data.email || "")).catch(() => {});
@@ -93,7 +97,8 @@ export default function Profile() {
           <div className="text-xs text-gray-700 mb-1">{t("profile.email")}</div>
           {emailEditing ? (
             <div className="flex gap-2 items-center">
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              <label htmlFor={emailId} className="sr-only">{t("profile.email")}</label>
+              <input id={emailId} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
               <button onClick={handleEmailSave} disabled={emailSaving}
@@ -118,18 +123,18 @@ export default function Profile() {
         <h2 className="font-semibold text-gray-700 mb-4">{t("profile.changePassword")}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs text-gray-700 block mb-1">{t("profile.currentPassword")}</label>
-            <input type="password" autoComplete="current-password" value={cur} onChange={e => setCur(e.target.value)} required
+            <label htmlFor={curPwId} className="text-xs text-gray-700 block mb-1">{t("profile.currentPassword")}</label>
+            <input id={curPwId} type="password" autoComplete="current-password" value={cur} onChange={e => setCur(e.target.value)} required
               className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label className="text-xs text-gray-700 block mb-1">{t("profile.newPassword")}</label>
-            <input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} required
+            <label htmlFor={newPwId} className="text-xs text-gray-700 block mb-1">{t("profile.newPassword")}</label>
+            <input id={newPwId} type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)} required
               className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div>
-            <label className="text-xs text-gray-700 block mb-1">{t("profile.confirmPassword")}</label>
-            <input type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required
+            <label htmlFor={confirmPwId} className="text-xs text-gray-700 block mb-1">{t("profile.confirmPassword")}</label>
+            <input id={confirmPwId} type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required
               className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <button type="submit" disabled={loading}

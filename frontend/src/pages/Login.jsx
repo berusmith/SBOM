@@ -120,8 +120,9 @@ export default function Login() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t("login.password")}</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">{t("login.password")}</label>
             <PasswordInput
+              id="login-password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { AUDIT_EVENT_COLOR, DEFAULT_BADGE } from "../constants/colors";
@@ -64,6 +64,10 @@ export default function AdminActivity() {
   const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
+  const orgFilterId = useId();
+  const typeFilterId = useId();
+  const dateFromId = useId();
+  const dateToId = useId();
 
   const loadSummary = () =>
     api.get("/admin/activity/summary").then(r => setSummary(r.data)).catch(() => {});
@@ -171,8 +175,9 @@ export default function AdminActivity() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">客戶</label>
+            <label htmlFor={orgFilterId} className="text-xs text-gray-600">客戶</label>
             <select
+              id={orgFilterId}
               value={filterOrg}
               onChange={e => setFilterOrg(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -182,8 +187,9 @@ export default function AdminActivity() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">事件類型</label>
+            <label htmlFor={typeFilterId} className="text-xs text-gray-600">事件類型</label>
             <select
+              id={typeFilterId}
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -195,13 +201,13 @@ export default function AdminActivity() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">開始日期</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            <label htmlFor={dateFromId} className="text-xs text-gray-600">開始日期</label>
+            <input id={dateFromId} type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">結束日期</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            <label htmlFor={dateToId} className="text-xs text-gray-600">結束日期</label>
+            <input id={dateToId} type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <button onClick={handleFilter} disabled={fetching}

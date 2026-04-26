@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Check, AlertTriangle, Clock } from "lucide-react";
@@ -235,6 +235,9 @@ function ActionPanel({ inc, onUpdate }) {
   const [enisaRef, setEnisaRef] = useState("");
   const [remDate, setRemDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const noteId = useId();
+  const enisaRefId = useId();
+  const remDateId = useId();
 
   const handleStartClock = async () => {
     setSaving(true);
@@ -289,8 +292,9 @@ function ActionPanel({ inc, onUpdate }) {
       <h2 className="font-semibold text-gray-700 mb-4">操作</h2>
       <div className="space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">備註 <span className="text-gray-600 font-normal">(選填，會記入稽核記錄)</span></label>
+          <label htmlFor={noteId} className="block text-sm font-medium text-gray-700 mb-1">備註 <span className="text-gray-600 font-normal">(選填，會記入稽核記錄)</span></label>
           <textarea
+            id={noteId}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
@@ -300,8 +304,9 @@ function ActionPanel({ inc, onUpdate }) {
 
         {needsEnisaRef && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ENISA Reference ID <span className="text-gray-600 font-normal">(提交後填入)</span></label>
+            <label htmlFor={enisaRefId} className="block text-sm font-medium text-gray-700 mb-1">ENISA Reference ID <span className="text-gray-600 font-normal">(提交後填入)</span></label>
             <input
+              id={enisaRefId}
               value={enisaRef}
               onChange={(e) => setEnisaRef(e.target.value)}
               placeholder="ENISA-2026-XXXX"
@@ -312,8 +317,9 @@ function ActionPanel({ inc, onUpdate }) {
 
         {needsRemDate && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">修補發布時間 <span className="text-gray-600 font-normal">(T+14d 從此時算起)</span></label>
+            <label htmlFor={remDateId} className="block text-sm font-medium text-gray-700 mb-1">修補發布時間 <span className="text-gray-600 font-normal">(T+14d 從此時算起)</span></label>
             <input
+              id={remDateId}
               type="datetime-local"
               value={remDate}
               onChange={(e) => setRemDate(e.target.value)}

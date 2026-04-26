@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
@@ -13,6 +13,8 @@ export default function ResetPassword() {
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const newPwId = useId();
+  const confirmPwId = useId();
 
   if (!token) {
     return (
@@ -48,9 +50,11 @@ export default function ResetPassword() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">新密碼（至少 8 個字元）</label>
+            <label htmlFor={newPwId} className="block text-xs font-medium text-gray-600 mb-1">新密碼（至少 8 個字元）</label>
             <input
+              id={newPwId}
               type="password"
+              autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
@@ -58,9 +62,11 @@ export default function ResetPassword() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">確認新密碼</label>
+            <label htmlFor={confirmPwId} className="block text-xs font-medium text-gray-600 mb-1">確認新密碼</label>
             <input
+              id={confirmPwId}
               type="password"
+              autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               required
