@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SBOM Platform favicon — a "shield + checkmark" combining the security
+  posture (shield) with the SBOM verification (checkmark).  Brand blue
+  matches design-token `brand` (rgb(37 99 235) = #2563eb).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SBOM Platform">
+  <title>SBOM Platform</title>
+  <!-- shield outline -->
+  <path d="M32 4 L56 12 V32 C56 46 44 56 32 60 C20 56 8 46 8 32 V12 Z"
+        fill="#2563eb" stroke="#1e40af" stroke-width="2" stroke-linejoin="round"/>
+  <!-- inner check -->
+  <path d="M20 32 L28 40 L46 22"
+        fill="none" stroke="#ffffff" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
