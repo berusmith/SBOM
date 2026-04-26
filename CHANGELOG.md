@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+### 效能(OSV 掃描重寫:per-PURL → 批次 + 唯一漏洞詳情並行)
+- `vuln_scanner.scan_components()` 從 N 次 `/v1/query`(每 PURL 一次)改成兩階段:
+  - **Phase 1**:`POST /v1/querybatch`,一次最多 1000 個 PURL,只回 `{id, modified}` 輕量 stub
+  - **Phase 2**:跨所有 PURL 收集**唯一** vuln id,以 20 worker 並行 `GET /v1/vulns/{id}` 抓完整資料(severity / aliases / CVSS vectors)
+- 200 元件 / 50 個唯一漏洞的 SBOM:從 ~200 次 HTTP → **1 + 50 = 51 次**(漏洞重複出現在多個元件時節省更明顯)
+- 公開 API contract 不變(`scan_components(components) -> dict[purl -> list[...]]`),所有呼叫點(`releases.py` × 4、`monitor.py` × 1)零修改
+- 失敗降級:單一 batch HTTP 失敗 → 該 batch 視為「無漏洞」,不會中斷整次上傳;單一 vuln 詳情失敗 → 跳過該 vuln,其餘正常處理
+- Smoke test 驗證:`lodash@4.17.20` (5)、`django@3.0.0` (30)、`log4j-core@2.14.0` (7,含 Log4Shell `CVE-2021-45046` critical/9.5)三個 PURL 5.9 秒回傳完整資料
+
+### 文件(外部情資 API key 申請指引)
+- 新增 `docs/api-keys-setup.md`:
+  - **NVD API Key**(5–10 分鐘):申請步驟 + 寫入 `.env` + 驗證生效;速率 5 → 50 req/30s(10×)
+  - **GitHub fine-grained PAT**(2 分鐘):2026 新版只勾 `Public Repositories: Read`;速率 60 → 5000 req/h(83×)
+  - 兩把都免費、無需信用卡、純讀取漏洞情資
+  - 包含安全注意事項(token 輪換、別 commit `.env`)+ 常見問題
+- 兩把 key **完全可選**,平台不申請也能跑;申請後大型 SBOM enrichment 從幾分鐘降到幾十秒
+
 ### 變更(UI/UX/RWD 系統性審視 — Wave A + B + C 全部完成)
 完整 6 階段 audit:Discovery → Audit(7 維度)→ Findings(36 項,P0=0/P1=12/P2=15/P3=9)→ Plan → Implementation(19 commits,每 issue 一 commit)→ Verification。詳細追蹤見 `audit-report.md` + `plan.md`。
 
