@@ -842,7 +842,13 @@ monitoring_detection:
 
 ---
 
-## SDLC-001 — Architectural cross-cutting: codebase lacks mandatory authorization-enforcement middleware (manifests in multiple TLT classes, not just multi-tenant)
+## SDLC-001 — Architectural: **auth/scope mandatory middleware gap** (rev-3 narrowed scope)
+
+**rev-3 scope narrowing**(per user round-3 review):
+- **Old scope (rev-2)**:「整個 codebase 缺 mandatory middleware 文化」(broad)
+- **New scope (rev-3)**:「auth / scope check 缺 mandatory middleware」(specific to authorization layer)
+- **Why narrow**:Phase 3 batch self-check 顯示 expected_recurrence 命中率 50%(2 of 4 — 詳細表格見下)。2 條沒命中代表 SDLC-001 的 RCA 過度延伸,把 violations endpoint family 的 specific gap 誤判成全 codebase pattern。
+- **拆分**:perimeter / transport / nginx 那類 cross-cutting issue 移到新增的 **SDLC-002 (perimeter & transport hardening)**;audit log integrity 系列移到 **SDLC-003 (audit/logging maturity)**。每個 SDLC-NNN 對應一個明確的 cross-cutting gap,Phase 4 architectural section 才有層次。
 
 ### Metadata
 
@@ -1034,3 +1040,160 @@ N/A — architectural finding; per-incident compensations are in SEC-001a/b/c/d.
 5. **SEC-001b/c/d 寫法**:目前每個都完整 metadata + 簡短 observation/recommendation(因為跟 a 高度共享,但不放 see SEC-001a 的省略寫法)— 對嗎?還是要 b/c/d 大幅簡化只留 metadata + diff?
 
 回覆完即動 PoC2 + 批量。
+
+---
+
+## SDLC-002 — Architectural cross-cutting: perimeter & transport hardening gap (rev-3 split)
+
+### Metadata
+
+| field | value |
+|-------|-------|
+| finding_id | SDLC-002 |
+| parent_finding | null (top-level architectural) |
+| scope | cross-cutting |
+| status | open |
+| discovered_phase | 3 (extracted from SDLC-001 over-extended scope per rev-3 review) |
+| verification_method | manual-review |
+| first_observed_commit | n/a (architectural absence) |
+| exploitation_complexity | n/a |
+| severity_lan_only | Low (LAN-only — internet attacker absent today) |
+| severity_if_public | High (commercialised exposes the perimeter) |
+| blocks_commercialization | true |
+| confidence | High |
+| category | SDLC / Architecture / Perimeter |
+| cwe | n/a |
+| owasp | n/a |
+
+### traceability
+
+```yaml
+traceability:
+  threat: cross-cutting     # references TLT-3 / TLT-18 specifically
+  parent_finding: null
+  attack_tree_leaf: null
+  references_findings:
+    - SEC-003 (TLT-3 X-Forwarded-For — perimeter trust boundary mishandled)
+    - SEC-018 (TLT-18 nginx security headers — defensive headers not policy-defined)
+  candidate_recurrence:                # findings to verify Phase 5 / 6 against
+    - SEC-005 (TLT-5 webhook DNS-rebinding — same "validate-then-trust" gap at egress)
+```
+
+### Observation
+**Pattern**:邊界 / 傳輸層的安全控制散落在 nginx 個別 directive、application code 個別 header check,**沒有 policy-as-code 來 enforce 一致性**。
+
+**已知症狀**:
+- nginx config 缺 HSTS / XCTO / XFO / Referrer-Policy / CSP(SEC-018)
+- nginx 預設用 `$proxy_add_x_forwarded_for`,client 可偽造 header(SEC-003)
+- 沒 nginx-level rate limit(全靠 backend in-memory,SEC-021 重啟 reset)
+- 沒 nginx-level WAF rule(防 path traversal / SQL injection probe / XSS payload)
+
+### Recommendation
+
+#### primary_remediation
+**Introduce nginx config-as-code policy + minimal WAF**:
+- `deploy/nginx-sbom.conf` 改成 template-driven(per-environment include),所有 security headers 在共用 include
+- 加 `limit_req_zone` rate-limit at nginx layer(每 IP 100/min)— 不依賴 backend 重啟存活
+- 評估 ModSecurity / nginx-OWASP-CRS(本機可選,不引入 service-level dep)
+
+- effort:M (~3h initial,需手動測試 staging)
+- risk_of_fix:Medium(改 nginx config 不慎可斷服務;rollback = revert + reload)
+
+#### defense_in_depth
+- CI rule:nginx config 改動需走 PR review,跑 `nginx -t` 語法檢查
+- 文件化:`deploy/MACMINI_SETUP.md` 加 perimeter-hardening checklist
+
+#### compensating_control
+- LAN-only:nothing immediate(threat absent)
+- Public:Cloudflare / WAF service 前置(off-host control)
+
+#### monitoring_detection
+- 結構化 log:nginx access log JSON,加 `client_ip`、`real_ip`、`forwarded_for_supplied`(client header是否現場偽造)等欄位
+- Alert:`forwarded_for_supplied != "" && upstream_status == 200`
+
+### References
+- nginx limit_req_zone
+- OWASP CRS
+
+---
+
+## SDLC-003 — Architectural cross-cutting: audit / logging maturity gap (rev-3 split)
+
+### Metadata
+
+| field | value |
+|-------|-------|
+| finding_id | SDLC-003 |
+| parent_finding | null |
+| scope | cross-cutting |
+| status | open |
+| discovered_phase | 3 |
+| verification_method | manual-review |
+| first_observed_commit | n/a |
+| exploitation_complexity | n/a |
+| severity_lan_only | Low |
+| severity_if_public | Medium |
+| blocks_commercialization | true (SOC 2 CC7.2 + GDPR storage limitation) |
+| confidence | High |
+| category | SDLC / Architecture / Audit |
+
+### traceability
+
+```yaml
+traceability:
+  threat: cross-cutting     # references TLT-13 + general audit completeness
+  parent_finding: null
+  references_findings:
+    - SEC-013 (TLT-13 audit log tamper / no DB-level append-only constraint)
+  candidate_recurrence:
+    - SEC-001a/b/c/d monitoring_detection layer — relies on application-level structured log,
+      no central audit-trail mechanism enforcing every cross-tenant access is recorded
+    - SEC-003 X-Forwarded-For — audit_event.ip_address 被 client 污染後,後續 forensic timeline 失靈
+```
+
+### Observation
+**Pattern**:Audit log 是 application-level concern,沒有 DB-level integrity / immutability constraint,沒有 hash chain 防序列竄改,沒有 PII auto-redaction policy。每個 router 自己決定要不要 `audit.record()`。
+
+**已知症狀**:
+- `audit_event` 表 admin SQL UPDATE 可改 history(SEC-013)
+- `ip_address` GDPR retention 無策略
+- 沒結構化 log pipeline(Loki / Sentry / CloudWatch)讓 SEC-001a/c monitoring_detection 真正落地
+- `monitor.py` 跳過事件不寫 audit log(只寫 in-memory `_last_skip_dt`)
+
+### Recommendation
+
+#### primary_remediation
+**Audit pipeline policy**:
+- DB-level INSERT-only(Postgres trigger / SQLite WAL-mode read-only constraint via app)
+- Hash chain on every insert:`row.prev_hash + sha256(row)` → tamper detection
+- IP retention:90 天 cron 把 `ip_address` 改 `[REDACTED]`(GDPR Art.5(1)(e))
+- 結構化 log pipeline 部署(Phase 5 後期,搭配 monitoring_detection)
+
+- effort:L (~6h)
+- risk_of_fix:Medium
+
+#### defense_in_depth
+- CI rule:任何 mutation endpoint 必須 `audit.record(...)` 呼叫(grep-based check)
+- Test:`tests/test_audit_completeness.py` — 每個 mutation 後 assert 對應 audit_event 存在
+
+#### compensating_control
+- 短期:每月手動 SQL `SELECT *, lag(...) OVER (...)` 檢查 audit timeline 連續性
+- 文件化 incident-response runbook
+
+#### monitoring_detection
+- 同 primary_remediation 的 hash chain;periodic cron 驗證 chain 沒斷
+
+### References
+- SOC 2 CC7.2 / GDPR Art.5(1)(e) / IEC 62443-4-1 SUM-3
+
+---
+
+## Phase 5 開工 gating(等 user 看完 rev-3 amend)
+
+待確認(以 4 件為單位):
+1. ✅ SEC-002 升級 PoC 已跑 + severity 校準確認(Low/Medium 維持)
+2. ✅ Top-10 reorder(SEC-017 → #0,SDLC-001 → #1,SEC-001a/b/c/d 跟在後面)
+3. ✅ SDLC-001 縮 scope + SDLC-002 / SDLC-003 拆出
+4. ⏳ Mirror URL — 等 user 提供
+
+確認後,Phase 5 從 Sprint 0 SEC-017 CI baseline 開始,一路衝到 Phase 6,中間不停。

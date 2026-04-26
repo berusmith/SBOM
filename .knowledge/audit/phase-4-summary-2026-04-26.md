@@ -42,7 +42,10 @@ This file is the synthesis of Phases 1–3. Three sub-sections:
 
 **Top three risks**(detailed in Top-10 list below):
 1. **Multi-tenant isolation gaps in `/violations/*` endpoint family**(SEC-001a/b/c/d)— 4 confirmed cross-tenant data exposures in licenses + policies routers. **Single biggest blocker for commercialisation**.
-2. **Cross-cutting absence of mandatory authorization middleware**(SDLC-001)— architectural finding;explains why SEC-001a/b/c/d happened twice in 5 days unnoticed,and why TLT-3 / TLT-13 / TLT-18 follow the same convention-not-enforcement anti-pattern.
+2. **Three architectural cross-cutting findings**(rev-3 split):
+   - **SDLC-001 auth/scope mandatory middleware gap** — explains why SEC-001a/b/c/d happened twice in 5 days unnoticed (narrowed from rev-2 broad scope after Phase 3 expected_recurrence 50% hit rate revealed over-extension)
+   - **SDLC-002 perimeter & transport hardening gap** — explains SEC-003 XFF spoof + SEC-018 nginx headers as systemic, not isolated;split out from SDLC-001 in rev-3
+   - **SDLC-003 audit / logging maturity gap** — explains SEC-013 audit-log tamper + lack of structured log pipeline;split out from SDLC-001 in rev-3
 3. **Backup at rest unencrypted**(SEC-014)— 14-day SQLite backup chain stored in `$HOME/sbom/backups/` with no encryption;disk theft / failure / commercialisation customer concern.
 
 **What's working well**(not a finding,but worth noting):
@@ -111,28 +114,31 @@ Each row scored on:
 - **Blast radius reduction**(higher = better — does fixing this remove other findings' exposure?)
 - **Compliance leverage**(higher = better — does this unblock SOC 2 / ISO 27001 evidence?)
 
-### Top-10 ranked
+### Top-10 ranked (rev-3 — architecture-first + scaffold-first per user round-3 review)
+
+**rev-3 rationale**:rev-2 排序為 pure ROI(1-line fix 先做)。rev-3 改成 **scaffold-first + architecture-first**:
+- **SEC-017 CI baseline 拉到 #0 (sprint 0)**:後續 10+ commit 都需 SAST / SCA / secret scan 在 PR 上跑。沒這層 = 閉著眼睛改 security code。SDLC-001 大改動沒 SAST 攔截尤其風險高。
+- **SDLC-001 拉到 #1**:若先修 SEC-001a/b/c/d 才做 SDLC-001,4 個 endpoint 要 refactor 兩次(先手動 fix,再轉 middleware)。SDLC-001 先做、4 個 sub-finding 直接套用新 middleware = 一次到位,commit 少,Phase 6 verification 簡單(只驗 middleware 本身 + 4 個 endpoint 都套用)。
 
 | # | finding | severity (lan/pub) | effort | rationale |
 |---|---------|--------------------|--------|-----------|
-| 1 | **SEC-001a** (licenses summary disclosure)         | Med / High  | S    | LEAK_CONFIRMED PoC;1-line `require_admin` patch closes immediately;biggest commercialisation blocker;unlocks SEC-001c via shared pattern |
-| 2 | **SEC-001b** (licenses release IDOR)               | Med / High  | S    | LEAK_CONFIRMED PoC;`assert_release_in_scope` helper deploys in same commit as SDLC-001 prep;404-not-403 detail prevents enumeration oracle |
-| 3 | **SEC-001c** (policies summary disclosure)         | Med / High  | S    | structurally confirmed;identical patch shape to #1;same commit acceptable |
-| 4 | **SEC-001d** (policies release IDOR)               | Med / High  | S    | LEAK_CONFIRMED PoC;same patch as #2;closes the violations endpoint family entirely |
-| 5 | **SDLC-001** (mandatory auth middleware)           | Med / High  | M    | Cross-cutting;**prevents SEC-001-class recurrence**;commercialisation differentiator (process maturity);also closes pre-conditions for #6 |
-| 6 | **SEC-003** (X-Forwarded-For spoof)                | Low / High  | S    | nginx config + 1 line in rate_limit.py;blocks login brute-force + audit log integrity in one fix;trivial exploitation complexity = most cost-effective Top-10 entry |
-| 7 | **SEC-002** (XML billion-laughs DoS)               | Low / Med   | S    | 2-line pre-parse rejection;closes the DoS vector;timing-confirmed PoC |
-| 8 | **SEC-014** (backup at-rest encryption)            | Med / High  | M    | gpg-encrypt the SQLite backup script + off-host transfer;ISO 27001 A.8.13 evidence |
-| 9 | **SEC-017** (CI SCA + SAST + secret scan)          | Med / High  | M    | one-time setup unlocks ongoing detection of new CVEs;SOC 2 CC8.1 evidence;closes precondition for SEC-014 / SEC-018 / future findings |
-| 10 | **SEC-018** (nginx security headers)              | Info / Med  | S    | 5-line nginx config addition;defensive headers come free;closes XSS / clickjacking risk surface ahead of any commercialisation |
+| **0** | **SEC-017** (CI SCA + SAST + secret scan) | Med / High | M (~3h) | **腳手架** — sprint 0 先架,後續每 fix commit 在 CI 監督下進。SOC 2 CC8.1 evidence 同步 unlock。沒這層 SDLC-001 大改動風險不可控 |
+| **1** | **SDLC-001** (auth/scope mandatory middleware,**rev-3 縮 scope**) | Med / High | M | **architecture-first** — 引入 `require_release_in_scope` Depends-based 守衛;SEC-001a/b/c/d 直接套用 |
+| 2 | SEC-001a (licenses summary disclosure)        | Med / High | S | 用 SDLC-001 helper 一行套上;LEAK_CONFIRMED PoC 已有 |
+| 3 | SEC-001b (licenses release IDOR)              | Med / High | S | 用 `assert_release_in_scope` + 404 not 403 |
+| 4 | SEC-001c (policies summary disclosure)        | Med / High | S | 同 #2 pattern |
+| 5 | SEC-001d (policies release IDOR)              | Med / High | S | 同 #3 pattern;封閉 violations endpoint family |
+| 6 | SEC-003 (X-Forwarded-For spoof)               | Low / High | S | nginx + rate_limit;trivial complexity → 最 cost-effective |
+| 7 | SEC-002 (XML billion-laughs DoS)              | Low / Med  | S | 2-line pre-parse rejection;PARTIAL_DEFENSE_CONFIRMED(Python 3.12 expat 擋 depth ≥ 7,depth 6 仍漏 5MB) |
+| 8 | SEC-018 (nginx security headers)              | Info / Med | S | 5-line nginx config;CSP 留待 frontend audit |
+| 9 | SEC-014 (backup at-rest encryption)           | Med / High | M | gpg-encrypt SQLite backup + off-host transfer;ISO 27001 A.8.13 |
 
-### Total estimated effort:**~6 sprints(2 senior engineer-weeks)**
-- Top-4 (SEC-001 family):1 sprint(includes PoC re-verification post-fix)
-- SDLC-001 + helpers:0.5 sprint
-- SEC-003 + SEC-002 + SEC-018:0.5 sprint(small fixes batch)
-- SEC-014 (backup) + SEC-017 (CI):1 sprint
-- Defense in depth (CI lint rule,test_multi_tenant_isolation.py):0.5 sprint
-- Verification round (Phase 6):0.5 sprint(re-run all PoCs,confirm regression suite catches reverts)
+### Total estimated effort:**~3 sprints(1.5 senior engineer-weeks)**(rev-3 down from rev-2's 6,因為 SDLC-001 先做後 4 個 sub-finding 各只剩 1-line)
+- Sprint 0:**SEC-017 CI baseline**,~3h(腳手架)
+- Sprint 1:**SDLC-001 middleware + SEC-001a/b/c/d 套用**,~1.5d(architecture + 4 個 sub-finding 一起 land)
+- Sprint 2:SEC-003 + SEC-002 + SEC-018 batch,~1d
+- Sprint 3:SEC-014 backup encryption,~1d
+- Phase 6 verification(re-run all PoCs + new tests):0.5d
 
 ### Findings 11–25 (deferred to subsequent sprints)
 
@@ -183,19 +189,45 @@ Aggregating `compliance_impact` across all 25 findings:
 
 ---
 
-## 5. Phase 5 remediation gating
+## 5. Phase 5 remediation gating (rev-3 reorder + commit-discipline)
 
-**Schema is frozen** since Phase 3 round-2 approval. Phase 5 begins on user "go" — sequence will be:
+**Schema is frozen** since Phase 3 round-2 approval. Phase 5 sequence follows rev-3 Top-10:
 
-1. SEC-001a/b/c/d patches (one commit per finding, per Phase 5 protocol)
-2. SDLC-001 helper introduction(`assert_release_in_scope` + Depends-based variant + CI lint rule)
-3. SEC-002 / SEC-003 / SEC-018(small batch)
-4. SEC-014 / SEC-017(infrastructure)
-5. PoC2 re-run after each patch — must produce post-fix verdict
+0. **SEC-017** CI baseline(sprint 0 — 腳手架先架)
+1. SDLC-001 mandatory middleware(architecture-first)
+2-5. SEC-001a/b/c/d 套用 SDLC-001 middleware
+6. SEC-003 X-Forwarded-For + 7. SEC-002 + 8. SEC-018(small batch)
+9. SEC-014 backup encryption
 
-Each commit message follows the protocol:`fix(security): [SEC-NNN] short description`. Each commit includes new tests (positive + negative + boundary + security test). Per CLAUDE.md no new dependencies introduced unless documented (SEC-010 webhook encryption may use `cryptography` which is already a sub-dep of `python-jose`).
+### Phase 5 commit discipline (rev-3 amendment per user round-3):
 
-Phase 6 verification produces final report with before/after evidence.
+**每個 fix commit 必須包含**(non-negotiable):
+
+1. **PoC re-run before/after**:
+   - Fix 之前跑一次 PoC,預期 LEAK CONFIRMED
+   - Fix 之後跑一次 PoC,預期 LEAK NOT REPRODUCED
+   - 兩次結果寫進 commit message 或 evidence file
+   - 沒這個 = 「我覺得我修了」,不是 fix
+2. **Regression suite pass**:
+   - CI baseline 上線後,每 commit PR 要過 SAST / SCA / 既有 test
+   - `python test_all.py` 必須過(54 個 stdlib regression test)
+   - 加新測試:positive + negative + boundary + security test 各 1 個
+
+**Commit message format**:
+```
+fix(security): [SEC-NNN] short description
+
+Before fix:
+  <PoC verdict line>
+After fix:
+  <PoC verdict line>
+
+Regression: test_all.py 54/54 pass + CI green
+```
+
+**No new dependencies** unless documented(per CLAUDE.md);SEC-010 webhook encryption 可用 `cryptography`(已是 `python-jose[cryptography]` 子依賴,等於 0 新 dep)。
+
+Phase 6 verification produces final report with before/after evidence + Top-10 全 commit hash 列表 + 執行過的 PoC 列表。
 
 ---
 
