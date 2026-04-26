@@ -442,12 +442,17 @@ Direct cross-tenant browsing: per-release license posture of any tenant whose re
 #### primary_remediation
 
 ```diff
-+# In core/deps.py — add this once
++# In core/deps.py — add this once.  Both branches return 404 to
++# avoid release_id enumeration oracle.
 +def assert_release_in_scope(release: "Release", org_scope: str | None) -> None:
++    """Combined existence + ownership check.  Returns 404 in both
++    failure modes so an attacker cannot distinguish 'doesn't exist'
++    from 'exists but not yours' (CWE-204 Observable Response
++    Discrepancy)."""
 +    if release is None:
 +        raise HTTPException(status_code=404, detail="Release not found")
 +    if org_scope and release.product.organization_id != org_scope:
-+        raise HTTPException(status_code=403, detail="此 release 不屬於您的組織")
++        raise HTTPException(status_code=404, detail="Release not found")
 
 # In licenses.py:139
  @router.get("/releases/{release_id}/violations")
@@ -456,9 +461,13 @@ Direct cross-tenant browsing: per-release license posture of any tenant whose re
      org_scope: str | None = Depends(get_org_scope),
      db: Session = Depends(get_db),
  ):
-     release = db.query(Release).filter(Release.id == release_id).first()
+-    release = db.query(Release).filter(Release.id == release_id).first()
 -    if not release:
 -        raise HTTPException(status_code=404, detail="Release not found")
++    release = (db.query(Release)
++               .options(joinedload(Release.product))   # for monitoring + ownership
++               .filter(Release.id == release_id)
++               .first())
 +    assert_release_in_scope(release, org_scope)
 ```
 
@@ -476,7 +485,7 @@ Same as SEC-001a:CI lint rule + `tests/test_multi_tenant_isolation.py`.
 
 #### monitoring_detection (rev-2:IDOR-endpoint pattern,in-handler blocking — implementation cost ≈ 0)
 
-SEC-001b is a record-level IDOR — `release.product.organization_id` is already loaded by the handler (the primary_remediation patch has the handler check it before the 403). The monitoring is a logging side-effect of the same query, not extra DB work.
+SEC-001b is a record-level IDOR — `release.product.organization_id` is already loaded by the handler (the primary_remediation patch has the handler check it before the 404). The monitoring is a logging side-effect of the same query, not extra DB work.
 
 ```yaml
 monitoring_detection:
@@ -505,8 +514,46 @@ monitoring_detection:
     structured-log emission of the same fields.
 ```
 
-- effort: S (~30min — adds structured log line at the same point as the 403 raise)
-- risk_of_fix: None (logging only)
+**Co-located primary + monitoring(具體 5 行)**:
+
+```python
+# SEC-001b primary_remediation + monitoring_detection co-located
+release = (
+    db.query(Release)
+      .options(joinedload(Release.product))
+      .filter(Release.id == release_id)
+      .first()
+)
+if release is None:
+    raise HTTPException(404, detail="Release not found")
+if org_scope and release.product.organization_id != org_scope:    # primary_remediation
+    log.warning("idor_attempt", extra={                            # monitoring_detection
+        "endpoint": "licenses.releases.violations",
+        "caller_org_id": org_scope,
+        "target_release_org_id": release.product.organization_id,
+        "release_id": release.id,
+    })
+    raise HTTPException(404, detail="Release not found")           # ← 404 not 403, see below
+```
+
+**404 not 403 — IDOR oracle prevention(rev-2 amendment 套用所有 IDOR 類 finding)**:
+
+回 403 「此 release 不屬於您的組織」會給 attacker 一個 oracle:
+
+| Attacker GET `release_id=X` 拿到 | 結論 |
+|---------------------------------|------|
+| `200` + 違規清單 | release 屬於我,正常 |
+| `403` 訊息「不屬於您」 | release **存在** + 屬於別組織 → release_id 是有效值 + 跨組 enumeration 已成立 |
+| `404` 訊息「Release not found」 | release **可能**不存在 / 可能存在但不屬於我 → attacker 無法區分 |
+
+403 直接洩漏 release_id 是否為有效 UUID + 是否跨組,變成 enumeration 工具。404 把「不存在」與「不屬於我」回應折成同一個,不給 oracle。
+
+**套用範圍(rev-2 amendment)**:
+- **SEC-001b / SEC-001d**(IDOR 類):primary_remediation 改 `raise HTTPException(404, "Release not found")`,**不**用 403
+- **SEC-001a / SEC-001c**(endpoint-level role gate via `require_admin`):保留 `raise HTTPException(403, "此操作需要管理員權限")`,因為這是「endpoint 對 role 的可達性」非「resource 對 user 的可見性」,403 在語意上正確且不洩漏 resource 存在性
+
+- effort: S (~30min — adds structured log line at the same point as the 404 raise)
+- risk_of_fix: None (logging only;404 換 403 的 frontend 影響:任何依賴 403 訊息文字判斷「是否為跨組存取」的 client code 會看不到差異 — 反正它本來也不該依賴這個 oracle)
 
 ### References
 Same as SEC-001a + Postgres Row-Level Security (long-term defence in depth) — https://www.postgresql.org/docs/current/ddl-rowsecurity.html
@@ -716,14 +763,16 @@ compliance_impact:
     gap_type: control_partial
   - framework: IEC62443-4-1
     control: SM-9
-    gap_type: control_partial
-    note: |
-      Process-gap signal: identical defective shape across
-      licenses.py + policies.py = code review process did not
-      catch the pattern.  Counted here (not in SEC-001b) because
-      this finding closes the recurrence loop — single occurrence
-      could be a slip; same pattern in TWO modules is a process
-      finding.
+    gap_type: process_gap
+    rationale: |
+      SEC-001b 與 SEC-001d 是同一 IDOR pattern 在 licenses + policies
+      兩個 router 重複出現。單一 occurrence(SEC-001b 自身)屬
+      individual slip,可由 code review 攔截;但 SEC-001d 證明 review
+      process 連續兩次未攔截同一 anti-pattern,構成 process-level 缺陷,
+      落入 SM-9(Security requirements review process)範圍。
+      SEC-001a/c 是 missing-auth pattern(完全沒 org_scope),不是同一類
+      缺陷,不重複計 SM-9。
+      商業化做 IEC 62443-4-1 self-assessment 時這段 rationale 可直接引用。
 ```
 
 ### Location
@@ -829,12 +878,21 @@ traceability:
     - SEC-001b    # symptom: violations IDOR
     - SEC-001c    # symptom: same as 001a in policies
     - SEC-001d    # symptom: same as 001b in policies
-  expected_recurrence:        # findings YET TO BE WRITTEN that will cite SDLC-001
-    - SEC-XXX (TLT-3 X-Forwarded-For client spoof — same "rely on convention not enforcement" pattern)
-    - SEC-XXX (TLT-7 JWT scope downgrade — every endpoint manually checks scope)
-    - SEC-XXX (TLT-13 audit log row tamper — no DB-level append-only constraint)
-    - SEC-XXX (TLT-18 nginx security headers — manual not policy-defined)
+  expected_recurrence_validated_after_bulk:    # rev-3 update — Phase 3 batch self-check
+    - SEC-003 (TLT-3 X-Forwarded-For)         # confirmed pattern match
+    - SEC-013 (TLT-13 audit log)              # partial pattern match — symptom is missing FEATURE
+                                              # (DB-level append-only constraint) more than missing
+                                              # middleware enforcement;~50% pattern overlap
+    - SEC-018 (TLT-18 nginx security headers) # confirmed pattern match (manual nginx config not
+                                              # policy-defined-and-enforced)
+  predicted_but_not_confirmed:
+    - TLT-7 JWT scope downgrade               # rejected after Phase 3 batch verification.  SEC-007
+                                              # showed scope checks ARE centralised in deps.py
+                                              # (require_admin_scope helper); not SDLC-001 pattern.
+                                              # Removed to avoid over-extending blast radius.
 ```
+
+**rev-3 honesty note** (added after Phase 3 batch):initial Phase 2 prediction listed 4 expected recurrences;Phase 3 batch verification confirmed 2 fully + 1 partially + 1 rejected. Documented here so Phase 4 report doesn't say "predicted 4 / confirmed 2" without rationale.
 
 **rev-2 rationale**:Phase 4 report will render this in its own "Architectural / SDLC findings" section (separate from per-TLT findings list). Customer due-diligence consumers value architectural findings disproportionately — they signal **process maturity**, not just defect count. Bumping severity reflects that this finding's resolution affects ALL future auth work, not just the 4 SEC-001 children.
 
