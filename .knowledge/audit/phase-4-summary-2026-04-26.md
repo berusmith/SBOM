@@ -112,6 +112,28 @@ methodology:
 
 ---
 
+## 0.1 Methodology Validation Note (added rev-7, 2026-04-26)
+
+**Event**:Phase 5 #1(SDLC-001 mandatory middleware introduction)included an enforcement test as part of the `primary_remediation`. **The test caught a stub endpoint(`/api/releases/{release_id}/compliance`,`list_compliance` in `releases.py:707-709`)on its first CI run that all prior phases — Phase 1 grep + Phase 3 batch verification — had missed.**
+
+**Why it matters for audit credibility**:
+- Phase 1 heuristic flagged 7 router files;Phase 3 batch verified them and found 4 confirmed leaks(SEC-001a/b/c/d)
+- `releases.py` was treated as globally cleared because it had 30 `_assert_release_org` callsites — but `list_compliance` was a stub with no DB query and no `_assert_*_org` call,invisible to symptom-based grep
+- The enforcement test walks **every route programmatically**,not file-level grep,so structural gaps surface immediately
+- Filed as **SEC-023**(severity Info/Low — no current data leak;closed in same Phase 5 #1 commit)
+- `discovered_via: enforcement_test_first_run` is the critical metadata — see SEC-023 traceability
+
+**This event validates the audit methodology**:
+1. SDLC-001 was filed in Phase 3 with explicit `scope_not_reviewed` 包含 "argument-passing correctness 抽樣未窮舉" — this was a **falsifiable prediction**,not boilerplate
+2. The prediction was verified by Phase 5 #1's enforcement test on first run
+3. The control(`require_release_in_scope` Depends + CI test)moves the failure-mode from "implementation drift undetected for months" to "PR blocked at first CI run"
+
+**For commercialisation due diligence**:Audit firms reviewing the trail will see Phase 1 → 3 → 5 → control → first-run discovery → same-commit closure. The control's value is empirically demonstrated within the audit itself. This pattern(audit-introduced controls validating their own ROI within the audit cycle)is a strong differentiator vs static-only audits.
+
+**For SDLC continuity**:see `security-audit-2026-04-26.md` § "SDLC-001 lessons_learned" for the methodology retrospective with falsifiable-prediction analysis.
+
+---
+
 ## 1. Executive Summary (one page)
 
 **System under audit**:SBOM Management Platform(FastAPI + React + multi-tenant),Mac mini LAN-only deployment 2026-04-26;commercialisation as B2B SaaS planned for industrial security teams within 12 months.

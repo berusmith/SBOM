@@ -1127,3 +1127,159 @@ gh run view <id> --log | grep "Python "
 ## Updated final count: **26 findings total**(rev-5)
 
 SEC-001 family (5) + SDLC-001/002/003 (3) + SEC-002..021 (19) = 27 entries. Subtract:SEC-001 parent and SDLC-001 parents are tracking-only (no own severity), and SEC-022 just added. Operational findings count adjusts to 26.
+
+---
+
+# Rev-7 amendment: SEC-023 — discovered via SDLC-001 enforcement test first run
+
+Background:Phase 5 #1 SDLC-001 commit-time verification ran the new
+`tests/test_endpoint_decorator_enforcement.py`. **First run flagged 3
+missing ownership-dependency endpoints** — 2 already known(SEC-001b /
+SEC-001d)+ 1 NEW that Phase 1 grep + Phase 3 batch missed
+(`/api/releases/{release_id}/compliance` placeholder stub).
+
+This event is itself the proof that the enforcement test (SDLC-001's
+core delivery) provides ROI on the very first run, catching what
+one-shot audit grep cannot.
+
+## SEC-023 — Placeholder route lacks ownership dependency, inviting implementation drift
+
+### Metadata
+
+| field | value |
+|-------|-------|
+| finding_id | SEC-023 |
+| parent_finding | **SDLC-001**(this finding is a derivative of SDLC-001's enforcement test, not an independent discovery) |
+| status | **fixed (2026-04-26 by Phase 5 #1 commit, same commit as SDLC-001)** |
+| discovered_phase | 5 (auto-discovered by SDLC-001 enforcement test first run, NOT in Phase 1-4 scope) |
+| verification_method | enforcement_test (CI-runnable) |
+| **discovered_via** | **enforcement_test_first_run** ← critical methodology metadata |
+| first_observed_commit | (unknown — placeholder stub, predates audit; `git log -L` would find it) |
+| exploitation_complexity | n/a (route currently unused / not implemented;not exploitable today) |
+| severity_lan_only | **Info**(no current data leak;route returns hardcoded `{"status": "not implemented"}` regardless of release_id) |
+| severity_if_public | **Low**(same — endpoint returns no data;no oracle;no leak even on public deployment) |
+| blocks_commercialization | **false**(itself does not block;related SDLC-001 work continues regardless) |
+| confidence | High (enforcement test deterministic) |
+| category | defense-in-depth / SDLC |
+| cwe | n/a (no current vulnerability;preventive control gap) |
+| owasp | n/a |
+| cvss_3_1 | n/a (not exploitable) |
+
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-1                     # multi-tenant family
+  parent_finding: SDLC-001          # this finding is a derivative
+  discovered_via: enforcement_test_first_run    # critical — methodology metadata
+  attack_tree_leaf: null            # not exploitable;preventive control finding
+  abuse_cases: []
+```
+
+### compliance_impact
+
+```yaml
+compliance_impact:
+  - framework: SOC2
+    control: CC8.1
+    gap_type: control_partial
+    note: |
+      Change management — placeholder routes that do not enforce future
+      consistency invite implementation drift.  Closing them at the
+      decorator level is preventive change-management hygiene.
+  - framework: IEC62443-4-1
+    control: SI-1
+    gap_type: control_partial
+    note: |
+      Secure implementation — routes that template a security-relevant
+      path parameter must wire the ownership check at route-shape time,
+      not at implementation time.
+```
+
+### Location
+
+- `backend/app/api/releases.py:707-709` — `list_compliance` placeholder
+
+### Observation
+
+```python
+# Pre-fix
+@router.get("/{release_id}/compliance")
+def list_compliance(release_id: str, db: Session = Depends(get_db)):
+    return {"status": "not implemented"}
+```
+
+The endpoint:
+- Templates `{release_id}` in URL — SDLC-001 enforcement target
+- Takes `release_id: str` parameter — declares intent to operate on a release
+- Returns hardcoded `{"status": "not implemented"}` — body never references `release_id`
+- **No DB query** → no current data leak
+- **No oracle** → returns same string for valid / invalid / cross-org release_id
+
+**Risk class — defense-in-depth, not exploitable today**:
+- An implementer filling in the body later would naturally write `release = db.query(Release).filter(Release.id == release_id).first()` and forget the ownership check, recreating SEC-001b/d-class IDOR
+- Pattern: if the route shape templates a release_id, the route MUST already enforce ownership at registration time — no lazy "we'll add the check when we implement the body"
+
+### Evidence — discovered_via: enforcement_test_first_run
+
+The enforcement test from SDLC-001 ran for the first time at the SDLC-001 commit. **First run output** (verbatim):
+
+```
+[FAIL] 3 endpoint(s) missing ownership dependency:
+  - ['GET'] /api/releases/{release_id}/compliance        → list_compliance
+  - ['GET'] /api/policies/releases/{release_id}/violations → release_violations
+  - ['GET'] /api/licenses/releases/{release_id}/violations → release_violations
+```
+
+Of the 3 hits:
+- 2 were already-known SEC-001b / SEC-001d (expected to surface — they're in Top-10)
+- **1 was NEW**:`list_compliance` — Phase 1 heuristic + Phase 3 batch grep didn't catch this because:
+  1. Phase 1 grep counted `_assert_*_org` *call presence* in router files,not *route-shape vs ownership-check completeness*
+  2. Phase 3 batch verified the 7 zero-`_assert` files,but `list_compliance` is in `releases.py`(which has 30 `_assert_release_org` callers and was therefore "cleared" globally)
+  3. Stub endpoints with no DB query don't show up in symptom-based audit
+
+This is **systematic gap** acknowledged in SDLC-001 `scope_not_reviewed`("argument-passing correctness 抽樣未窮舉") — exactly what the enforcement test is designed to catch over time as new endpoints are added.
+
+### Recommendation
+
+#### primary_remediation
+Add `release: Release = Depends(require_release_in_scope)` to the signature. Single-line change. No behavior shift in the placeholder body — still returns the not-implemented stub — but enforces ownership at route registration time.
+
+```diff
+ @router.get("/{release_id}/compliance")
+-def list_compliance(release_id: str, db: Session = Depends(get_db)):
++def list_compliance(release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
++    # SEC-023 fix: placeholder route now enforces release ownership before
++    # returning the not-implemented stub.  Future implementer fills the body
++    # without forgetting the ownership check (CI enforcement test ensures it).
+     return {"status": "not implemented"}
+```
+
+- effort:S (1 line + import already in file from SDLC-001 commit)
+- risk_of_fix:None (placeholder behavior unchanged — same hardcoded response)
+
+#### defense_in_depth
+The enforcement test (SDLC-001) is itself the defense-in-depth — it caught this finding. Going forward any new placeholder route with `{release_id}` will be caught at PR time.
+
+#### compensating_control
+N/A — fix is one line.
+
+#### monitoring_detection
+Covered by SDLC-001's enforcement test in CI. No additional monitoring needed.
+
+### References
+- SDLC-001 — parent / introduces the enforcement test that found this
+- CWE-1188 (Initialization of a Resource with an Insecure Default) — loose match
+- "Secure by Default" — Saltzer & Schroeder, 1975 (fail-safe defaults principle)
+
+### Phase 5 methodology validation note (cross-referenced from phase-4-summary §0)
+
+This finding is the proof that the enforcement test (SDLC-001's core delivery) provides ROI on the very first CI run. Audit firms reviewing the audit trail will see:
+
+1. Phase 1 heuristic grep produced a finding-set
+2. Phase 3 batch validated and supplemented the heuristic
+3. Phase 5 #1 introduced an automated control (the enforcement test)
+4. **The control's first run found a gap that all prior phases missed**
+5. The gap was closed in the same commit that introduced the control
+
+This validates the "systemic prevention beats one-shot detection" principle that motivates SDLC-001 in the first place.

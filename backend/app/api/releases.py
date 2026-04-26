@@ -20,7 +20,7 @@ from app.core import audit
 from app.core.config import BACKEND_DIR, resolve_under_backend, settings as _cfg
 from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin, get_current_user
+from app.core.deps import get_org_scope, require_admin, get_current_user, require_release_in_scope
 from app.core.security import csv_safe, safe_attachment_filename
 
 logger = logging.getLogger(__name__)
@@ -705,7 +705,10 @@ def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(
 
 
 @router.get("/{release_id}/compliance")
-def list_compliance(release_id: str, db: Session = Depends(get_db)):
+def list_compliance(release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    # SEC-023 fix: placeholder route now enforces release ownership before
+    # returning the not-implemented stub.  Future implementer fills the body
+    # without forgetting the ownership check (CI enforcement test ensures it).
     return {"status": "not implemented"}
 
 

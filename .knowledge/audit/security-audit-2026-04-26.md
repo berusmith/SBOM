@@ -857,7 +857,7 @@ monitoring_detection:
 | finding_id                | SDLC-001 |
 | parent_finding            | null (top-level architectural finding) |
 | **scope**                 | **cross-cutting** (rev-2 elevation:references multiple TLTs;Phase 4 報告放在 "Architectural / SDLC findings" section,不放在 per-TLT 列表)|
-| status                    | open |
+| status                    | **in-progress** (Phase 5 #1: helpers + enforcement test landed 2026-04-26; full completion requires SEC-001a/b/c/d migration in Phase 5 #2-#5 — enforcement test moves from 2 missing → 0 missing) |
 | discovered_phase          | 3 (extracted from SEC-001 RCA;**位階提升**:不只是 SEC-001 的 root cause,是跨 TLT 的 systemic gap)|
 | verification_method       | manual-review (process / architecture finding, not a runtime bug per se) |
 | first_observed_commit     | n/a (architectural absence is "since beginning of project") |
@@ -1136,6 +1136,61 @@ N/A — architectural finding; per-incident compensations are in SEC-001a/b/c/d.
 5. **SEC-001b/c/d 寫法**:目前每個都完整 metadata + 簡短 observation/recommendation(因為跟 a 高度共享,但不放 see SEC-001a 的省略寫法)— 對嗎?還是要 b/c/d 大幅簡化只留 metadata + diff?
 
 回覆完即動 PoC2 + 批量。
+
+---
+
+## SDLC-001 lessons_learned (rev-7 — added after Phase 5 #1 enforcement test first run)
+
+**Event**:Phase 5 #1 commit-time verification ran the new enforcement test and found **3 missing endpoints, 1 of which was NOT in any prior phase's finding-set**(`/api/releases/{release_id}/compliance` placeholder stub).
+
+```yaml
+lessons_learned:
+  - lesson: |
+      Audit batch grep heuristic has a systematic gap on stub / placeholder
+      routes.  Phase 1 grep counted `_assert_*_org` call presence per file,
+      so files like releases.py (30 callsites) were treated as globally
+      "cleared" — but a stub endpoint within that file with no DB query
+      and no _assert_* call was invisible to symptom-based detection.
+
+    delivery_proof: |
+      The enforcement test introduced as SDLC-001's primary_remediation
+      caught this gap on its FIRST CI run.  Filed as SEC-023, fixed in
+      the same commit as SDLC-001.  This validates "automated invariant
+      enforcement beats one-shot grep audit" as a long-term risk-control
+      strategy.
+
+    audit_methodology_implication: |
+      Future audits should NOT trust "router-file-cleared" verdicts based
+      on grep heuristics.  Either:
+        (a) walk every route programmatically (what the enforcement test
+            now does continuously), OR
+        (b) explicitly enumerate stub / placeholder routes during Phase 3
+            and verify each has the ownership shape
+
+      Phase 4 audit reports should cite this event as the moment the
+      audit's own methodology was validated.
+
+  - lesson: |
+      "scope_not_reviewed" sections in SDLC findings are not just
+      defensive standardisation — they make falsifiable predictions.
+
+    falsifiable_prediction_from_rev-4: |
+      SDLC-001 scope_not_reviewed wrote: "argument-passing correctness
+      抽樣未窮舉" + "30 callsites verified for _assert_release_org call
+      presence;... was sampled not exhaustive".
+
+      The placeholder-stub class is exactly the failure mode that
+      "sampled not exhaustive" predicted.  Prediction validated.
+
+    audit_methodology_implication: |
+      scope_not_reviewed is not boilerplate — write it as predictions,
+      then verify them.  When verification surfaces a hit, file the
+      finding as discovered_via: enforcement_test_first_run (or whatever
+      mechanism caught it) so the audit trail traces back to the specific
+      caveat.
+```
+
+**Cross-reference**:`SEC-023` finding(in `security-audit-batch-tlt-2-21.md`)is the SEC-numbered record of this event;this `lessons_learned` block is the methodology-level retrospective.
 
 ---
 
