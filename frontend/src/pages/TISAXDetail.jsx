@@ -81,7 +81,7 @@ function ControlRow({ ctrl, onSave }) {
           {gap > 0 && (
             <span className="text-xs text-red-400">差距 {gap}</span>
           )}
-          <span className="text-xs text-gray-500">{ctrl.current_maturity}/{ctrl.target_maturity}</span>
+          <span className="text-xs text-gray-600">{ctrl.current_maturity}/{ctrl.target_maturity}</span>
           <StatusBadge status={ctrl.status} />
           <span className="text-gray-400 text-xs" aria-hidden="true">{expanded ? "▲" : "▼"}</span>
         </div>
@@ -89,7 +89,7 @@ function ControlRow({ ctrl, onSave }) {
 
       {expanded && (
         <div className="px-4 pb-4 bg-gray-50/50">
-          <p className="text-xs text-gray-500 mb-3 leading-relaxed">{ctrl.requirement_summary}</p>
+          <p className="text-xs text-gray-600 mb-3 leading-relaxed">{ctrl.requirement_summary}</p>
 
           {!editing ? (
             <div className="space-y-2">
@@ -112,7 +112,7 @@ function ControlRow({ ctrl, onSave }) {
             <div className="space-y-3" onClick={e => e.stopPropagation()}>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">當前成熟度</label>
+                  <label className="text-xs text-gray-600 block mb-1">當前成熟度</label>
                   <select value={form.current_maturity}
                     onChange={e => setForm({ ...form, current_maturity: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full">
@@ -122,7 +122,7 @@ function ControlRow({ ctrl, onSave }) {
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">目標成熟度</label>
+                  <label className="text-xs text-gray-600 block mb-1">目標成熟度</label>
                   <select value={form.target_maturity}
                     onChange={e => setForm({ ...form, target_maturity: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full">
@@ -133,7 +133,7 @@ function ControlRow({ ctrl, onSave }) {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">證據說明</label>
+                <label className="text-xs text-gray-600 block mb-1">證據說明</label>
                 <textarea value={form.evidence_note}
                   onChange={e => setForm({ ...form, evidence_note: e.target.value })}
                   rows={2} placeholder="描述現有的控制措施與佐證..."
@@ -141,19 +141,19 @@ function ControlRow({ ctrl, onSave }) {
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">負責人</label>
+                  <label className="text-xs text-gray-600 block mb-1">負責人</label>
                   <input value={form.owner} onChange={e => setForm({ ...form, owner: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full" />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">預計完成日</label>
+                  <label className="text-xs text-gray-600 block mb-1">預計完成日</label>
                   <input type="date" value={form.due_date}
                     onChange={e => setForm({ ...form, due_date: e.target.value })}
                     className="border rounded px-2 py-1 text-sm w-full" />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">備註</label>
+                <label className="text-xs text-gray-600 block mb-1">備註</label>
                 <input value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })}
                   className="border rounded px-2 py-1 text-sm w-full" />
               </div>
@@ -163,7 +163,7 @@ function ControlRow({ ctrl, onSave }) {
                   {saving ? "儲存中..." : "儲存"}
                 </button>
                 <button onClick={() => setEditing(false)}
-                  className="text-gray-500 px-3 py-1.5 rounded text-xs hover:bg-gray-200 border">取消</button>
+                  className="text-gray-600 px-3 py-1.5 rounded text-xs hover:bg-gray-200 border">取消</button>
               </div>
             </div>
           )}
@@ -259,7 +259,7 @@ export default function TISAXDetail() {
         ].map(({ label, value, cls }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
             <div className={`text-2xl font-bold ${cls}`}>{value}</div>
-            <div className="text-xs text-gray-500 mt-1">{label}</div>
+            <div className="text-xs text-gray-600 mt-1">{label}</div>
           </div>
         ))}
       </div>
@@ -359,7 +359,7 @@ export default function TISAXDetail() {
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-xs text-gray-500">
+                      <tr className="bg-gray-50 text-xs text-gray-600">
                         <th scope="col" className="px-4 py-2 text-left">編號</th>
                         <th scope="col" className="px-4 py-2 text-left">控制項</th>
                         <th scope="col" className="px-4 py-2 text-center">當前</th>
@@ -375,12 +375,12 @@ export default function TISAXDetail() {
                           <td className="px-4 py-2 font-mono text-xs text-gray-600">{c.control_number}</td>
                           <td className="px-4 py-2 text-gray-800">{c.name}</td>
                           <td className="px-4 py-2 text-center font-bold text-red-500">{c.current_maturity}</td>
-                          <td className="px-4 py-2 text-center text-gray-500">{c.target_maturity}</td>
+                          <td className="px-4 py-2 text-center text-gray-600">{c.target_maturity}</td>
                           <td className="px-4 py-2 text-center font-bold text-red-600">
                             -{c.target_maturity - c.current_maturity}
                           </td>
-                          <td className="px-4 py-2 text-gray-500 text-xs hidden sm:table-cell">{c.owner || "—"}</td>
-                          <td className="px-4 py-2 text-gray-500 text-xs hidden sm:table-cell">{c.due_date || "—"}</td>
+                          <td className="px-4 py-2 text-gray-600 text-xs hidden sm:table-cell">{c.owner || "—"}</td>
+                          <td className="px-4 py-2 text-gray-600 text-xs hidden sm:table-cell">{c.due_date || "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -394,7 +394,7 @@ export default function TISAXDetail() {
                   </div>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-xs text-gray-500">
+                      <tr className="bg-gray-50 text-xs text-gray-600">
                         <th scope="col" className="px-4 py-2 text-left">編號</th>
                         <th scope="col" className="px-4 py-2 text-left">控制項</th>
                         <th scope="col" className="px-4 py-2 text-center">當前</th>
@@ -407,7 +407,7 @@ export default function TISAXDetail() {
                           <td className="px-4 py-2 font-mono text-xs text-gray-600">{c.control_number}</td>
                           <td className="px-4 py-2 text-gray-800">{c.name}</td>
                           <td className="px-4 py-2 text-center font-bold text-yellow-600">{c.current_maturity}</td>
-                          <td className="px-4 py-2 text-center text-gray-500">{c.target_maturity}</td>
+                          <td className="px-4 py-2 text-center text-gray-600">{c.target_maturity}</td>
                         </tr>
                       ))}
                     </tbody>

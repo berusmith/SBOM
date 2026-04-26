@@ -323,7 +323,7 @@ export default function Settings() {
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">掃描頻率</label>
+            <label className="block text-xs text-gray-600 mb-1">掃描頻率</label>
             <select
               value={intervalHours}
               onChange={(e) => setIntervalHours(Number(e.target.value))}
@@ -348,7 +348,7 @@ export default function Settings() {
         </div>
 
         {monitorStatus && (
-          <div className="bg-gray-50 rounded p-3 text-xs text-gray-500 space-y-1">
+          <div className="bg-gray-50 rounded p-3 text-xs text-gray-600 space-y-1">
             <div className="flex gap-4 flex-wrap">
               <span>
                 狀態：
@@ -620,7 +620,7 @@ function ApiTokens({ flash }) {
                 </span>
               </p>
               <p className="text-xs text-gray-600 font-mono">{t.prefix}...</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-600">
                 建立：{t.created_at ? formatDateTime(t.created_at) : "—"}
                 {" · "}
                 上次使用：{t.last_used_at ? formatDateTime(t.last_used_at) : "尚未使用"}

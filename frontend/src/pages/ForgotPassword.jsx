@@ -55,7 +55,7 @@ export default function ForgotPassword() {
               {loading ? "送出中..." : "送出重設連結"}
             </button>
             <div className="text-center">
-              <Link to="/login" className="text-xs text-gray-500 hover:underline">← 返回登入</Link>
+              <Link to="/login" className="text-xs text-gray-600 hover:underline">← 返回登入</Link>
             </div>
           </form>
         )}

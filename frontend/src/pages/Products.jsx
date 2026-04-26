@@ -113,7 +113,7 @@ export default function Products() {
               {loading ? t("common.creating") : t("common.confirm")}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
-              className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100">{t("common.cancel")}</button>
+              className="text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-100">{t("common.cancel")}</button>
           </div>
         </form>
       )}
@@ -158,7 +158,7 @@ export default function Products() {
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[360px]">
-              <thead className="bg-gray-50 text-gray-500 text-left">
+              <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t("products.name")}</th>
                   <th scope="col" className="px-4 py-3">{t("common.description")}</th>
@@ -169,7 +169,7 @@ export default function Products() {
                 {products.map((p) => (
                   <tr key={p.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
-                    <td className="px-4 py-3 text-gray-500 max-w-[180px] truncate">{p.description || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{p.description || "—"}</td>
                     <td className="px-4 py-3 text-right flex justify-end gap-2">
                       <button onClick={() => navigate(`/products/${p.id}/releases`, { state: { orgId, orgName } })}
                         className="text-blue-600 px-3 py-2 rounded hover:bg-gray-100 text-xs">

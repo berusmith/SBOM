@@ -127,7 +127,7 @@ export default function Organizations() {
               　請將初始密碼告知客戶，登入後建議立即修改。
             </div>
           ) : (
-            <div className="text-gray-500">未建立登入帳號（可稍後在使用者管理中新增）</div>
+            <div className="text-gray-600">未建立登入帳號（可稍後在使用者管理中新增）</div>
           )}
           <button onClick={() => setCreated(null)} className="mt-2 text-xs text-green-600 underline">關閉</button>
         </div>
@@ -151,7 +151,7 @@ export default function Organizations() {
             {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
           </div>
           <div className="border-t pt-3">
-            <div className="text-xs text-gray-500 mb-2">登入帳號（選填，留空則不建立）</div>
+            <div className="text-xs text-gray-600 mb-2">登入帳號（選填，留空則不建立）</div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
                 <input
@@ -184,7 +184,7 @@ export default function Organizations() {
             <button
               type="button"
               onClick={() => { setShowForm(false); setUsername(""); setPassword(""); }}
-              className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border"
+              className="text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-100 border"
             >
               {t("common.cancel")}
             </button>
@@ -222,7 +222,7 @@ export default function Organizations() {
         ) : (
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[280px]">
-            <thead className="bg-gray-50 text-gray-500 text-left">
+            <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
                 <th scope="col" className="px-4 py-3">{t("organizations.name")}</th>
                 <th scope="col" className="px-4 py-3 hidden sm:table-cell">授權狀態</th>
@@ -265,7 +265,7 @@ export default function Organizations() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
+                  <td className="px-4 py-3 text-gray-600 hidden md:table-cell">
                     {formatDate(org.created_at)}
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-3">

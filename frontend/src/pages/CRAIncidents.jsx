@@ -19,7 +19,7 @@ function Countdown({ seconds, label }) {
   const m = Math.floor((seconds % 3600) / 60);
   const urgent = seconds < 6 * 3600;
   return (
-    <span className={`text-xs font-mono ${urgent ? "text-red-600 font-bold" : "text-gray-500"}`}>
+    <span className={`text-xs font-mono ${urgent ? "text-red-600 font-bold" : "text-gray-600"}`}>
       {label} 剩 {h}h {m}m
     </span>
   );
@@ -87,7 +87,7 @@ export default function CRAIncidents() {
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[280px]">
-            <thead className="bg-gray-50 text-gray-500 text-left">
+            <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
                 <th scope="col" className="px-4 py-3">事件標題</th>
                 <th scope="col" className="px-4 py-3 hidden sm:table-cell">觸發 CVE</th>

@@ -34,7 +34,7 @@ export default function TrendChart({ data }) {
           <h3 className="text-sm font-semibold text-gray-700">各版本漏洞趨勢</h3>
           <p className="text-xs text-gray-600">僅計算未解決漏洞（排除 fixed / not_affected）</p>
         </div>
-        <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+        <div className="flex flex-wrap gap-3 text-xs text-gray-600">
           {LINES.map(({ color, label }) => (
             <span key={label} className="flex items-center gap-1">
               <svg width="14" height="4"><line x1="0" y1="2" x2="14" y2="2" stroke={color} strokeWidth="2" strokeLinecap="round"/></svg>

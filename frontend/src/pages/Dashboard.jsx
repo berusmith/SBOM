@@ -155,7 +155,7 @@ function ViewerOnboarding({ orgId }) {
         </div>
         <div className="flex-1">
           <h2 className="font-semibold text-gray-800 mb-1">{t("dashboard.onboarding.title")}</h2>
-          <p className="text-sm text-gray-500 mb-4">{t("dashboard.onboarding.hint")}</p>
+          <p className="text-sm text-gray-600 mb-4">{t("dashboard.onboarding.hint")}</p>
           <div className="space-y-3">
             {steps.map((s) => (
               <div key={s.num} className="flex items-start gap-3">
@@ -307,7 +307,7 @@ export default function Dashboard() {
                   <div key={key}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className={`font-medium ${text}`}>{label}</span>
-                      <span className="text-gray-500">{count} ({pct}%)</span>
+                      <span className="text-gray-600">{count} ({pct}%)</span>
                     </div>
                     <div className="h-4 rounded-full bg-gray-100 overflow-hidden">
                       <div
@@ -333,7 +333,7 @@ export default function Dashboard() {
                   <div key={key}>
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-600 font-medium">{label}</span>
-                      <span className="text-gray-500">{count} ({pct}%)</span>
+                      <span className="text-gray-600">{count} ({pct}%)</span>
                     </div>
                     <div className="h-4 rounded-full bg-gray-100 overflow-hidden">
                       <div
@@ -393,7 +393,7 @@ export default function Dashboard() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">{t("dashboard.qualityNoData")}</p>
+          <p className="text-sm text-gray-600">{t("dashboard.qualityNoData")}</p>
         )}
       </div>
 
@@ -417,13 +417,13 @@ export default function Dashboard() {
         </form>
         {cveResult && (
           cveResult.affected_count === 0 ? (
-            <p className="text-sm text-gray-500">{t("dashboard.cveNoResult")}</p>
+            <p className="text-sm text-gray-600">{t("dashboard.cveNoResult")}</p>
           ) : (
             <>
               <p className="text-sm font-medium text-red-700 mb-2">{t("dashboard.cveAffected", { n: cveResult.affected_count })}</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs min-w-[320px]">
-                  <thead className="text-left text-gray-500 border-b">
+                  <thead className="text-left text-gray-600 border-b">
                     <tr>
                       <th scope="col" className="pb-2 pr-3">{t("organizations.name")}</th>
                       <th scope="col" className="pb-2 pr-3">{t("products.name")}</th>
@@ -476,19 +476,19 @@ export default function Dashboard() {
                   <span className="text-lg font-bold text-gray-800">{stats.patch_tracking.patch_rate}%</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-500">{t("dashboard.patchRate")}</p>
+              <p className="text-sm text-gray-600">{t("dashboard.patchRate")}</p>
             </div>
             {/* Fixed count */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-green-600">{stats.patch_tracking.fixed}</span>
-              <p className="text-sm text-gray-500 mt-1">{t("dashboard.fixedVulns")}</p>
+              <p className="text-sm text-gray-600 mt-1">{t("dashboard.fixedVulns")}</p>
             </div>
             {/* Avg days to fix */}
             <div className="flex flex-col items-center justify-center">
               <span className="text-3xl font-bold text-blue-600">
                 {stats.patch_tracking.avg_days_to_fix != null ? stats.patch_tracking.avg_days_to_fix : "—"}
               </span>
-              <p className="text-sm text-gray-500 mt-1">{t("dashboard.avgDaysToFix")}</p>
+              <p className="text-sm text-gray-600 mt-1">{t("dashboard.avgDaysToFix")}</p>
             </div>
           </div>
         </div>
@@ -521,7 +521,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {topThreats.top_epss.map((v) => {
-                    const sevColor = { critical: "text-red-600 bg-red-50", high: "text-orange-600 bg-orange-50", medium: "text-yellow-600 bg-yellow-50", low: "text-blue-600 bg-blue-50" }[v.severity] || "text-gray-500 bg-gray-50";
+                    const sevColor = { critical: "text-red-600 bg-red-50", high: "text-orange-600 bg-orange-50", medium: "text-yellow-600 bg-yellow-50", low: "text-blue-600 bg-blue-50" }[v.severity] || "text-gray-600 bg-gray-50";
                     return (
                       <tr key={v.cve_id} className="hover:bg-gray-50">
                         <td className="py-3 pr-4 font-mono text-xs text-gray-700">{v.cve_id}</td>
@@ -590,7 +590,7 @@ export default function Dashboard() {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                           c.max_epss >= 0.5 ? "bg-red-100 text-red-700" :
                           c.max_epss >= 0.1 ? "bg-orange-100 text-orange-700" :
-                          "bg-gray-100 text-gray-500"
+                          "bg-gray-100 text-gray-600"
                         }`}>
                           {(c.max_epss * 100).toFixed(1)}%
                         </span>
@@ -632,7 +632,7 @@ export default function Dashboard() {
                       onClick={() => navigate(`/organizations/${org.org_id}/products`)}
                     >
                       <td className="py-2.5 pr-4 font-medium text-gray-800">{org.org_name}</td>
-                      <td className="py-2.5 pr-4 text-center text-gray-500">{org.products}</td>
+                      <td className="py-2.5 pr-4 text-center text-gray-600">{org.products}</td>
                       <td className="py-2.5 pr-4 text-center text-gray-600">{org.total_vulns}</td>
                       <td className="py-2.5 pr-4 text-center">
                         {org.unpatched_critical > 0

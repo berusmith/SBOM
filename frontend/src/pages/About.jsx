@@ -70,7 +70,7 @@ export default function About() {
         <h1 className="text-2xl font-bold text-gray-800">Open Source Notices</h1>
         <Link
           to="/"
-          className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
         >
           ← Back
         </Link>
@@ -87,7 +87,7 @@ export default function About() {
 
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 sm:p-6">
         {loading && (
-          <div className="text-sm text-gray-500 py-8 text-center">Loading…</div>
+          <div className="text-sm text-gray-600 py-8 text-center">Loading…</div>
         )}
         {error && (
           <div className="text-sm text-red-600 py-4">
@@ -106,7 +106,7 @@ export default function About() {
         )}
       </div>
 
-      <div className="mt-4 flex items-center gap-3 text-xs text-gray-500">
+      <div className="mt-4 flex items-center gap-3 text-xs text-gray-600">
         <a
           href="/api/notice"
           target="_blank"

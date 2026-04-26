@@ -189,7 +189,7 @@ export default function Policies() {
             <p className={`font-semibold text-sm ${summary.total_violations > 0 ? "text-red-700" : "text-green-700"}`}>
               {summary.total_violations > 0 ? "項全平台違規" : "目前無違規"}
             </p>
-            <p className="text-xs text-gray-500">已啟用 {rules.filter((r) => r.enabled).length} 條規則</p>
+            <p className="text-xs text-gray-600">已啟用 {rules.filter((r) => r.enabled).length} 條規則</p>
           </div>
         </div>
       )}
@@ -228,9 +228,9 @@ export default function Policies() {
                     )}
                   </div>
                   {rule.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{rule.description}</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{rule.description}</p>
                   )}
-                  <div className="flex gap-4 mt-1.5 text-xs text-gray-500">
+                  <div className="flex gap-4 mt-1.5 text-xs text-gray-600">
                     <span>超過 <span className="font-semibold text-gray-700">{rule.min_days_open}</span> 天</span>
                     <span>狀態：{rule.statuses}</span>
                   </div>
@@ -279,7 +279,7 @@ export default function Policies() {
               <p className={`font-semibold text-sm ${licenseSummary.total_violations > 0 ? "text-orange-700" : "text-green-700"}`}>
                 {licenseSummary.total_violations > 0 ? "個元件含有受管控授權" : "目前無 License 違規"}
               </p>
-              <p className="text-xs text-gray-500">已啟用 {licenseRules.filter((r) => r.enabled).length} 條規則</p>
+              <p className="text-xs text-gray-600">已啟用 {licenseRules.filter((r) => r.enabled).length} 條規則</p>
             </div>
           </div>
         )}

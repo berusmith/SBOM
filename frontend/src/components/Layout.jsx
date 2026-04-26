@@ -244,7 +244,7 @@ export default function Layout({ children }) {
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">{children}</main>
 
       <footer className="border-t border-gray-200 bg-white mt-8">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
           <span>SBOM Platform · v2.0.0</span>
           <div className="flex items-center gap-3">
             <Link to="/about" className="hover:text-gray-800 hover:underline">

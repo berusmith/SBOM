@@ -59,7 +59,7 @@ function DeadlineBar({ label, seconds, submitted }) {
   if (seconds === null || seconds === undefined) {
     return (
       <div className="flex items-center gap-3 py-3 border-b last:border-0 opacity-40">
-        <div className="w-24 text-xs font-medium text-gray-500">{label}</div>
+        <div className="w-24 text-xs font-medium text-gray-600">{label}</div>
         <div className="flex-1">
           <div className="h-2 rounded-full bg-gray-100" />
         </div>
@@ -143,7 +143,7 @@ export default function CRAIncidentDetail() {
                 ))}
               </div>
             )}
-            {inc.description && <p className="text-sm text-gray-500">{inc.description}</p>}
+            {inc.description && <p className="text-sm text-gray-600">{inc.description}</p>}
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium shrink-0 ${CRA_STATUS_COLOR[inc.status] || DEFAULT_BADGE}`}>
             {inc.status_label}
@@ -173,13 +173,13 @@ export default function CRAIncidentDetail() {
           />
 
           {inc.enisa_ref_t24 && (
-            <div className="mt-3 text-xs text-gray-500">ENISA T+24h Ref: <span className="font-mono">{inc.enisa_ref_t24}</span></div>
+            <div className="mt-3 text-xs text-gray-600">ENISA T+24h Ref: <span className="font-mono">{inc.enisa_ref_t24}</span></div>
           )}
           {inc.enisa_ref_t72 && (
-            <div className="text-xs text-gray-500">ENISA T+72h Ref: <span className="font-mono">{inc.enisa_ref_t72}</span></div>
+            <div className="text-xs text-gray-600">ENISA T+72h Ref: <span className="font-mono">{inc.enisa_ref_t72}</span></div>
           )}
           {inc.enisa_ref_final && (
-            <div className="text-xs text-gray-500">ENISA Final Ref: <span className="font-mono">{inc.enisa_ref_final}</span></div>
+            <div className="text-xs text-gray-600">ENISA Final Ref: <span className="font-mono">{inc.enisa_ref_final}</span></div>
           )}
         </div>
 

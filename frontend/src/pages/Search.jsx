@@ -69,7 +69,7 @@ export default function Search() {
 
       {results && (
         <>
-          <p className="text-sm text-gray-500 mb-3">
+          <p className="text-sm text-gray-600 mb-3">
             搜尋「<span className="font-medium text-gray-700">{results.query}</span>」找到 <span className="font-medium">{results.total}</span> 筆結果
           </p>
 
@@ -81,7 +81,7 @@ export default function Search() {
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[320px]">
-                <thead className="bg-gray-50 text-gray-500 text-left">
+                <thead className="bg-gray-50 text-gray-600 text-left">
                   <tr>
                     <th scope="col" className="px-4 py-3">元件名稱</th>
                     <th scope="col" className="px-4 py-3 hidden sm:table-cell">版本</th>
@@ -97,7 +97,7 @@ export default function Search() {
                   {results.results.map((r) => (
                     <tr key={r.component_id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-2 font-medium text-gray-800">{r.component_name}</td>
-                      <td className="px-4 py-2 text-gray-500 font-mono text-xs hidden sm:table-cell">{r.component_version || "—"}</td>
+                      <td className="px-4 py-2 text-gray-600 font-mono text-xs hidden sm:table-cell">{r.component_version || "—"}</td>
                       <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{r.org_name}</td>
                       <td className="px-4 py-2 text-gray-600 hidden md:table-cell">{r.product_name}</td>
                       <td className="px-4 py-2 hidden sm:table-cell">

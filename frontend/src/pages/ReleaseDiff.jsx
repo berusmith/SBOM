@@ -100,14 +100,14 @@ export default function ReleaseDiff() {
         {[
           { label: "元件新增", val: c.added.length,    color: "text-green-600", bg: "bg-green-50" },
           { label: "元件移除", val: c.removed.length,  color: "text-red-600",   bg: "bg-red-50" },
-          { label: "元件不變", val: c.unchanged,       color: "text-gray-500",  bg: "bg-gray-50" },
+          { label: "元件不變", val: c.unchanged,       color: "text-gray-600",  bg: "bg-gray-50" },
           { label: "漏洞新增", val: v.added.length,    color: "text-red-600",   bg: "bg-red-50" },
           { label: "漏洞消失", val: v.removed.length,  color: "text-green-600", bg: "bg-green-50" },
-          { label: "漏洞不變", val: v.unchanged,       color: "text-gray-500",  bg: "bg-gray-50" },
+          { label: "漏洞不變", val: v.unchanged,       color: "text-gray-600",  bg: "bg-gray-50" },
         ].map((s) => (
           <div key={s.label} className={`rounded-lg border p-4 text-center ${s.bg}`}>
             <div className={`text-2xl font-bold ${s.color}`}>{s.val}</div>
-            <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+            <div className="text-xs text-gray-600 mt-1">{s.label}</div>
           </div>
         ))}
       </div>
@@ -152,7 +152,7 @@ export default function ReleaseDiff() {
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <p className="text-2xl mb-2">✓</p>
           <p className="text-gray-700 font-medium">兩版本元件與漏洞完全相同</p>
-          <p className="text-xs text-gray-500 mt-1">{c.unchanged} 個元件 · {v.unchanged} 個漏洞</p>
+          <p className="text-xs text-gray-600 mt-1">{c.unchanged} 個元件 · {v.unchanged} 個漏洞</p>
         </div>
       )}
     </div>
@@ -175,7 +175,7 @@ function SimpleCompTable({ items }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full text-sm bg-white min-w-[280px]">
-      <thead className="bg-gray-50 text-gray-500 text-left">
+      <thead className="bg-gray-50 text-gray-600 text-left">
         <tr>
           <th scope="col" className="px-4 py-2">元件名稱</th>
           <th scope="col" className="px-4 py-2">版本</th>
@@ -185,7 +185,7 @@ function SimpleCompTable({ items }) {
         {items.map((c, i) => (
           <tr key={i} className="border-t">
             <td className="px-4 py-2 font-medium text-gray-800">{c.name}</td>
-            <td className="px-4 py-2 text-gray-500 font-mono text-xs">{c.version || "—"}</td>
+            <td className="px-4 py-2 text-gray-600 font-mono text-xs">{c.version || "—"}</td>
           </tr>
         ))}
       </tbody>
@@ -198,7 +198,7 @@ function VulnTable({ items }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full text-sm bg-white min-w-[480px]">
-      <thead className="bg-gray-50 text-gray-500 text-left">
+      <thead className="bg-gray-50 text-gray-600 text-left">
         <tr>
           <th scope="col" className="px-4 py-2">CVE ID</th>
           <th scope="col" className="px-4 py-2">元件</th>
@@ -219,7 +219,7 @@ function VulnTable({ items }) {
               {v.severity && <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity]}`}>{v.severity}</span>}
             </td>
             <td className="px-4 py-2 text-gray-600 hidden sm:table-cell">{v.cvss_score ?? "—"}</td>
-            <td className="px-4 py-2 text-xs text-gray-500 hidden sm:table-cell">
+            <td className="px-4 py-2 text-xs text-gray-600 hidden sm:table-cell">
               {v.epss_score != null ? `${(v.epss_score * 100).toFixed(1)}%` : "—"}
             </td>
           </tr>

@@ -105,7 +105,7 @@ export default function Profile() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700">{email || <span className="text-gray-500 italic">{t("profile.emailUnset")}</span>}</span>
+              <span className="text-sm text-gray-700">{email || <span className="text-gray-600 italic">{t("profile.emailUnset")}</span>}</span>
               <button onClick={() => setEmailEditing(true)}
                 className="text-xs text-blue-600 hover:underline">{t("common.edit")}</button>
             </div>

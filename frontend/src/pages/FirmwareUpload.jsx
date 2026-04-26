@@ -177,7 +177,7 @@ export default function FirmwareUpload() {
       >
         <Upload size={32} className="mx-auto text-gray-400 mb-3" />
         <h2 className="text-lg font-medium text-gray-800 mb-1">拖放韌體檔案或點擊選擇</h2>
-        <p className="text-xs text-gray-500 mb-4">支援: .bin, .img, .zip (最大 500MB)</p>
+        <p className="text-xs text-gray-600 mb-4">支援: .bin, .img, .zip (最大 500MB)</p>
         {selectedFile && (
           <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
             <p className="text-sm text-blue-800">已選擇: <strong>{selectedFile.name}</strong></p>
@@ -241,9 +241,9 @@ export default function FirmwareUpload() {
                     <p className="font-medium text-gray-800">{scan.filename}</p>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                       {getStatusBadge(scan.status)}
-                      {scan.status === "running" && <span className="text-xs text-gray-500">進度: {scan.progress}%</span>}
+                      {scan.status === "running" && <span className="text-xs text-gray-600">進度: {scan.progress}%</span>}
                       {scan.components_count > 0 && (
-                        <span className="text-xs text-gray-500">找到 {scan.components_count} 個元件</span>
+                        <span className="text-xs text-gray-600">找到 {scan.components_count} 個元件</span>
                       )}
                       <span className="text-xs text-gray-400">
                         {new Date(scan.created_at).toLocaleString("zh-TW")}
@@ -291,7 +291,7 @@ export default function FirmwareUpload() {
                                 <tr key={i} className="border-t hover:bg-gray-50">
                                   <td className="px-3 py-2">{comp.name}</td>
                                   <td className="px-3 py-2">{comp.version || "—"}</td>
-                                  <td className="px-3 py-2 text-gray-500">{comp.type || "—"}</td>
+                                  <td className="px-3 py-2 text-gray-600">{comp.type || "—"}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -344,7 +344,7 @@ export default function FirmwareUpload() {
               value={importData.product}
               onChange={(e) => setImportData({ ...importData, product: e.target.value })}
               disabled={importLoading || !importData.org}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:text-gray-600"
             >
               <option value="">選擇產品...</option>
               {products.map((product) => (

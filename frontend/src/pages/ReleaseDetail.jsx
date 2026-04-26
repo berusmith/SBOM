@@ -659,7 +659,7 @@ export default function ReleaseDetail() {
           <span>
             {t("releaseDetail.upload.success", { components: uploadResult.components_found, vulns: uploadResult.vulnerabilities_found })}
             {uploadResult.diff && (
-              <span className="ml-2 text-gray-500">
+              <span className="ml-2 text-gray-600">
                 ｜{t("releaseDetail.upload.diff.prev")} <span className="font-medium text-gray-700">{uploadResult.diff.prev_version}</span>：
                 {uploadResult.diff.components_added > 0 && <span className="text-orange-600"> {t("releaseDetail.upload.diff.compAdded", { n: uploadResult.diff.components_added })}</span>}
                 {uploadResult.diff.components_removed > 0 && <span className="text-blue-600"> {t("releaseDetail.upload.diff.compRemoved", { n: uploadResult.diff.components_removed })}</span>}
@@ -942,7 +942,7 @@ export default function ReleaseDetail() {
                 </button>
               </div>
               {shareNewLink.expires_at && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-600 mt-1">
                   過期時間：{new Date(shareNewLink.expires_at).toLocaleString()}
                 </p>
               )}
@@ -958,7 +958,7 @@ export default function ReleaseDetail() {
                   <span className="font-mono truncate max-w-[200px]">{lk.token.slice(0, 16)}…</span>
                   <span>{lk.expires_at ? new Date(lk.expires_at).toLocaleDateString() : "永不過期"}</span>
                   {lk.mask_internal && <span className="px-1 bg-orange-100 text-orange-700 rounded">已脫敏</span>}
-                  {lk.expired && <span className="px-1 bg-gray-200 text-gray-500 rounded">已過期</span>}
+                  {lk.expired && <span className="px-1 bg-gray-200 text-gray-600 rounded">已過期</span>}
                   <span className="text-gray-400">{lk.download_count} 次下載</span>
                   <button onClick={() => handleRevokeShareLink(lk.id)}
                     className="ml-auto text-red-400 hover:text-red-600">撤銷</button>
@@ -1097,7 +1097,7 @@ export default function ReleaseDetail() {
               <span className="text-red-700 text-xs">{sigStatus.message}</span>
             )}
             {(!sigStatus || sigStatus.status === "unsigned") && (
-              <span className="text-gray-500 text-xs">尚未上傳簽章</span>
+              <span className="text-gray-600 text-xs">尚未上傳簽章</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -1227,7 +1227,7 @@ export default function ReleaseDetail() {
               <span className="ml-2 text-xs text-gray-600">Release Policy Gate</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">{gate.passed}/{gate.total} 通過</span>
+              <span className="text-xs text-gray-600">{gate.passed}/{gate.total} 通過</span>
               <span className={`px-3 py-1 rounded-full text-sm font-bold tracking-wide ${gate.overall === "pass" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
                 {gate.overall === "pass" ? <><CheckCircle2 size={16} className="inline mr-1 text-green-600" /> PASS</> : <><XCircle size={16} className="inline mr-1 text-red-600" /> FAIL</>}
               </span>
@@ -1241,7 +1241,7 @@ export default function ReleaseDetail() {
                 </span>
                 <div>
                   <span className={`font-medium ${c.passed ? "text-green-800" : "text-red-800"}`}>{c.label}</span>
-                  <div className="text-gray-500 mt-0.5">{c.detail}</div>
+                  <div className="text-gray-600 mt-0.5">{c.detail}</div>
                 </div>
               </div>
             ))}
@@ -1261,7 +1261,7 @@ export default function ReleaseDetail() {
                 <span className="ml-2 text-xs text-gray-600">NTIA 最低要求（7 項）</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-500">{sbomQuality.passed}/{sbomQuality.total} 通過</span>
+                <span className="text-xs text-gray-600">{sbomQuality.passed}/{sbomQuality.total} 通過</span>
                 <span className={`text-2xl font-bold ${gradeColor}`}>{sbomQuality.grade}</span>
                 <span className={`text-lg font-bold ${gradeColor}`}>{sbomQuality.score}%</span>
               </div>
@@ -1273,7 +1273,7 @@ export default function ReleaseDetail() {
                     {c.passed ? "✓" : "✗"}
                   </span>
                   <div>
-                    <span className={`font-medium ${c.passed ? "text-gray-700" : "text-gray-500"}`}>{c.label}</span>
+                    <span className={`font-medium ${c.passed ? "text-gray-700" : "text-gray-600"}`}>{c.label}</span>
                     <span className="ml-1 text-gray-600">{c.detail}</span>
                   </div>
                 </div>
@@ -1324,7 +1324,7 @@ export default function ReleaseDetail() {
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[360px]" role="table">
               <caption className="sr-only">元件清單</caption>
-              <thead className="bg-gray-50 text-gray-500 text-left">
+              <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
                   <th className="px-4 py-3" scope="col">{t("releaseDetail.components.name")}</th>
                   <th className="px-4 py-3 hidden sm:table-cell" scope="col">{t("releaseDetail.components.version")}</th>
@@ -1338,8 +1338,8 @@ export default function ReleaseDetail() {
                 {components.map((c) => (
                   <tr key={c.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{c.name}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{c.version || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{c.license || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{c.version || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">{c.license || "—"}</td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {c.license_risk && c.license_risk !== "unknown" ? (
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -1421,7 +1421,7 @@ export default function ReleaseDetail() {
                   {t("common.kevFilter")}
                 </label>
                 {suppressedCount > 0 && (
-                  <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
+                  <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
                     <input type="checkbox" checked={showSuppressed} onChange={(e) => setShowSuppressed(e.target.checked)} />
                     {t("common.showSuppressed", { n: suppressedCount })}
                   </label>
@@ -1511,7 +1511,7 @@ export default function ReleaseDetail() {
                         ? <p className="leading-relaxed text-xs">{v.description}</p>
                         : <p className="text-gray-600 italic text-xs">NVD 描述尚未補充，請點「更新 NVD」</p>
                       }
-                      <div className="flex gap-4 flex-wrap text-xs text-gray-500">
+                      <div className="flex gap-4 flex-wrap text-xs text-gray-600">
                         {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
                         {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
                         {v.cvss_v4_score != null && <span><span className="font-medium text-gray-700">CVSS v4：</span>{v.cvss_v4_score}</span>}
@@ -1529,11 +1529,11 @@ export default function ReleaseDetail() {
                           <p className="text-xs font-medium text-gray-600 mb-1">狀態變更紀錄</p>
                           <ol className="space-y-1">
                             {vulnHistory[v.id].map((h) => (
-                              <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
+                              <li key={h.id} className="flex items-start gap-2 text-xs text-gray-600">
                                 <span className="text-gray-300">▸</span>
                                 <span className="font-mono text-gray-600 shrink-0">{formatDateTime(h.changed_at)}</span>
                                 <span>
-                                  <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
+                                  <span className="text-gray-600">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
                                   <span className="mx-1 text-gray-600">→</span>
                                   <span className="font-medium text-gray-700">{STATUS_LABEL[h.to_status] ?? h.to_status}</span>
                                   {h.note && <span className="ml-2 italic text-gray-600">{h.note}</span>}
@@ -1552,7 +1552,7 @@ export default function ReleaseDetail() {
             <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm" role="table">
               <caption className="sr-only">漏洞清單</caption>
-              <thead className="bg-gray-50 text-gray-500 text-left">
+              <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
                   <th className="px-3 py-3 w-8" scope="col">
                     <input
@@ -1646,7 +1646,7 @@ export default function ReleaseDetail() {
                         <span className={`px-2 py-0.5 rounded font-medium ${
                           v.epss_score >= 0.5 ? "bg-red-100 text-red-700" :
                           v.epss_score >= 0.1 ? "bg-orange-100 text-orange-700" :
-                          "bg-gray-100 text-gray-500"
+                          "bg-gray-100 text-gray-600"
                         }`}>
                           {(v.epss_score * 100).toFixed(1)}%
                         </span>
@@ -1675,7 +1675,7 @@ export default function ReleaseDetail() {
                       ) : v.reachability === "test_only" ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-700">僅測試</span>
                       ) : v.reachability === "not_found" ? (
-                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-500">未發現</span>
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">未發現</span>
                       ) : (
                         <span className="text-gray-300 text-xs">—</span>
                       )}
@@ -1703,7 +1703,7 @@ export default function ReleaseDetail() {
                       <td colSpan={9} className="px-6 py-3 text-sm text-gray-700 space-y-2">
                         {v.description && <p className="leading-relaxed">{v.description}</p>}
                         {!v.description && <p className="text-gray-600 italic">NVD 描述尚未補充，請點「更新 NVD」</p>}
-                        <div className="flex gap-6 flex-wrap text-xs text-gray-500">
+                        <div className="flex gap-6 flex-wrap text-xs text-gray-600">
                           {v.cwe && <span><span className="font-medium text-gray-700">CWE：</span>{v.cwe}</span>}
                           {v.cvss_v3_score != null && <span><span className="font-medium text-gray-700">CVSS v3：</span>{v.cvss_v3_score}</span>}
                           {v.cvss_v4_score != null && <span><span className="font-medium text-gray-700">CVSS v4：</span>{v.cvss_v4_score}</span>}
@@ -1731,13 +1731,13 @@ export default function ReleaseDetail() {
                             <p className="text-xs font-medium text-gray-600 mb-1">狀態變更紀錄</p>
                             <ol className="space-y-1">
                               {vulnHistory[v.id].map((h) => (
-                                <li key={h.id} className="flex items-start gap-2 text-xs text-gray-500">
+                                <li key={h.id} className="flex items-start gap-2 text-xs text-gray-600">
                                   <span className="text-gray-300 mt-0.5">▸</span>
                                   <span className="font-mono text-gray-600 shrink-0">
                                     {formatDateTime(h.changed_at)}
                                   </span>
                                   <span>
-                                    <span className="text-gray-500">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
+                                    <span className="text-gray-600">{STATUS_LABEL[h.from_status] ?? h.from_status ?? "—"}</span>
                                     <span className="mx-1 text-gray-600">→</span>
                                     <span className="font-medium text-gray-700">{STATUS_LABEL[h.to_status] ?? h.to_status}</span>
                                     {h.note && <span className="ml-2 italic text-gray-600">{h.note}</span>}
@@ -1827,7 +1827,7 @@ function SuppressButton({ vuln, onUpdate }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`px-2 py-1 text-xs rounded border ${vuln.suppressed ? "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100" : "border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+        className={`px-2 py-1 text-xs rounded border ${vuln.suppressed ? "border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100" : "border-gray-300 text-gray-600 hover:bg-gray-50"}`}
         title={vuln.suppressed ? "管理抑制" : "抑制此漏洞（風險接受）"}
       >
         {vuln.suppressed ? "已抑制" : "抑制"}

@@ -128,7 +128,7 @@ export default function Users() {
           <h2 className="font-semibold text-gray-700">{t("users.add")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">帳號名稱</label>
+              <label className="text-xs text-gray-600 block mb-1">帳號名稱</label>
               <div>
                 <input
                   value={form.username}
@@ -144,7 +144,7 @@ export default function Users() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">初始密碼</label>
+              <label className="text-xs text-gray-600 block mb-1">初始密碼</label>
               <PasswordInput
                 value={form.password}
                 onChange={e => {
@@ -155,14 +155,14 @@ export default function Users() {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Email（選填，密碼重設用）</label>
+              <label className="text-xs text-gray-600 block mb-1">Email（選填，密碼重設用）</label>
               <input type="email" value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 placeholder="user@example.com"
                 className="border border-gray-300 rounded px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">角色</label>
+              <label className="text-xs text-gray-600 block mb-1">角色</label>
               <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}
                 className="border rounded px-3 py-2 w-full text-sm">
                 <option value="viewer">客戶（viewer）</option>
@@ -171,7 +171,7 @@ export default function Users() {
             </div>
             {form.role === "viewer" && (
               <div>
-                <label className="text-xs text-gray-500 block mb-1">綁定組織 *</label>
+                <label className="text-xs text-gray-600 block mb-1">綁定組織 *</label>
                 <select value={form.organization_id} onChange={e => setForm({ ...form, organization_id: e.target.value })}
                   required className="border rounded px-3 py-2 w-full text-sm">
                   <option value="">選擇組織</option>
@@ -182,7 +182,7 @@ export default function Users() {
           </div>
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={() => setShowForm(false)}
-              className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">取消</button>
+              className="text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-100 border">取消</button>
             <button type="submit" disabled={loading}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50">
               {loading ? "建立中..." : "確認建立"}
@@ -253,7 +253,7 @@ export default function Users() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[280px]" role="table">
               <caption className="sr-only">使用者清單</caption>
-              <thead className="bg-gray-50 text-gray-500 text-left">
+              <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
                   <th className="px-4 py-3" scope="col">帳號</th>
                   <th className="px-4 py-3" scope="col">角色</th>
@@ -273,10 +273,10 @@ export default function Users() {
                         {u.role === "admin" ? "管理員" : "客戶"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{u.email || "—"}</td>
-                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">{orgName(u.organization_id)}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{u.email || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">{orgName(u.organization_id)}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
                         {u.is_active ? "啟用" : "停用"}
                       </span>
                     </td>

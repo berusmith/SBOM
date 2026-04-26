@@ -19,7 +19,7 @@ function MaturityBar({ value, max = 5 }) {
       <div className="flex-1 bg-gray-100 rounded-full h-2">
         <div className={`${color} h-2 rounded-full transition-all`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-500 w-6">{value.toFixed(1)}</span>
+      <span className="text-xs text-gray-600 w-6">{value.toFixed(1)}</span>
     </div>
   );
 }
@@ -94,7 +94,7 @@ export default function TISAXAssessments() {
           <h2 className="font-semibold text-gray-700">新增 TISAX 評估</h2>
           {isAdmin && (
             <div>
-              <label className="text-xs text-gray-500 block mb-1">客戶組織</label>
+              <label className="text-xs text-gray-600 block mb-1">客戶組織</label>
               <select value={form.organization_id}
                 onChange={e => setForm({ ...form, organization_id: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full" required>
@@ -105,7 +105,7 @@ export default function TISAXAssessments() {
           )}
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-xs text-gray-500 block mb-1">評估模組</label>
+              <label className="text-xs text-gray-600 block mb-1">評估模組</label>
               <select value={form.module} onChange={e => setForm({ ...form, module: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full">
                 <option value="infosec">資訊安全（41 項）</option>
@@ -114,7 +114,7 @@ export default function TISAXAssessments() {
               </select>
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-500 block mb-1">評估等級</label>
+              <label className="text-xs text-gray-600 block mb-1">評估等級</label>
               <select value={form.assessment_level}
                 onChange={e => setForm({ ...form, assessment_level: e.target.value })}
                 className="border rounded px-3 py-2 text-sm w-full">
@@ -126,7 +126,7 @@ export default function TISAXAssessments() {
           </div>
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={() => setShowForm(false)}
-              className="text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">取消</button>
+              className="text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-100 border">取消</button>
             <button type="submit" disabled={loading}
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? "建立中..." : "確認建立"}
@@ -155,7 +155,7 @@ export default function TISAXAssessments() {
                 className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <span className="text-xs font-medium text-gray-500">
+                    <span className="text-xs font-medium text-gray-600">
                       {MODULE_LABELS[a.module] || a.module}
                     </span>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -174,7 +174,7 @@ export default function TISAXAssessments() {
                 </div>
 
                 <div className="mb-3">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div className="flex justify-between text-xs text-gray-600 mb-1">
                     <span>整體進度</span><span>{progress}%</span>
                   </div>
                   <div className="bg-gray-100 rounded-full h-2">
@@ -189,7 +189,7 @@ export default function TISAXAssessments() {
                   <span className="text-gray-600">— 未評 {unassessed}</span>
                 </div>
                 <div className="mt-3">
-                  <div className="text-xs text-gray-500 mb-1">平均成熟度</div>
+                  <div className="text-xs text-gray-600 mb-1">平均成熟度</div>
                   <MaturityBar value={a.avg_maturity} />
                 </div>
               </div>

@@ -142,7 +142,7 @@ export default function Releases() {
               {loading ? t("common.creating") : t("common.confirm")}
             </button>
             <button type="button" onClick={() => setShowForm(false)}
-              className="flex-1 sm:flex-none text-gray-500 px-4 py-2 rounded text-sm hover:bg-gray-100 border">
+              className="flex-1 sm:flex-none text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-100 border">
               {t("common.cancel")}
             </button>
           </div>
@@ -200,7 +200,7 @@ export default function Releases() {
           <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[280px]" role="table">
             <caption className="sr-only">版本列表</caption>
-            <thead className="bg-gray-50 text-gray-500 text-left">
+            <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
                 <th className="px-4 py-3" scope="col">{t("releases.version")}</th>
                 <th className="px-4 py-3 hidden sm:table-cell" scope="col">{t("common.createdAt")}</th>
@@ -216,7 +216,7 @@ export default function Releases() {
                     {r.version}
                     {r.locked && <Lock size={14} className="inline ml-1.5 text-gray-600" />}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
+                  <td className="px-4 py-3 text-gray-600 hidden sm:table-cell">
                     {formatDate(r.created_at)}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">

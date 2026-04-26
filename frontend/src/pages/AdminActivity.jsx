@@ -139,7 +139,7 @@ export default function AdminActivity() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs">
+              <tr className="bg-gray-50 text-gray-600 text-xs">
                 <th scope="col" className="px-4 py-2 text-left">客戶</th>
                 <th scope="col" className="px-4 py-2 text-right">登入次數</th>
                 <th scope="col" className="px-4 py-2 text-right">SBOM 上傳</th>
@@ -156,7 +156,7 @@ export default function AdminActivity() {
                   <td className="px-4 py-2 text-right text-gray-600">{row.sbom_uploads}</td>
                   <td className="px-4 py-2 text-right text-gray-600 hidden sm:table-cell">{row.vuln_scans}</td>
                   <td className="px-4 py-2 text-right text-gray-600 hidden sm:table-cell">{row.report_downloads}</td>
-                  <td className="px-4 py-2 text-gray-500 text-xs">{fmtDate(row.last_login)}</td>
+                  <td className="px-4 py-2 text-gray-600 text-xs">{fmtDate(row.last_login)}</td>
                 </tr>
               ))}
               {summary.length === 0 && (
@@ -171,7 +171,7 @@ export default function AdminActivity() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">客戶</label>
+            <label className="text-xs text-gray-600">客戶</label>
             <select
               value={filterOrg}
               onChange={e => setFilterOrg(e.target.value)}
@@ -182,7 +182,7 @@ export default function AdminActivity() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">事件類型</label>
+            <label className="text-xs text-gray-600">事件類型</label>
             <select
               value={filterType}
               onChange={e => setFilterType(e.target.value)}
@@ -195,12 +195,12 @@ export default function AdminActivity() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">開始日期</label>
+            <label className="text-xs text-gray-600">開始日期</label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">結束日期</label>
+            <label className="text-xs text-gray-600">結束日期</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="border border-gray-200 rounded px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
@@ -208,7 +208,7 @@ export default function AdminActivity() {
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded disabled:opacity-40">
             {fetching ? "查詢中..." : "套用篩選"}
           </button>
-          <button onClick={handleReset} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 underline">
+          <button onClick={handleReset} className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-700 underline">
             清除
           </button>
           <span className="ml-auto text-xs text-gray-600 self-end">共 {events.length} 筆</span>
@@ -220,7 +220,7 @@ export default function AdminActivity() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs border-b">
+              <tr className="bg-gray-50 text-gray-600 text-xs border-b">
                 <th scope="col" className="px-4 py-2.5 text-left">時間</th>
                 <th scope="col" className="px-4 py-2.5 text-left">使用者</th>
                 <th scope="col" className="px-4 py-2.5 text-left hidden sm:table-cell">客戶</th>
@@ -232,9 +232,9 @@ export default function AdminActivity() {
             <tbody className="divide-y divide-gray-100">
               {events.map(e => (
                 <tr key={e.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-500 text-xs whitespace-nowrap">{fmtDate(e.created_at)}</td>
+                  <td className="px-4 py-2 text-gray-600 text-xs whitespace-nowrap">{fmtDate(e.created_at)}</td>
                   <td className="px-4 py-2 text-gray-700 font-medium">{e.username}</td>
-                  <td className="px-4 py-2 text-gray-500 hidden sm:table-cell">{e.org_name || "—"}</td>
+                  <td className="px-4 py-2 text-gray-600 hidden sm:table-cell">{e.org_name || "—"}</td>
                   <td className="px-4 py-2">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${AUDIT_EVENT_COLOR[e.event_type] || DEFAULT_BADGE}`}>
                       {EVENT_LABELS[e.event_type] || e.event_type}

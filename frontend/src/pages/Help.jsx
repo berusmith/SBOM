@@ -909,7 +909,7 @@ function SearchResults({ query, onSelect }) {
 
   return (
     <div>
-      <div className="text-sm text-gray-500 mb-4">找到 {results.length} 筆結果</div>
+      <div className="text-sm text-gray-600 mb-4">找到 {results.length} 筆結果</div>
       <div className="space-y-4">
         {results.map(({ section, article }) => (
           <div
@@ -919,7 +919,7 @@ function SearchResults({ query, onSelect }) {
           >
             <div className="text-xs text-gray-600 mb-1">{getIconComponent(section.icon, 14)} {section.title}</div>
             <div className="font-semibold text-blue-700">{highlight(article.title, query)}</div>
-            <div className="text-sm text-gray-500 mt-1 line-clamp-2">
+            <div className="text-sm text-gray-600 mt-1 line-clamp-2">
               {highlight(flattenText(article.content).slice(0, 150), query)}…
             </div>
           </div>
@@ -1044,7 +1044,7 @@ export default function Help() {
                 >
                   上一頁
                 </button>
-                <span className="text-xs text-gray-500">{articlePage + 1} / {totalPages}</span>
+                <span className="text-xs text-gray-600">{articlePage + 1} / {totalPages}</span>
                 <button
                   onClick={() => setArticlePage(Math.min(totalPages - 1, articlePage + 1))}
                   disabled={articlePage === totalPages - 1}

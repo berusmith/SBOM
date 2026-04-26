@@ -19,7 +19,7 @@ function PatchBar({ rate }) {
       <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${rate}%` }} />
       </div>
-      <span className="text-xs text-gray-500 w-10 text-right">{rate}%</span>
+      <span className="text-xs text-gray-600 w-10 text-right">{rate}%</span>
     </div>
   );
 }
@@ -99,17 +99,17 @@ export default function RiskOverview() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium w-8">#</th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-600 font-medium w-8">#</th>
                 {SORT_FIELDS.map((f) => (
                   <th scope="col" key={f.key}
                     onClick={() => handleSort(f.key)}
-                    className="px-4 py-3 text-left text-gray-500 font-medium cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
+                    className="px-4 py-3 text-left text-gray-600 font-medium cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
                   >
                     {f.label}<SortIcon field={f.key} />
                   </th>
                 ))}
-                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium whitespace-nowrap">修補率</th>
-                <th scope="col" className="px-4 py-3 text-left text-gray-500 font-medium hidden sm:table-cell">進行中事件</th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-600 font-medium whitespace-nowrap">修補率</th>
+                <th scope="col" className="px-4 py-3 text-left text-gray-600 font-medium hidden sm:table-cell">進行中事件</th>
                 <th scope="col" className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -119,7 +119,7 @@ export default function RiskOverview() {
                   <td className="px-4 py-3 text-gray-600 text-xs">{i + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800">
                     <RiskBadge score={row.risk_score} />
-                    <span className="ml-2 text-gray-500 text-xs">{row.risk_score}</span>
+                    <span className="ml-2 text-gray-600 text-xs">{row.risk_score}</span>
                   </td>
                   <td className="px-4 py-3">
                     {row.unpatched_critical > 0
