@@ -1,4 +1,11 @@
 import { useState } from "react";
+import {
+  SEVERITY_HEX,
+  CHART_AXIS_STROKE,
+  CHART_GRID_STROKE,
+  CHART_TICK_LABEL,
+  CHART_LABEL_HOVER,
+} from "../constants/chart-colors";
 
 export default function TrendChart({ data }) {
   const [hovered, setHovered] = useState(null);
@@ -12,10 +19,10 @@ export default function TrendChart({ data }) {
   const yp = (v) => PT + cH - (v / maxVal) * cH;
 
   const LINES = [
-    { field: "total",    color: "#60a5fa", label: "Total (未解決)", dot: 3 },
-    { field: "critical", color: "#ef4444", label: "Critical",       dot: 2.5 },
-    { field: "high",     color: "#fb923c", label: "High",           dot: 2 },
-    { field: "medium",   color: "#facc15", label: "Medium",         dot: 2 },
+    { field: "total",    color: SEVERITY_HEX.total,    label: "Total (未解決)", dot: 3   },
+    { field: "critical", color: SEVERITY_HEX.critical, label: "Critical",       dot: 2.5 },
+    { field: "high",     color: SEVERITY_HEX.high,     label: "High",           dot: 2   },
+    { field: "medium",   color: SEVERITY_HEX.medium,   label: "Medium",         dot: 2   },
   ];
 
   const yTicks = [0, Math.round(maxVal / 2), maxVal];
@@ -39,15 +46,15 @@ export default function TrendChart({ data }) {
       <div className="relative">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "150px" }}>
           {/* Y gridlines + labels */}
-          <line x1={PL} y1={PT} x2={PL} y2={PT + cH} stroke="#e5e7eb" strokeWidth="1"/>
+          <line x1={PL} y1={PT} x2={PL} y2={PT + cH} stroke={CHART_AXIS_STROKE} strokeWidth="1"/>
           {yTicks.map((v) => (
             <g key={v}>
-              <line x1={PL} y1={yp(v)} x2={W - PR} y2={yp(v)} stroke="#f3f4f6" strokeWidth="1"/>
-              <text x={PL - 4} y={yp(v) + 3} textAnchor="end" fontSize="8" fill="#9ca3af">{v}</text>
+              <line x1={PL} y1={yp(v)} x2={W - PR} y2={yp(v)} stroke={CHART_GRID_STROKE} strokeWidth="1"/>
+              <text x={PL - 4} y={yp(v) + 3} textAnchor="end" fontSize="8" fill={CHART_TICK_LABEL}>{v}</text>
             </g>
           ))}
           {/* X axis */}
-          <line x1={PL} y1={PT + cH} x2={W - PR} y2={PT + cH} stroke="#e5e7eb" strokeWidth="1"/>
+          <line x1={PL} y1={PT + cH} x2={W - PR} y2={PT + cH} stroke={CHART_AXIS_STROKE} strokeWidth="1"/>
           {/* Lines */}
           {LINES.map(({ field, color }) => {
             const pts = data.map((d, i) => `${xp(i)},${yp(d[field] || 0)}`).join(" ");
@@ -58,12 +65,12 @@ export default function TrendChart({ data }) {
             <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} style={{ cursor: "pointer" }}>
               {/* Invisible wide hit area */}
               <rect x={xp(i) - 14} y={PT} width={28} height={cH} fill="transparent"/>
-              {hovered === i && <line x1={xp(i)} y1={PT} x2={xp(i)} y2={PT + cH} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,2"/>}
+              {hovered === i && <line x1={xp(i)} y1={PT} x2={xp(i)} y2={PT + cH} stroke={CHART_AXIS_STROKE} strokeWidth="1" strokeDasharray="3,2"/>}
               {LINES.map(({ field, color, dot }) => (
                 d[field] > 0 && <circle key={field} cx={xp(i)} cy={yp(d[field])} r={hovered === i ? dot + 1 : dot} fill={color}/>
               ))}
-              <circle cx={xp(i)} cy={yp(d.total || 0)} r={hovered === i ? 4 : 3} fill="#60a5fa"/>
-              <text x={xp(i)} y={H - 4} textAnchor="middle" fontSize="7.5" fill={hovered === i ? "#374151" : "#9ca3af"} fontWeight={hovered === i ? "600" : "400"}>
+              <circle cx={xp(i)} cy={yp(d.total || 0)} r={hovered === i ? 4 : 3} fill={SEVERITY_HEX.total}/>
+              <text x={xp(i)} y={H - 4} textAnchor="middle" fontSize="7.5" fill={hovered === i ? CHART_LABEL_HOVER : CHART_TICK_LABEL} fontWeight={hovered === i ? "600" : "400"}>
                 {d.version.length > 8 ? d.version.slice(0, 8) + "…" : d.version}
               </text>
             </g>

@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import {
+  GRAPH_NODE_FILL,
+  GRAPH_NODE_STROKE,
+  GRAPH_NODE_TEXT,
+  GRAPH_EDGE_STROKE,
+} from "../constants/chart-colors";
 
 export function DependencyGraph({ nodes, edges, totalNodes, totalEdges }) {
   const [selected, setSelected] = useState(null);
@@ -73,7 +79,7 @@ export function DependencyGraph({ nodes, edges, totalNodes, totalEdges }) {
             const x1 = s.x + NW, y1 = s.y + NH / 2, x2 = t.x, y2 = t.y + NH / 2;
             const mx = (x1 + x2) / 2;
             return <path key={i} d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-              fill="none" stroke="#d1d5db" strokeWidth="1" />;
+              fill="none" stroke={GRAPH_EDGE_STROKE} strokeWidth="1" />;
           })}
           {/* Nodes */}
           {nodes.map(n => {
@@ -82,20 +88,28 @@ export function DependencyGraph({ nodes, edges, totalNodes, totalEdges }) {
             const isRoot = n.is_root;
             const hasVuln = n.has_vuln;
             const isSel = selected === n.id;
-            const fill = hasVuln ? "#fca5a5" : isRoot ? "#93c5fd" : "#e5e7eb";
-            const stroke = isSel ? "#1d4ed8" : hasVuln ? "#ef4444" : isRoot ? "#3b82f6" : "#9ca3af";
+            const fill = hasVuln
+              ? GRAPH_NODE_FILL.vulnerable
+              : isRoot ? GRAPH_NODE_FILL.root : GRAPH_NODE_FILL.regular;
+            const stroke = isSel
+              ? GRAPH_NODE_STROKE.selected
+              : hasVuln ? GRAPH_NODE_STROKE.vulnerable
+              : isRoot ? GRAPH_NODE_STROKE.root : GRAPH_NODE_STROKE.regular;
+            const textFill = hasVuln
+              ? GRAPH_NODE_TEXT.vulnerable
+              : isRoot ? GRAPH_NODE_TEXT.root : GRAPH_NODE_TEXT.regular;
             const label = n.name.length > 16 ? n.name.slice(0, 15) + "…" : n.name;
             return (
               <g key={n.id} onClick={() => setSelected(isSel ? null : n.id)} style={{ cursor: "pointer" }}>
                 <rect x={p.x} y={p.y} width={NW} height={NH} rx={4}
                   fill={fill} stroke={stroke} strokeWidth={isSel ? 2 : 1} />
                 <text x={p.x + NW / 2} y={p.y + NH / 2 + 1} textAnchor="middle" dominantBaseline="middle"
-                  fontSize="9.5" fill={hasVuln ? "#7f1d1d" : isRoot ? "#1e3a8a" : "#374151"} fontWeight={isRoot ? "600" : "400"}>
+                  fontSize="9.5" fill={textFill} fontWeight={isRoot ? "600" : "400"}>
                   {label}
                 </text>
                 {n.version && (
                   <text x={p.x + NW / 2} y={p.y + NH - 4} textAnchor="middle"
-                    fontSize="7.5" fill="#9ca3af">{n.version.length > 12 ? n.version.slice(0,11)+"…" : n.version}</text>
+                    fontSize="7.5" fill={GRAPH_NODE_TEXT.meta}>{n.version.length > 12 ? n.version.slice(0,11)+"…" : n.version}</text>
                 )}
               </g>
             );
