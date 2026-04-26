@@ -25,7 +25,7 @@ jobs:
     name: pip-audit + bandit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       # SEC-022 — pin python-version at CI level (packaging-level lock
       # via pyproject.toml lands in SEC-022 commit; CI lock is here).
@@ -56,7 +56,7 @@ jobs:
     name: npm audit (frontend)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-node@v4
         with:
@@ -80,7 +80,7 @@ jobs:
     name: gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0    # full history for gitleaks to scan all commits
 
@@ -97,7 +97,7 @@ jobs:
     name: syft self-SBOM + grype
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Generate SBOM with syft
         uses: anchore/sbom-action@v0.17.7
@@ -121,7 +121,7 @@ jobs:
     name: backend test_all.py (54 stdlib tests)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -159,7 +159,7 @@ jobs:
     name: reachability corpus validate + stats
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
