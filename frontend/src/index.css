@@ -42,6 +42,17 @@
   }
 
   /*
+   * UX-008 — Honour iOS safe-area insets so content (especially any
+   * future sticky bottom UI like a tab bar) stays out of the notch /
+   * Home Indicator.  Pairs with viewport-fit=cover in index.html.
+   * On non-notched devices env() resolves to 0 and this is a no-op.
+   */
+  body {
+    padding-left:  env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /*
    * UX-003 / UX-028 — iOS Safari auto-zooms in when a form control
    * with computed font-size < 16px is focused, and does NOT zoom back
    * out automatically.  Force every input/select/textarea on phone-sized
