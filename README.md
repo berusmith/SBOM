@@ -135,8 +135,8 @@ bash deploy/first-deploy.sh
 | `JWT_EXPIRE_HOURS` | `8` | 登入 Token 有效時間（小時） |
 | `ALLOWED_ORIGIN` | `http://localhost:3000` | 對外 origin（單一），CORS / OIDC redirect 用 |
 | `SMTP_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_FROM` / `_TLS` | 空 | Email 通知（可選） |
-| `NVD_API_KEY` | 空 | NVD API Key（無 5 req/30s；有 50 req/30s） |
-| `GITHUB_TOKEN` | 空 | GHSA 查詢 rate limit（無 60/h；有 5000/h） |
+| `NVD_API_KEY` | 空 | NVD API Key（無 5 req/30s；有 50 req/30s）— 申請步驟見 [`docs/api-keys-setup.md`](docs/api-keys-setup.md) |
+| `GITHUB_TOKEN` | 空 | GHSA 查詢 rate limit（無 60/h；有 5000/h）— 申請步驟見 [`docs/api-keys-setup.md`](docs/api-keys-setup.md) |
 | `OIDC_ISSUER` / `_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URI` | 空 | OIDC SSO（留空關閉） |
 | `FRONTEND_URL` | `http://localhost:3000` | 忘記密碼信件用 |
 | `UPLOAD_DIR` | 空 | SBOM 上傳目錄；空 = `<backend>/uploads`，相對路徑會錨定到 backend/ |
@@ -167,12 +167,12 @@ bash deploy/first-deploy.sh
 | 容器映像 → SBOM | `POST /api/releases/{id}/scan-image` | Trivy |
 | IaC（Terraform / K8s / Dockerfile）→ SBOM + misconfig | `POST /api/releases/{id}/scan-iac` | Trivy |
 | 韌體深度解包 | （獨立 firmware scan 流程） | EMBA（GPL-3.0，自選） |
-| Reachability（漏洞函式可達性分析） | `POST /api/releases/{id}/upload-source` | 內建 Python AST |
+| Reachability（漏洞函式可達性分析） | `POST /api/releases/{id}/upload-source` | 內建 Python AST（JS/Java 擴展計畫見 [`.knowledge/decisions/`](.knowledge/decisions/reachability-js-java-issue.md)）|
 
 ### 核心功能
 | 功能 | 說明 |
 |------|------|
-| CVE 掃描 | 透過 OSV.dev API 自動掃描 |
+| CVE 掃描 | 透過 OSV.dev API 自動掃描（v1/querybatch + 並行詳情,200 元件 SBOM 從 ~200 次 HTTP → 1+M 次） |
 | VEX 狀態管理 | open / in_triage / not_affected / affected / fixed |
 | 批次 VEX 更新 | 多選漏洞一次更新狀態 |
 | 重新掃描 | 對現有元件重新查詢最新 CVE |
@@ -271,9 +271,13 @@ User / PolicyRule / BrandConfig / AlertConfig（全域）
 |------|------|
 | [docs/user-manual.md](docs/user-manual.md) | 顧問操作 SOP（8 步驟 + 情境） |
 | [docs/api-reference.md](docs/api-reference.md) | 完整 API 端點參考 |
+| [docs/api-keys-setup.md](docs/api-keys-setup.md) | NVD / GitHub PAT 申請步驟（5–10 分鐘,可選；有 key 後 enrichment 快 10× / 83×）|
+| [docs/architecture.md](docs/architecture.md) | 系統架構（資料模型、服務層、技術棧、設計決策）|
 | [docs/db-schema.md](docs/db-schema.md) | 資料表欄位說明 |
 | [docs/phase2-spec.md](docs/phase2-spec.md) | Phase 2 功能規格 |
 | [deploy/MACMINI_SETUP.md](deploy/MACMINI_SETUP.md) | 生產環境部署指南（Mac Mini + launchd + Homebrew + Postgres + nginx + Trivy + Syft） |
+| [`.knowledge/decisions/reachability-js-java-issue.md`](.knowledge/decisions/reachability-js-java-issue.md) | Wave D sprint #3 規劃：JS/TS + Java reachability 擴展 |
+| [`.knowledge/decisions/reachability-corpus-cve-mapping.md`](.knowledge/decisions/reachability-corpus-cve-mapping.md) | 39-fixture ground-truth corpus 的 CVE→symbol 對照 |
 | [NOTICE.md](NOTICE.md) | 第三方開源元件清單與授權聲明 |
 
 平台內建說明中心：登入後點選導覽列 **說明**，或直接開啟 `http://localhost:3000/help`
@@ -313,5 +317,7 @@ taskkill /PID <PID號碼> /F
 此為 passlib 與新版 bcrypt 的相容性警告，**不影響功能**，可忽略。
 
 **Q: NVD 更新很慢**
-沒有 API Key 時限速 7 秒/次。申請免費 NVD API Key 後填入 `.env`，速度提升 10 倍：
-https://nvd.nist.gov/developers/request-an-api-key
+沒有 API Key 時限速 7 秒/次。完整申請步驟（NVD + GitHub PAT,各約 5 分鐘,免費）見 [`docs/api-keys-setup.md`](docs/api-keys-setup.md)。
+
+**Q: 大型 SBOM 掃描花太久**
+v2.x 已將 OSV 改成 batch + parallel detail fetches —— 200 元件 / 50 唯一漏洞的 SBOM 從 ~200 次 HTTP 降到 1 + 50 次。如果還是慢,通常是 NVD enrichment（無 key 時 5 req/30s）—— 申請 NVD key 後降到原本的 1/10 時間。
