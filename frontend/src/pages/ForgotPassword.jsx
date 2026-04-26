@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
+import { Button } from "../components/Button";
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -51,13 +52,9 @@ export default function ForgotPassword() {
               required
               className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-            >
+            <Button type="submit" loading={loading} fullWidth size="lg">
               {loading ? "送出中..." : "送出重設連結"}
-            </button>
+            </Button>
             <div className="text-center">
               <Link to="/login" className="text-xs text-gray-600 hover:underline">← 返回登入</Link>
             </div>

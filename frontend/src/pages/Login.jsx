@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { PasswordInput } from "../components/PasswordInput";
+import { Button } from "../components/Button";
 import { validate, validators } from "../utils/validate";
 
 export default function Login() {
@@ -132,13 +133,9 @@ export default function Login() {
             />
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-2.5 rounded text-sm text-white font-medium ${loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"}`}
-          >
+          <Button type="submit" loading={loading} fullWidth size="lg">
             {loading ? t("login.loggingIn") : t("login.submit")}
-          </button>
+          </Button>
           <div className="text-right mt-2">
             <Link to="/forgot-password" className="text-xs text-gray-700 hover:text-blue-600 hover:underline">
               {t("login.forgotPassword")}
@@ -156,16 +153,20 @@ export default function Login() {
                 <span className="bg-white px-2">{t("login.orDivider")}</span>
               </div>
             </div>
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
+              fullWidth
               onClick={handleSsoLogin}
-              className="w-full py-2.5 rounded text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+              icon={
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              }
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
               {t("login.ssoButton")}
-            </button>
+            </Button>
           </>
         )}
       </div>

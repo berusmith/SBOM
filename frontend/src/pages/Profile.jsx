@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
+import { Button } from "../components/Button";
 import { pickErrorDetail } from "../utils/errors";
 
 export default function Profile() {
@@ -101,12 +102,12 @@ export default function Profile() {
               <input id={emailId} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 className="flex-1 border border-gray-300 rounded px-3 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
-              <button onClick={handleEmailSave} disabled={emailSaving}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50">
+              <Button onClick={handleEmailSave} loading={emailSaving} size="sm">
                 {emailSaving ? `${t("common.save")}...` : t("common.save")}
-              </button>
-              <button onClick={() => setEmailEditing(false)}
-                className="px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-50">{t("common.cancel")}</button>
+              </Button>
+              <Button onClick={() => setEmailEditing(false)} variant="secondary" size="sm">
+                {t("common.cancel")}
+              </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -137,10 +138,9 @@ export default function Profile() {
             <input id={confirmPwId} type="password" autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} required
               className="border border-gray-300 rounded px-3 py-2 w-full text-base focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 text-white px-4 py-2.5 rounded text-sm hover:bg-blue-700 disabled:opacity-50 mt-1 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1">
+          <Button type="submit" loading={loading} fullWidth size="lg" className="mt-1">
             {loading ? t("profile.updating") : t("profile.updatePassword")}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -148,10 +148,9 @@ export default function Profile() {
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-700 mb-2">{t("profile.logoutTitle")}</h2>
         <p className="text-xs text-gray-700 mb-3">{t("profile.logoutHint")}</p>
-        <button onClick={handleLogout}
-          className="px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded text-sm hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1">
+        <Button onClick={handleLogout} variant="danger" size="md">
           {t("profile.logoutAction")}
-        </button>
+        </Button>
       </div>
     </div>
   );
