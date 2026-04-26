@@ -47,6 +47,29 @@
   - 預期 sprint #3 完成後 baseline 變化:13 reachable 全 PASS / ~12 unreachable 全 PASS(現在會是 FP)/ 2 unknown_acceptable 全 PASS(現在 SKIP)
 - **下一步**:Phase 3 寫 13 個 Java fixture(13 = 5 reachable + 6 unreachable + 1 test_only + 1 framework_mechanism),完成後 corpus 達 39 個,Wave D sprint 可正式啟動
 
+### 文件 / 測試(Reachability Fixture Corpus — Phase 3:Java 13 fixtures,corpus 完成 ✅)
+- **13 個 Java fixture**(`backend/tests/fixtures/reachability/java/`,Maven `src/main/java/` + `src/test/java/` 慣例):
+  - V1/V2/V3:CVE-2021-44228 Log4Shell — Service class reachable / static literal not_found / bare main reachable(rev 2 split,從 Spring 拆出純 main 的版本,診斷時可分辨「symbol resolution 壞」vs「framework 偵測壞」)
+  - V4/V5:CVE-2022-22965 Spring4Shell — `@RestController` + `@ModelAttribute` reachable / `@Service` 但無 controller not_found
+  - V6/V7:CVE-2022-42889 Text4Shell — `StringSubstitutor.replace` reachable / 只用 `StringEscapeUtils.escapeHtml4` not_found
+  - V8/V9:Java 兩種 import 邊角 — static import(`import static log4j.LogManager.getLogger`)/ wildcard import(`import org.apache.logging.log4j.*`)
+  - V10:JAX-RS framework_mechanism(`@Path` + `@GET` 但 body 只呼叫 `String.toUpperCase()`)— rev 2 拆出來的純框架測試
+  - V11:`transitive_only: true` 第一個範例 — log4j-core 在 pom.xml 但**整個 src/ 沒有任何 import**(典型「transitive 拉進來忘了 exclude」)
+  - V12:Spring DI dead bean —— vulnerable `@Component` POJO 存在但無 `@Autowired` / `@ModelAttribute` 路徑(最深的靜態分析挑戰,需要 DI graph 走訪)
+  - V13:commons-text test_only — production 只用 `StringEscapeUtils`,`StringSubstitutor.replace` 只在 `src/test/java/` 出現
+- **Corpus 完成總計:39 fixtures**(等於規劃 cap)
+  - Python: 10 / JavaScript: 15 / TypeScript: 1 / Java: 13
+  - Tracks: 35 cve_reachability + 4 framework_mechanism(JSX + 2 honesty + JAX-RS)
+  - FP/FN baseline: 20 reachable / 19 unreachable(完美對稱,supports 0.5 FP rate as ROC inflection point)
+- **目前 baseline**(現有 Python analyzer 對 39 個 fixture):
+  - 5 PASS / 5 FP / 0 FN / 29 SKIP
+  - 5 FP 全部源自 Python 的 package-level 限制(無法分辨 `yaml.load` vs `yaml.safe_load` 等)
+  - 29 SKIP 全部是 JS / TS / Java(analyzer 不支援,這正是 Wave D sprint #3 要做的事)
+- **Wave D sprint kickoff 條件達成** — 任何 sprint #3 PR 在 merge 前須:
+  1. `python backend/tests/fixtures/reachability/_tools/validate_meta.py` exit 0
+  2. `python backend/tests/fixtures/reachability/_runner/run_corpus.py` 顯示 sprint #3 改完後 FP / FN 趨近於 0
+  3. 39 個 fixture 中,unknown_acceptable 的 J15 / J16 必須輸出 `unknown` 而非 reachable / not_found(誠實認輸 = 通過)
+
 ### 效能(OSV 掃描重寫:per-PURL → 批次 + 唯一漏洞詳情並行)
 - `vuln_scanner.scan_components()` 從 N 次 `/v1/query`(每 PURL 一次)改成兩階段:
   - **Phase 1**:`POST /v1/querybatch`,一次最多 1000 個 PURL,只回 `{id, modified}` 輕量 stub

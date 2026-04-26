@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-42889
+ghsa_id: GHSA-599f-7c49-w659
+package: org.apache.commons:commons-text
+import_names: [org.apache.commons.text]
+ecosystem: maven
+affected_versions: ">=1.5,<1.10.0"
+language: java
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.commons.text.StringSubstitutor.replace
+notes: |
+  commons-text imported but only the safe surface used —
+  StringEscapeUtils (HTML/XML/JSON escapers) and WordUtils
+  (capitalisation helpers).  StringSubstitutor is never
+  instantiated, so the prefix-evaluation attack surface doesn't
+  exist in this app.

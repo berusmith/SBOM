@@ -1,0 +1,21 @@
+fixture_type: framework_mechanism
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+import_names: [javax.ws.rs]
+notes: |
+  Framework-mechanism test (no real CVE — exercises JAX-RS
+  entrypoint detection).
+
+  A `@Path("/x") @GET` annotated method becomes an HTTP entry
+  point at runtime.  Body is intentionally benign
+  (String.toUpperCase()) to isolate the framework-recognition
+  test from any CVE symbol resolution.
+
+  Reported in the framework_mechanism scorer track.  If V3
+  (bare main + Log4Shell) passes but V10 fails, the bug is in
+  JAX-RS annotation recognition, not symbol resolution.
+
+  Rev 2 split: was originally fused with Log4Shell as
+  V10-old; separated for diagnostic isolation.

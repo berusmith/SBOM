@@ -1,0 +1,27 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+  - org.apache.logging.log4j.Logger.info
+notes: |
+  log4j-core IS imported and Logger.error / Logger.info ARE called,
+  but only with compile-time string literals — no user data flows
+  into the message.  JNDI lookup substitution still happens, but
+  there's nothing controllable by an attacker, so practical
+  reachability is none.
+
+  This is the harder symbol-level test: it's not about whether
+  Logger.error is called at all (it is), but whether the *argument*
+  is taintable.  Sprint #3 might choose to leave this as
+  "function_reachable" (over-approximation) or do basic taint
+  analysis to downgrade.  Either policy is defensible — the fixture
+  documents the boundary.

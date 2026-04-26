@@ -1,0 +1,27 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-22965
+ghsa_id: GHSA-36p3-wjmg-h94x
+package: org.springframework:spring-beans
+import_names: [org.springframework.beans, org.springframework.stereotype, org.springframework.web]
+ecosystem: maven
+affected_versions: ">=5.3.0,<5.3.18 || >=5.2.0,<5.2.20"
+language: java
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - org.springframework.beans.PropertyAccessor
+  - org.springframework.beans.BeanWrapperImpl
+notes: |
+  DI dead-code edge — a `@Component` bean exists with the
+  vulnerable POJO data-binding signature, but **no controller**
+  ever `@Autowired`s it or exposes it via an HTTP endpoint.  The
+  bean is created by Spring at startup but nothing routes user
+  input to it, so Spring4Shell cannot fire.
+
+  This is the deepest static-analysis case — ideally requires
+  full DI graph construction (find every @Autowired path, check
+  which are reachable from controllers).  Sprint #3 might
+  reasonably mark this as `function_reachable` (over-approximation
+  on @Component presence) and document the limitation; this
+  fixture quantifies that policy choice.

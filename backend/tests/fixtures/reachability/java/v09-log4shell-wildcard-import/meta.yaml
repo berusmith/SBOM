@@ -1,0 +1,21 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+notes: |
+  Wildcard import edge — `import org.apache.logging.log4j.*`
+  brings every public type from the package into scope.  Subsequent
+  references like `LogManager.getLogger(...)` and `Logger logger`
+  are unqualified.  Analyzer must resolve `LogManager` and `Logger`
+  to FQNs by checking the wildcard imports in scope.
+
+  Common Java idiom in older codebases / quick prototypes.

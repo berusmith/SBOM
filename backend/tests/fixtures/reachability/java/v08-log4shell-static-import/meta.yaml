@@ -1,0 +1,23 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+notes: |
+  Static import edge — `import static
+  org.apache.logging.log4j.LogManager.getLogger;` brings the
+  getLogger() method directly into scope.  Subsequent call site
+  reads as `getLogger(Foo.class).error(...)` with no `LogManager.`
+  qualifier.  Analyzer must follow the static import to resolve
+  `getLogger` back to LogManager.getLogger.
+
+  Common in test code (assertEquals etc.) but rarer in production
+  Logger setup — still occurs in idiomatic JUnit 5 / AssertJ codebases.

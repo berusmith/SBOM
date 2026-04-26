@@ -1,0 +1,23 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: false
+expected_label: not_found
+transitive_only: true
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+notes: |
+  log4j-core is on the classpath via pom.xml but **no source file
+  in the project imports `org.apache.logging.log4j.*`** — typically
+  pulled in transitively by another dep that someone forgot to
+  exclude.  Without an import there's no Logger instance, so the
+  JNDI lookup path cannot fire from this app.
+
+  This is the canonical "transitive_only=true" case.  Distinct
+  from V2 (imports + uses with literal arg) and V5 (imports auth
+  but no controller) — V11 has zero source-level use.

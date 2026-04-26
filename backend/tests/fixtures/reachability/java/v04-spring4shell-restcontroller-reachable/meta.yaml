@@ -1,0 +1,28 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-22965
+ghsa_id: GHSA-36p3-wjmg-h94x
+package: org.springframework:spring-beans
+import_names: [org.springframework.web, org.springframework.beans]
+ecosystem: maven
+affected_versions: ">=5.3.0,<5.3.18 || >=5.2.0,<5.2.20"
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - org.springframework.beans.PropertyAccessor
+  - org.springframework.beans.BeanWrapperImpl
+notes: |
+  Spring4Shell — data binding from request parameters into a POJO
+  (`@ModelAttribute UserDto`) walks `class.module.classLoader.*`
+  property paths, allowing attacker to write arbitrary properties
+  on objects reachable via reflection (e.g. Tomcat AccessLogValve).
+  Trigger requires:
+    1. A controller method (@RequestMapping / @PostMapping / etc.)
+    2. The handler binds a non-record POJO via @ModelAttribute or
+       implicit binding from form/query params
+    3. JDK 9+ + Tomcat exposing accessible class.module path
+
+  Fixture covers (1)+(2); analyzer must recognise BOTH the
+  @RestController + @PostMapping route AND the @ModelAttribute
+  binding pattern as the reachability signal.

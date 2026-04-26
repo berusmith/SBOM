@@ -1,0 +1,25 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+notes: |
+  Pure Log4Shell with no framework wiring — bare main(String[] args)
+  logs args[0] which is the most direct possible attacker-controlled
+  taint path.  By design this fixture isolates symbol resolution
+  (LogManager.getLogger → Logger.error) from any framework / DI /
+  route detection logic.
+
+  If V3 fails but V1 (service class) passes, the bug is in basic
+  symbol resolution.  If V3 passes but V4 (Spring controller) fails,
+  the bug is in route-handler entrypoint detection.  Diagnostic
+  isolation by design (rev 2 split from the original dual-purpose
+  Spring+Log4Shell V3).

