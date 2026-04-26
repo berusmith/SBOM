@@ -393,23 +393,26 @@ GOAL: Become admin by exploiting OIDC flow
 
 ## 7. Risk Heatmap
 
+**Axis change per amendment**:Y = severity (dual);X = **exploitation_complexity** (trivial / low / medium / high) NOT likelihood. Reason:LAN-only context makes likelihood = Low for everything → heatmap collapses. Exploitation complexity is deployment-mode-invariant, so the same plot works for both LAN and commercialised contexts (only severity dimension shifts).
+
 ```
-Risk = Severity × Likelihood (5-point each, qualitative)
+Y = severity                     X = exploitation_complexity
+                                     trivial(T) / low(L) / medium(M) / high(H)
 
 severity_lan_only:                    severity_if_public:
-                                      
-  5│      ─────                          5│  ─── TLT-1
-  4│  TLT-1                              4│  TLT-2 TLT-12 TLT-3
-  3│  TLT-2 TLT-12 TLT-4 TLT-15          3│  TLT-4 TLT-5 TLT-15 TLT-17 TLT-19
-  2│  TLT-5 TLT-8 TLT-10 TLT-14 TLT-17   2│  TLT-6 TLT-7 TLT-8 TLT-13 TLT-18
-  1│  TLT-3 TLT-6 TLT-7 TLT-9 TLT-11     1│  TLT-9 TLT-11 TLT-14 TLT-16
-  0│  TLT-13 TLT-16 TLT-18 TLT-19        
-   └──────────────────────────────       └──────────────────────────────
-       1   2   3   4   5                    1   2   3   4   5
-                Likelihood                            Likelihood
+
+  Crit│            ─                      Crit│  T:TLT-1
+  High│  T:TLT-1                          High│  T:TLT-2 TLT-12  L:TLT-3 TLT-17
+   Med│  T:TLT-2 TLT-12  L:TLT-4           Med│  L:TLT-4 TLT-5 TLT-8 TLT-15  M:TLT-19
+        L:TLT-5 TLT-8 TLT-10 TLT-14         Med│  L:TLT-6 TLT-7  M:TLT-13 TLT-18
+   Low│  T:TLT-3  L:TLT-6 TLT-7 TLT-9     Low│  L:TLT-9 TLT-11 TLT-14 TLT-16 TLT-21
+        TLT-11 TLT-21
+  Info│  TLT-13 TLT-16 TLT-18 TLT-19      Info│  (none)
+       └────────────────────                  └────────────────────
+        T   L   M   H                           T   L   M   H
 ```
 
-(Loose qualitative placement; Phase 3 will add CVSS to each.)
+Phase 3 will add precise CVSS 3.1 to each finding (not just TLT). Heatmap rebuilt in Phase 4 using actual finding population, not just TLT bucket guesses.
 
 ---
 
@@ -447,11 +450,13 @@ severity_lan_only:                    severity_if_public:
 
 | field                     | value |
 |---------------------------|-------|
-| finding_id                | SEC-NNN  (or CR/SUP/SDLC/MISC-NNN — same numbering namespace per series) |
-| traceability              | TLT-X, attack-tree-N, abuse-case-N (back-link to Phase 2 — required) |
-| status                    | open \| confirmed \| confirmed-N/A \| wont-fix \| deferred |
+| finding_id                | SEC-NNN  (or CR/SUP/SDLC/MISC-NNN — same numbering namespace per series; sub-findings use lowercase suffix: SEC-001a/b/c/d) |
+| traceability              | TLT-X (top-level threat); attack-tree-N.path-A/B/C.leaf-N (specific tree leaf, not just tree); abuse-case ABU-N |
+| status                    | open \| confirmed \| confirmed-N/A \| wont-fix \| **wont-fix-accepted-risk** \| deferred |
 | discovered_phase          | 1 \| 2 \| 3 \| 5-verify |
-| verification_method       | static \| dynamic-poc \| manual-review \| heuristic |
+| verification_method       | static \| dynamic-poc \| manual-review \| heuristic \| static+heuristic-validated |
+| **first_observed_commit** | git SHA at which the finding code is first present (use `git log -L` or `git log -S "..." --reverse`); **null** = pre-Phase-3 commit unknown but at least HEAD |
+| **exploitation_complexity** | trivial \| low \| medium \| high (replaces CVSS Attack Complexity for prioritisation; X-axis of risk heatmap so it stays meaningful in LAN-only context) |
 | severity_lan_only         | Critical \| High \| Medium \| Low \| Info |
 | severity_if_public        | Critical \| High \| Medium \| Low \| Info |
 | blocks_commercialization  | true \| false \| partial |
@@ -495,31 +500,54 @@ compliance_impact:
 **Likelihood**:
 （可達性與利用難度;低/中/高與 attacker profile 一致）
 
-**Recommendation**:
-（具體修法 + 替代方案 + 參考資料連結;優先列「不引入新 dep」的方案）
+**Recommendation**(4-layer structure per Phase 3 review amendment;標籤改 NIST CSF spelling):
 
-**Patch Sketch**:
+#### primary_remediation(修這條才算修掉)
+（具體修法 + 替代方案 + 參考資料連結;優先列「不引入新 dep」的方案）
+- effort:S / M / L
+- risk_of_fix:可能波及哪些功能 + rollback strategy
+
+#### defense_in_depth(縱深防禦,額外層級)
+（描述,例如:lint rule、test 套件、DB 層 RLS 等)
+- effort:S / M / L
+- risk_of_fix:同上
+
+#### compensating_control(修不了時的緩解;單獨列出讓 sprint 排序時可選擇先綁這個)
+（描述,例如:hotfix mark require_admin 直接擋掉非 admin)
+- effort:S / M / L
+- risk_of_fix:同上
+
+#### monitoring_detection(修完後長期偵測,確認沒 regression;商業化做 SOC 2 Type II 必問)
+（描述,例如:結構化 log + alert rule;dashboards;periodic re-test)
+- effort:S / M / L
+- risk_of_fix:同上(通常 Low,純 observability 不動 prod 行為)
+
+**Patch Sketch**(對應 primary_remediation):
 ```diff
 - old code
 + new code
 ```
 
-**Effort**:S / M / L  (S=<1h, M=1-4h, L=>4h)
-**Risk of Fix**:可能波及哪些功能 + rollback strategy
-
 **References**:
 - CWE-XX
 - OWASP Cheat Sheet URL
 - relevant CVE / RFC
-- SOC 2 / ISO 27001 / GDPR / IEC 62443 control text(per compliance_impact entries）
+- SOC 2 / ISO 27001 / GDPR / IEC 62443 control text(per compliance_impact entries)
+- NIST SP 800-53 / NIST CSF 控制項對應(若 monitoring_detection 涉及)
 ```
 
-### Schema design notes(why these 5 new columns matter)
-- **finding_id**:標題已含,但獨立成欄 = 機讀;Phase 4 risk heatmap 必要 key
-- **status**:Q1/Q4 已有 confirmed-N/A 概念但未進 schema;Phase 5 修補後 status 變,沒這欄要重寫整 finding
+### Schema design notes(why these 7 columns matter)
+
+**Original 5 (Phase 2 amendment)**:
+- **finding_id**:標題已含,但獨立成欄 = 機讀;Phase 4 risk heatmap 必要 key;sub-findings 用 `001a/b/c/d` suffix
+- **status**:Phase 5 修補後 status 變,沒這欄要重寫整 finding;`wont-fix-accepted-risk` 跟 `wont-fix` 區分(前者有人簽字接受,後者單純技術上不修)
 - **discovered_phase**:商業化 due-diligence 客戶會問「程式碼讀的還是動態打的」,有這欄一目了然
-- **verification_method**:`heuristic` finding 信號強度比 `dynamic-poc` 差兩個量級;客戶 / 自審時必須分得開
-- **traceability**:STRIDE 與 finding 沒接起來就白做了;Phase 4 報告才能講「20 條 TLT 推導出 N 個 finding,涵蓋 X/21」
+- **verification_method**:`heuristic` 信號強度比 `dynamic-poc` 差兩個量級;客戶 / 自審時必須分得開
+- **traceability**:STRIDE 與 finding 沒接起來就白做了;**反向連到 attack-tree leaf 而非整棵樹**,Phase 4 才能畫出「這棵 attack tree 的這個分支已被 SEC-001a 阻斷」
+
+**Added in Phase 3 review amendment**:
+- **first_observed_commit**:GDPR breach notification 計時的依據(暴露窗口 = first_observed → patched);也用於 IEC 62443-4-1 SM-9 process improvement(「當時 review 是誰、流程哪裡漏了」)
+- **exploitation_complexity**:CVSS 的 Attack Complexity 太粗;trivial/low/medium/high 跟部署模式無關,商業化重評時 X 軸座標不會跑掉(替代 likelihood 當 risk heatmap 的 X 軸)
 
 ### compliance_impact 從 string 改成 yaml list-of-tags 的理由
 原版 `SOC 2 CC?.?` 占位語法易留未填空 finding。改成結構化:
@@ -531,11 +559,29 @@ compliance_impact:
 ```
 商業化前 gap analysis 直接 `yaml.load` 後 `groupby framework`,不用 regex parse 字串。
 
-### Phase 3 第一個 finding 的特殊 gating(per amendment)
-1. 第一個 finding 寫完先給 user review,確認 schema 在實戰中沒漏欄位
-2. 7 個 0-assert 檔案合成 **一條 multi-tenant umbrella finding** + sub-evidence per file,**不**逐檔開 7 個 finding(避免 heuristic false-positive 直接變 7 個 P1)
-3. `stats.py` 的 19 處先做 **dynamic PoC**:兩個 org 各塞一筆資料 + 用 org A token 打 stats endpoint,看回傳是 1 還是 2;回 2 = High severity confirmed
-4. 寫完暫停 → schema 落地版定案 → 才批量寫剩 20 條 TLT 的 finding
+### Phase 3 first finding gating (revised by Phase 3 review amendment)
+
+Round 1 (umbrella SEC-001 attempt) revealed 4 of the 7 zero-`_assert` files are confirmed leaks (not heuristic false positives) — bundling them as one finding obscures CVSS / compliance / fix-commit granularity. **Switched to split structure.**
+
+Revised structure:
+1. **SEC-001(parent)** — RCA only(why this pattern systemically appeared)+ pointer to systemic remediation(SDLC-001 architectural finding 引入 mandatory `@require_release_ownership` decorator);沒有獨立 severity / CVSS
+2. **SEC-001a** — `licenses.py /violations/summary` unauthenticated cross-tenant disclosure
+3. **SEC-001b** — `licenses.py /releases/{id}/violations` IDOR
+4. **SEC-001c** — `policies.py /violations/summary` unauthenticated cross-tenant disclosure
+5. **SEC-001d** — `policies.py /releases/{id}/violations` IDOR
+6. **SDLC-001** — architectural:lacks mandatory release-ownership middleware,系統性必然漏掉
+
+PoC policy:
+- **PoC1 stats.py confirm-N/A**:**SKIP**(static analysis 信號夠強,跑 PoC ROI 低;商業化前正式 audit report 時補)
+- **PoC2 licenses/policies leak**:**MUST run before Phase 5**;evidence 寫進 SEC-001a/b/c/d,Phase 5 修完同樣 PoC 跑第二次當 regression test
+
+PoC infra:
+- 腳本位置:`.knowledge/audit/poc/SEC-001*.py`(**不**進 backend test suite,避免 CI 誤跑、避免 packaging 進 production wheel)
+- Evidence:`.knowledge/audit/evidence/2026-04-26/SEC-001*.md`(redacted command + response excerpt + 截圖路徑)
+- Header warning:`"DO NOT RUN against production. Requires test orgs."`
+
+Schema review gate:
+**SEC-001a 寫完(含 PoC2 跑完的 evidence)**先給 user review,確認新 schema(2 新欄 + 改 status enum + traceability 細化)+ sub-finding 結構在實戰中對齊。**才批量寫剩 20 條 TLT 的 finding**。
 
 ---
 
