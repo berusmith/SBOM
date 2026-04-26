@@ -6,6 +6,39 @@
 
 ## [Unreleased]
 
+### 變更(UI/UX/RWD 系統性審視 — Wave A + B + C 全部完成)
+完整 6 階段 audit:Discovery → Audit(7 維度)→ Findings(36 項,P0=0/P1=12/P2=15/P3=9)→ Plan → Implementation(19 commits,每 issue 一 commit)→ Verification。詳細追蹤見 `audit-report.md` + `plan.md`。
+
+- **Wave A — 基礎(設計 token + 動效偏好 + focus 行為)**(1 commit)
+  - `frontend/tailwind.config.js` 新增語意 token:colors(surface/fg/brand/danger 系列)、fontSize(modular 1.2 比例,caption~h1)、zIndex(base/raised/dropdown/sticky/modal/toast/tooltip)、transitionDuration(instant/fast/base/slow)、maxWidth(page/form/prose);取代散落於各檔的 raw `bg-blue-600` / `z-50` 等魔術值
+  - `index.css` 新增 `@media (prefers-reduced-motion: reduce)` 覆蓋所有 `animation-duration` → 1ms(尊重作業系統「減少動態效果」設定);`:focus-visible` 顯示 ring,`:focus:not(:focus-visible)` 取消 ring(滑鼠點擊不再殘留藍色光環)
+  - `body` 套 `env(safe-area-inset-*)` 防 iPhone 瀏海擋住內容
+  - mobile-only `input/select/textarea { font-size: 16px }` 防 iOS Safari 對焦時自動縮放(< 16px 會觸發)
+- **Wave B — 8 項 a11y quick wins**(8 commits)
+  - **UX-001**`<html lang>` 隨 i18n.changeLanguage 同步(`zh-Hant` ↔ `en`),語音閱讀器選對發音引擎
+  - **UX-003**`<meta viewport>` 加 `viewport-fit=cover` + `theme-color`,iPhone 安全區域可控
+  - **UX-008**Skeleton 加 `role="status" aria-busy aria-live="polite"` + sr-only "Loading..." 標籤(語言依 `<html lang>` 切換 EN/ZH)
+  - **UX-013**Modal close + Toast dismiss 的 `aria-label` 從 hardcoded "Close" / "Dismiss" 改 i18n key(`common.close` / `common.dismiss`)
+  - **UX-014**Modal/Toast 從 `z-50` 改 `z-modal` / `z-toast` token,層疊次序明確
+  - **UX-020**`PageLoading` 文案讀 `<html lang>` 而非 localStorage(SSO 回流時 localStorage 還沒寫入)
+  - **UX-021**Mobile hamburger menu 抽取 `useFocusTrap` hook(與 Modal 共用):open 時 trap Tab、Esc 關閉、body scroll lock、close 時還焦點到 hamburger 按鈕
+  - **UX-024**新增 `favicon.svg`(brand 色盾牌 + checkmark),分頁標籤不再顯示 Vite 預設 logo
+- **Wave C — 10 項深度 a11y / consistency / 元件化**(9 commits)
+  - **UX-002**所有 `<th>` 加 `scope="col"`(86 處 / 12 個頁面,Python 正則批次):螢幕閱讀器列表格時能讀出欄名
+  - **UX-006**`text-gray-500` → `text-gray-600` 共 137 處(WCAG AA 1.4.3 contrast):`text-gray-500` 在白底僅 4.0:1 < 4.5:1 標準;`text-gray-100` 背景上的 badge 保留 gray-500(背景非白,對比足夠)
+  - **UX-007**Dashboard top-risky-components 表的 `<tr onClick={navigate}>` 改成 `<Link>`(鍵盤可到、Right-Click 可開新分頁、scope="col" 補齊);TISAXDetail 的 disclosure `<div onClick>` 改 `<button aria-expanded>`
+  - **UX-009**Mobile nav 觸控目標 ≥ 44×44 px(Apple HIG):links `py-2.5` → `py-3`,語言切換 `min-w-[44px]`
+  - **UX-011**SVG 顏色十六進制提取到 `constants/chart-colors.js`(SEVERITY_HEX / GRAPH_NODE_FILL / CHART_AXIS_STROKE 等):TrendChart + DependencyGraph 不再 hardcoded `#fca5a5` / `#d1d5db`
+  - **UX-012**Layout 內 emoji glyph(🔒 / ⌕)改 lucide icon(`<Lock>` / `<Search>`)+ `aria-hidden`:跨平台字形一致(Windows / macOS / Linux 不再各畫一套表情符)
+  - **UX-015**Modal/Toast/Tooltip z-index 改 token(同 UX-014,Wave A 的 token 化現在實際採用)
+  - **UX-017**新增 `Button` component(`variant=primary|secondary|danger|ghost` × `size=sm|md|lg`、`loading` 自動 spinner + aria-busy + 防雙擊、`focus-visible` 才出 ring、`type="button"` 預設不誤觸 form submit);Login + Profile + ForgotPassword + ResetPassword 共 8 個 CTA 改用
+  - **UX-019**所有 `<label>` 透過 `useId` 配 `htmlFor` ↔ `id`(10 個頁面,共 ~30 個欄位):VoiceOver/NVDA 對焦不再讀出「edit text, blank」,點 label 也能聚焦欄位;password 欄位順手補 `autoComplete="current-password|new-password"`
+- **驗證**:
+  - 每個 commit 後 `npm run build` 通過(最終 index 302.48 kB / gzip 102.34 kB,比起點 +6.5 kB / +2.3 kB gzip,主要來自 Button 元件 + useId hooks)
+  - 靜態回歸檢查:`grep "z-50"` = 0、`grep "<th"` 無漏掉 `scope="col"`、`grep "text-gray-500"` 僅剩 3 處(全在 `bg-gray-100` badge 中,對比足夠)
+  - components/ 內 SVG 已無 hardcoded hex literal
+- **延後到後續 roadmap(Wave D)**:ReleaseDetail.jsx 約 20 個 form htmlFor 配對(檔案最大、含多個條件子 modal,需獨立 commit pass);Button 元件對其餘 ~70 處 `<button>` 的全面採用(增量遷移較安全);UX-022/026/031..036 等 P3 細節
+
 ### 變更(License 簡化 — 路線 B 全部完成,runtime 0 LGPL)
 - **PDF 生成:`fpdf2` (LGPL-3.0) → `reportlab` (BSD-3-Clause) via shim**
   - 新檔 `backend/app/services/pdf_shim.py`(~470 行):fpdf2-相容 API 在 reportlab Canvas 之上,翻譯坐標系(fpdf2 Y-down → reportlab Y-up)、處理 footer/header 不再觸發無限遞迴 page-break、支援 set_xy/get_x/rect/line/image/cell/multi_cell/add_font 等所有現用 API
