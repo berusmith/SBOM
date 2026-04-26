@@ -1,0 +1,18 @@
+fixture_type: cve_reachability
+cve_id: CVE-2020-1747
+ghsa_id: GHSA-8q59-q68h-6hv4
+package: pyyaml
+import_names: [yaml]
+ecosystem: pypi
+affected_versions: ">=0,<5.3.1"
+language: python
+expected_reachable: false
+expected_label: test_only
+transitive_only: false
+vulnerable_symbols:
+  - yaml.load
+notes: |
+  Production code (src/main.py) imports yaml only for safe_load.
+  Test code (tests/test_loader.py) calls the vulnerable yaml.load
+  to exercise an old fixture format.  Test-path filtering must
+  classify pyyaml use as test_only, not reachable.

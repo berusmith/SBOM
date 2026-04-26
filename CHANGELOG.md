@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+### 文件 / 測試(Reachability Fixture Corpus — Phase 1:Python 10 fixtures + 工具鏈)
+完整 ground-truth corpus 規劃見 `.knowledge/decisions/reachability-corpus-cve-mapping.md`(rev 2,39 fixture 全清單)。本 commit 落實 Phase 1:Python 10 個 fixture(P1–P10)+ schema/validator/stats/runner 工具鏈,作為 Wave D sprint #3(JS/Java reachability)的 acceptance ground truth。
+
+- **Schema + 工具**(`backend/tests/fixtures/reachability/`):
+  - `_schema/meta.schema.yaml`:human-readable schema spec(field/enum/cross-field 規則)
+  - `_tools/validate_meta.py`:純 stdlib + PyYAML(無新 dep);ASCII-safe 輸出(Windows cp950)
+  - `_tools/corpus_stats.py`:per-language / per-track / FP-FN baseline 統計;**先驗 schema,失敗則拒印**避免 typo'd label 扭曲數字
+  - `_runner/run_corpus.py`:把 fixture 打包成 zip → 餵給現有 `app.services.reachability.scan_zip()` → 比對 `expected_label` → 報 FP/FN
+- **10 個 Python fixture**:覆蓋 4 個 CVE × 多種 reachability label
+  - P1/P2/P3:CVE-2020-1747 PyYAML(load reachable / dump only / load test_only)
+  - P4/P5:CVE-2019-19844 django(PasswordResetForm reachable / 無 password reset)
+  - P6/P7:CVE-2022-40023 Mako(Template() compile reachable / 無 Template)— **修正常見誤解**:trigger 是編譯時 `Lexer.parse`,不是 `.render()`
+  - P8/P9:CVE-2023-50447 Pillow(`ImageMath.eval` reachable / 純 Image.open)
+  - P10:PyYAML alias edge(`import yaml as yl`)— 測 Phase 3 alias tracking
+- **Schema gate 結果**(寫到 #10 時 user-mandated checkpoint):
+  - **抓到 schema design hole**:PyPI name ≠ import name(pyyaml→yaml、pillow→PIL),原本只有 `package` 欄位無法 lookup → **新增 `import_names: list[str]` 必填欄位**(寫進 schema、validator、runner)
+  - **5 PASS / 5 FP / 0 FN baseline**:
+    - 0 FN = 所有 reachable fixture 全捕捉到(含 P10 alias)
+    - 5 FP 全部來自同一限制(package-level granularity,無法分辨 `yaml.load` vs `yaml.safe_load`)— 這正是 Wave D sprint #3 要關掉的 gap
+- **下一步**:Phase 2 寫 16 個 JS/TS fixture,Phase 3 寫 13 個 Java fixture,各自獨立 commit
+
 ### 效能(OSV 掃描重寫:per-PURL → 批次 + 唯一漏洞詳情並行)
 - `vuln_scanner.scan_components()` 從 N 次 `/v1/query`(每 PURL 一次)改成兩階段:
   - **Phase 1**:`POST /v1/querybatch`,一次最多 1000 個 PURL,只回 `{id, modified}` 輕量 stub

@@ -1,0 +1,20 @@
+fixture_type: cve_reachability
+cve_id: CVE-2023-50447
+ghsa_id: GHSA-3f63-hfp8-52jq
+package: pillow
+import_names: [PIL]
+ecosystem: pypi
+affected_versions: ">=2.0,<10.2.0"
+language: python
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - PIL.ImageMath.eval
+notes: |
+  PIL.ImageMath.eval() passes the expression argument through
+  Python's builtin eval() with limited but exploitable globals,
+  enabling arbitrary code execution when expression is attacker-
+  controlled (e.g. via image processing pipeline taking user
+  formula input).  Fixed in Pillow 10.2.0 by sandboxing the
+  evaluation context.

@@ -1,0 +1,24 @@
+fixture_type: cve_reachability
+cve_id: CVE-2019-19844
+ghsa_id: GHSA-vfq6-hq5r-27r6
+package: django
+import_names: [django]
+ecosystem: pypi
+affected_versions: ">=2.1,<2.2.9 || >=3.0,<3.0.1 || <1.11.27"
+language: python
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - django.contrib.auth.forms.PasswordResetForm.get_users
+  - django.contrib.auth.forms.PasswordResetForm.save
+notes: |
+  Imports django.contrib.auth (User model + authenticate) but never
+  wires up password reset.  No view/URL routes through
+  PasswordResetForm.  Phase 1 will see django in presence; symbol-
+  level analysis must downgrade to not_found because
+  PasswordResetForm is never referenced.
+
+  NOTE: known limitation — current Python analyzer is
+  package-level, will likely register false positive ("reachable")
+  here.  Sprint #3 must move to symbol-level resolution.

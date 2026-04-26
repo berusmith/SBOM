@@ -1,0 +1,26 @@
+fixture_type: cve_reachability
+cve_id: CVE-2020-1747
+ghsa_id: GHSA-8q59-q68h-6hv4
+package: pyyaml
+import_names: [yaml]
+ecosystem: pypi
+affected_versions: ">=0,<5.3.1"
+language: python
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - yaml.load
+  - yaml.full_load
+notes: |
+  Imports pyyaml but only uses yaml.dump and yaml.safe_load — neither
+  triggers the deserialisation RCE.  Phase 1 will see pyyaml in
+  presence; Phase 3 must downgrade to not_found because the AST
+  pass finds no calls to the vulnerable symbols.
+
+  NOTE: under the current Python analyzer this fixture exposes a
+  known coarse-grained limitation — Phase 3 currently checks "is
+  any function from this package called" rather than "is the
+  vulnerable function called".  Expected to register as a false
+  positive ("reachable") today; sprint #3 must improve this to
+  symbol-level granularity to score not_found.

@@ -1,0 +1,19 @@
+fixture_type: cve_reachability
+cve_id: CVE-2020-1747
+ghsa_id: GHSA-8q59-q68h-6hv4
+package: pyyaml
+import_names: [yaml]
+ecosystem: pypi
+affected_versions: ">=0,<5.3.1"
+language: python
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - yaml.load
+notes: |
+  Tests Phase 3 alias resolution: `import yaml as yl` then
+  `yl.load(data)`.  The vulnerable symbol is yaml.load but the
+  call site reads as yl.load — the AST analyzer must track the
+  alias to correctly classify this as function_reachable.
+  A naïve regex / literal name match would miss this entirely.

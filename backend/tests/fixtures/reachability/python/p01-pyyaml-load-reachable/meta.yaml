@@ -1,0 +1,20 @@
+fixture_type: cve_reachability
+cve_id: CVE-2020-1747
+ghsa_id: GHSA-8q59-q68h-6hv4
+package: pyyaml
+import_names: [yaml]
+ecosystem: pypi
+affected_versions: ">=0,<5.3.1"
+language: python
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - yaml.load
+  - yaml.full_load
+notes: |
+  Pre-5.4 yaml.load() without an explicit Loader= argument uses the
+  unsafe FullLoader by default (5.1+) or no loader at all (<5.1),
+  both of which deserialise arbitrary Python objects via tags like
+  !!python/object/apply, achieving RCE.  yaml.dump and
+  yaml.safe_load are not vulnerable.

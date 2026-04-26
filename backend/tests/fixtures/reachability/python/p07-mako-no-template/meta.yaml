@@ -1,0 +1,18 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-40023
+package: mako
+import_names: [mako]
+ecosystem: pypi
+affected_versions: ">=0,<1.2.2"
+language: python
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - mako.lexer.Lexer.parse
+  - mako.template.Template.__init__
+notes: |
+  Imports mako.runtime.Context for runtime helpers but never
+  constructs a Template from any input.  No path to Lexer.parse
+  exists.  Phase 1 sees mako; symbol-level analysis must downgrade
+  to not_found.

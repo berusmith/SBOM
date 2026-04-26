@@ -1,0 +1,20 @@
+fixture_type: cve_reachability
+cve_id: CVE-2022-40023
+package: mako
+import_names: [mako]
+ecosystem: pypi
+affected_versions: ">=0,<1.2.2"
+language: python
+expected_reachable: true
+expected_label: function_reachable
+transitive_only: false
+vulnerable_symbols:
+  - mako.lexer.Lexer.parse
+  - mako.template.Template.__init__
+notes: |
+  ReDoS in Mako's lexer.  Trigger is COMPILATION TIME — i.e. the
+  Template(text) constructor (which internally calls Lexer.parse)
+  or Template.from_file().  .render() is too late: by the time
+  .render() runs the template is already compiled and the regex
+  has been applied.  Common misconception is that .render() is the
+  trigger; actually Template(user_input) is enough on its own.

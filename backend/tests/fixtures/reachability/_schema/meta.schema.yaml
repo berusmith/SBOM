@@ -1,0 +1,40 @@
+# JSON-Schema-style spec for fixture meta.yaml.  Enforced by
+# _tools/validate_meta.py (pure-Python, no jsonschema dep).  Kept as
+# YAML for human readability rather than as a real .json schema file.
+
+required_fields:
+  - fixture_type            # cve_reachability | framework_mechanism
+  - language                # python | javascript | typescript | java
+  - expected_reachable      # bool
+  - expected_label          # function_reachable | reachable | test_only | not_found | unknown_acceptable
+  - transitive_only         # bool
+  - notes                   # free-text rationale
+
+# These are required only when fixture_type == cve_reachability:
+conditional_required:
+  cve_reachability:
+    - cve_id
+    - package               # PyPI/npm/Maven coordinate (canonical name)
+    - import_names          # NEW: list of top-level identifiers as imported
+                            # at runtime — distinct from PyPI name when they
+                            # differ (pyyaml→yaml, pillow→PIL, python-dateutil→dateutil).
+                            # Required because the analyzer scans imports, not lock files.
+    - ecosystem             # pypi | npm | maven | go | cargo | rubygems
+    - affected_versions
+    - vulnerable_symbols    # non-empty list
+  framework_mechanism: []   # nothing extra; cve_id / package etc. may be null
+
+enums:
+  fixture_type:    [cve_reachability, framework_mechanism]
+  language:        [python, javascript, typescript, java]
+  expected_label:  [function_reachable, reachable, test_only, not_found, unknown_acceptable]
+  ecosystem:       [pypi, npm, maven, go, cargo, rubygems]
+
+cross_field_rules:
+  # If expected_reachable is true, expected_label must indicate reachability
+  - if: "expected_reachable == true"
+    then: "expected_label in {function_reachable, reachable, unknown_acceptable}"
+    rationale: "an expected-reachable fixture cannot have label not_found / test_only"
+  - if: "expected_reachable == false"
+    then: "expected_label in {not_found, test_only, unknown_acceptable}"
+    rationale: "an expected-unreachable fixture cannot be labelled function_reachable / reachable"

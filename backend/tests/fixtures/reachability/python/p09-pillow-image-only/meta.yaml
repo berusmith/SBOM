@@ -1,0 +1,22 @@
+fixture_type: cve_reachability
+cve_id: CVE-2023-50447
+ghsa_id: GHSA-3f63-hfp8-52jq
+package: pillow
+import_names: [PIL]
+ecosystem: pypi
+affected_versions: ">=2.0,<10.2.0"
+language: python
+expected_reachable: false
+expected_label: not_found
+transitive_only: false
+vulnerable_symbols:
+  - PIL.ImageMath.eval
+notes: |
+  Standard Pillow image I/O — Image.open / .resize / .save /
+  .thumbnail.  ImageMath module is never imported.  The vulnerable
+  eval() path cannot be triggered without an explicit
+  `from PIL import ImageMath` somewhere.
+
+  NOTE: known limitation — current package-level analyzer will
+  flag pillow as "reachable" here.  Sprint #3 must check for the
+  ImageMath sub-import specifically.
