@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Lock, Search } from "lucide-react";
 import { getPlan, hasPlan, PLAN_LABEL, PLAN_COLOR } from "../utils/plan";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
@@ -102,7 +103,7 @@ export default function Layout({ children }) {
                   })}
                   className="px-2.5 py-1.5 rounded text-sm text-gray-600 cursor-not-allowed flex items-center gap-1 whitespace-nowrap"
                 >
-                  <span aria-hidden="true">🔒</span>
+                  <Lock size={12} aria-hidden="true" />
                   <span>{t(`nav.${item.key}`)}</span>
                 </span>
               ))}
@@ -126,8 +127,10 @@ export default function Layout({ children }) {
               <button
                 type="submit"
                 aria-label={t("common.search")}
-                className="text-gray-600 hover:text-white px-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
-              >⌕</button>
+                className="text-gray-300 hover:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+              >
+                <Search size={16} aria-hidden="true" />
+              </button>
             </form>
             <div className="hidden md:flex items-center gap-3 shrink-0">
               <button
