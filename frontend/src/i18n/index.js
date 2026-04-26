@@ -19,4 +19,17 @@ i18n
     },
   });
 
+// UX-001 — keep <html lang> synchronised with the active UI language so
+// screen readers (VoiceOver, NVDA, JAWS, TalkBack) pick the correct
+// pronunciation engine. Use BCP-47 tags: zh-Hant (Traditional Chinese)
+// and en. Fires on every languageChanged plus once at boot.
+const syncHtmlLang = (lng) => {
+  const tag = lng === "en" ? "en" : "zh-Hant";
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = tag;
+  }
+};
+syncHtmlLang(i18n.language);
+i18n.on("languageChanged", syncHtmlLang);
+
 export default i18n;
