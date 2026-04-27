@@ -670,8 +670,8 @@ Residual:
 | field | value |
 |-------|-------|
 | finding_id | SEC-014 |
-| status | open |
-| verification_method | static (read deploy/backup.sh) |
+| status | **fixed (2026-04-26 by Phase 5 P2 commit)** |
+| verification_method | static + dynamic-poc — `deploy/backup.sh` now AES-256 symmetric-encrypts via gpg when `$SBOM_BACKUP_GPG_KEY` (default `$HOME/.sbom-backup-key`) is readable; PoC `.knowledge/audit/poc/SEC-014-backup-encryption-roundtrip.sh` confirms round-trip + wrong-passphrase rejection |
 | severity_lan_only | Medium | severity_if_public | High |
 | blocks_commercialization | true (ISO 27001 A.8.13 Information Backup) |
 | confidence | High |
