@@ -1284,3 +1284,82 @@ This finding is the proof that the enforcement test (SDLC-001's core delivery) p
 5. The gap was closed in the same commit that introduced the control
 
 This validates the "systemic prevention beats one-shot detection" principle that motivates SDLC-001 in the first place.
+
+
+# Rev-8 amendment: SEC-024 — discovered via Phase 6 CI snapshot (pip-audit)
+
+**Discovery context**: During Phase 6.4 (CI traffic-light snapshot), the
+`pip-audit + bandit` job has been failing on every Phase 5 push. A
+local rerun of `pip-audit -r backend/requirements.txt --strict --no-deps`
+found one CVE in `pg8000 1.31.2` (advisory `GHSA-wq2g-r956-j8cc`,
+fixed in 1.31.5).  This was not in the Phase 1–3 scope (Phase 1
+catalogued routers / endpoints, Phase 3 produced 25 findings none of
+which addressed dependency-version freshness on every fix-commit
+boundary; the Phase 5 #0 SEC-017 work introduced the CI baseline that
+revealed it).  Filed as SEC-024 to keep the audit register
+machine-checkable and to link the CVE → planned upgrade.
+
+## SEC-024 (TLT-17 / supply-chain) — `pg8000 1.31.2` has known CVE GHSA-wq2g-r956-j8cc
+
+### Metadata
+
+| field | value |
+|-------|-------|
+| finding_id | SEC-024 |
+| parent_finding | null |
+| status | **open** (P2 backlog — not on the Phase 5 critical path; Phase 6 discovered, Phase 7 candidate) |
+| discovered_phase | 6 (auto-discovered by Phase 5 #0 SEC-017 CI baseline, ratified during Phase 6.4 snapshot) |
+| verification_method | static (`pip-audit -r backend/requirements.txt --strict --no-deps` — local + CI) |
+| discovered_via | ci_snapshot_phase_6 |
+| first_observed_commit | (pg8000 1.31.2 was pinned in `backend/requirements.txt` before the audit period; CVE published after the pin) |
+| exploitation_complexity | depends on Postgres-driver code path (not used in default SQLite deploy) |
+| severity_lan_only | **Low** — Mac mini default deploy uses SQLite; pg8000 only loaded if `DATABASE_URL` is `postgresql+pg8000://`. LAN deploy without Postgres = unexposed. |
+| severity_if_public | **Medium** — commercialised SaaS likely Postgres-backed; pg8000's 1.31.5 fix description should be read before sizing exact impact. |
+| blocks_commercialization | **partial** (must upgrade before any Postgres-backed customer cluster ships) |
+| confidence | High (vendor advisory + pip-audit corroboration) |
+| category | Supply chain / Vulnerable & outdated component |
+| cwe | depends on advisory body (TBD on read) |
+| owasp | A06:2021 |
+| cvss_3_1 | TBD (read from GHSA advisory before scheduling fix) |
+
+### traceability
+
+```yaml
+traceability:
+  threat: TLT-17                          # supply chain
+  parent_finding: null
+  discovered_via: ci_snapshot_phase_6     # not seen in Phase 1-3 grep + Phase 5 fix loop
+  attack_tree_leaf: null
+  abuse_cases: []
+  related_findings:
+    - SEC-017       # CI baseline that surfaced this finding
+    - SEC-022       # python_requires floor — same supply-chain category
+```
+
+### Location
+
+- `backend/requirements.txt` — `pg8000==1.31.2` line (Postgres driver pin)
+- Used in `backend/app/core/database.py` only when `DATABASE_URL` starts with `postgresql+pg8000://` (SQLAlchemy URL scheme)
+
+### Recommendation
+
+#### primary_remediation
+- Upgrade `backend/requirements.txt`: `pg8000==1.31.2` → `pg8000>=1.31.5`
+- Re-run `python test_all.py` to confirm no regression (test_all.py uses SQLite by default — Postgres path needs separate manual test on the Mac mini staging DB)
+- Re-run `pip-audit` locally and in CI; expect green
+- Update `deploy/migrate-sqlite-to-postgres.py` runbook if any pg8000 API used there breaks (unlikely — patch release)
+
+- effort: S (~30 min — one line + test_all.py rerun + CI green check)
+- risk_of_fix: Low (1.31.x is a patch series; backward-compatible by SemVer convention)
+
+#### compensating_control
+SQLite default deploy (Mac mini path) does not load pg8000. SaaS Postgres deploy is not in scope until Phase 7 (commercialisation). Net exposure today: **none on the LAN deploy**.
+
+#### monitoring_detection
+- pip-audit job in `.github/workflows/security.yml` — already gated on this finding (the job is failing, so the alert is in place by construction)
+- After fix, confirm the same job goes green; track in Phase 6 verification log
+
+### Open question for Phase 6.4 follow-up
+- `grype` job also fails. Likely scans the same SBOM and surfaces pg8000 + maybe additional High/Critical CVEs in transitive deps. Without authenticated log access during this Phase 6 snapshot we couldn't enumerate. Schedule a SEC-024-followup slot for that confirmation, or fold into the same upgrade PR.
+- `gitleaks` job also fails. Could be (a) gitleaks Pro license requirement after Anchore's 2024 acquisition (false positive at policy level), or (b) a real secret slipped through the `.gitleaks.toml` allowlist. Action: read GitHub Actions log via signed-in browser session, then either add allowlist entry (false positive) or rotate + remove the leaked secret.
+
