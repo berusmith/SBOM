@@ -6,7 +6,7 @@ methodology: Phase 1 recon + Phase 2 STRIDE + Phase 3 (25 findings) → Phase 4 
 deployment_mode: lan_only
 commercialization_planned: true
 created: 2026-04-26
-status: draft for user review before Phase 5 remediation gate
+status: Phase 5 remediation + Phase 6 verification complete (2026-04-26) — 10/10 Top-10 + SEC-014 P2 + SEC-023 (enforcement-test discovered) all fixed, PoCs re-verified post-fix, test_all.py 55/55, SDLC-001 enforcement 42/42
 ---
 
 # Phase 4 — Executive Summary + Risk Heatmap + Top-10 Must-Fix
@@ -399,3 +399,63 @@ Phase 6 verification produces final report with before/after evidence + Top-10 �
 | Honest Phase 3 self-check applied? | Yes — `expected_recurrence` validation found 1 of 4 predictions wrong (TLT-7), removed from SDLC-001 traceability rather than rationalising backwards. |
 | Is the report consumable by both technical and non-technical audiences? | Section 1 is non-technical (one page); Section 3 is the technical action list. Sections 2 / 4 are reference material. |
 | Risk of over-confidence in confirmed-N/A items? | Acknowledged — SEC-004 subprocess and SEC-001-cleared 5 files were verified by READING SOURCE only. No fuzzing. Phase 6 verification round will spot-check with adversarial inputs. |
+
+
+---
+
+## 9. Phase 5 + Phase 6 completion log (2026-04-26)
+
+### 5.1 Phase 5 commit sequence (in execution order)
+
+| # | Finding | Commit | Test/PoC |
+|---|---------|--------|----------|
+| 0 | SEC-017 (CI baseline) | `5286b00` | `.github/workflows/security.yml` 6 jobs + gitleaks allowlist |
+| 1 | SDLC-001 + SEC-023 (placeholder route surfaced by enforcement test) | `a604c56` | `test_endpoint_decorator_enforcement.py` 42/42 |
+| 2 | SEC-001a (licenses summary → require_admin) | `21b7ee7` | PoC `[NO LEAK] HTTP 403` |
+| 3 | SEC-001b (licenses release IDOR via SDLC-001) | `f5dc94c` | PoC `[NO LEAK] HTTP 404` |
+| 4+5 | SEC-001c+d (policies summary + release IDOR) | `f0355ec` | PoC NO LEAK on both; auto-pause #2 fired (stale uvicorn workers, not a code issue) |
+| 6 | SEC-003 (X-Forwarded-For — three-layer fix nginx + backend + uvicorn `--no-proxy-headers`) | `6f44863` | PoC: 12 spoofed XFF logins → attempts 11+ HTTP 429 |
+| 7 | SEC-022 (`backend/pyproject.toml` requires-python `>=3.11.4`) | `c5ab06c` | SpecifierSet rejects 3.11.3, accepts 3.11.4+ |
+| 8 | SEC-002 (XML pre-parse DOCTYPE/ENTITY rejection + 5MB cap) | `8d26065` | PoC: 499-byte lol4 → HTTP 400 in 0.00s (was 200 in 2.03s pre-fix) |
+| 9 | SEC-018 (nginx security headers x4 with inheritance fix) | `35f11aa` | PoC checks 4 headers across `/` and `/index.html` |
+| P2 | SEC-014 (gpg AES-256 backup encryption + restore docs + key procedure) | `c401c11` | PoC: encrypt → no-canary in ciphertext, decrypt → canary recovered, wrong-pass rejected |
+
+All commits pushed to `origin/master` (`berusmith/SBOM`) and mirrored to `audit-mirror/master` (`ninjat6/SBOM-audit-private`) via `git audit-split` subtree pattern.
+
+### 5.2 Auto-pause conditions — final tally
+
+| # | Condition | Fired? | Resolution |
+|---|-----------|--------|------------|
+| 1 | Python version regression (<3.11.4) | No | n/a |
+| 2 | PoC re-run after-fix not NOT_REPRODUCED | **Yes (SEC-001c/d)** | Stale uvicorn workers; full kill + restart resolved. File edits were correct from the start. Logged in compaction summary; resumed cleanly. |
+| 3 | test_all.py regression | No | 55/55 throughout |
+| 4 | Enforcement test surfaces missing endpoints | **Yes (SEC-023)** | Filed as separate finding, fixed in same SDLC-001 commit (Option A per user). Pattern documented in `lessons_learned`. |
+| 5 | Severity estimate off by ≥1 level | No | All findings closed at originally-stated severity |
+| 6 | Mirror push fail / grep suspicious hit | No | All 11 fix commits pushed cleanly to both remotes |
+
+### 5.3 Phase 6 final verification (re-run all PoCs against current `master`)
+
+| PoC | Result |
+|-----|--------|
+| SEC-001a — licenses summary leak     | `[NO LEAK]` HTTP 403 |
+| SEC-001b — licenses release IDOR     | `[NO LEAK]` HTTP 404 |
+| SEC-001c — policies summary leak     | `[NO LEAK]` HTTP 403 |
+| SEC-001d — policies release IDOR     | `[NO LEAK]` HTTP 404 |
+| SEC-002  — XML billion-laughs         | `[SAFE]` HTTP 400 in 0.00s |
+| SEC-003  — XFF spoof rate-limit       | `[NO LEAK]` 11+ HTTP 429 |
+| SEC-014  — backup gpg round-trip      | `[NO LEAK]` ciphertext clean, decrypt round-trip OK, wrong-pass rejected |
+| SEC-018  — nginx security headers     | static-only (deploy-time check via PoC against deployed nginx) |
+| SEC-022  — Python version floor       | static-only (`pip install -e backend` rejects <3.11.4) |
+| SDLC-001 — release-ownership enforcement | 42/42 release-scoped routes have ownership dependency |
+| `test_all.py` regression              | 55 PASS / 0 FAIL |
+
+### 5.4 Lesson learned — Phase 5 #6 (SEC-003 three-layer discovery)
+
+**Event**: First-pass SEC-003 fix patched (1) nginx XFF clearing and (2) backend `_client_ip` to read X-Real-IP only. PoC still showed `[LEAK CONFIRMED]` — 12 logins with different XFF each got HTTP 401, no rate limit triggered.
+
+**Root cause**: uvicorn 0.30.6 default `proxy_headers=True` + `forwarded_allow_ips="127.0.0.1"` means its built-in `ProxyHeadersMiddleware` silently rewrites `request.client.host` from `X-Forwarded-For` when the source IP is on the trusted list. Direct-loopback dev or any future misconfiguration that exposes uvicorn directly defeats layers 1 and 2.
+
+**Fix**: added `--no-proxy-headers` to all three uvicorn launchers (`com.sbom.backend.plist`, `start_backend.bat`, `Dockerfile`) and documented the dependency in `_client_ip`'s docstring.
+
+**Methodological takeaway**: This is the second time in Phase 5 that a runtime mechanism the audit didn't anticipate moved data through a different path than the static analysis predicted. SEC-023 was the first (placeholder route the test found). Both confirm that *PoC re-run after-fix* is load-bearing — the static fix would have shipped without it.
+
