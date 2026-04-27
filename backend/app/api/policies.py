@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.deps import require_admin, require_release_in_scope
 from app.models.component import Component
 from app.models.policy_rule import PolicyRule
 from app.models.release import Release
@@ -162,8 +163,13 @@ def delete_rule(rule_id: str, db: Session = Depends(get_db)):
 # ── Violation evaluation ───────────────────────────────────────────
 
 @router.get("/violations/summary")
-def violations_summary(db: Session = Depends(get_db)):
-    """Platform-wide violation counts per rule."""
+def violations_summary(_admin: dict = Depends(require_admin),
+                       db: Session = Depends(get_db)):
+    """Platform-wide violation counts per rule (admin only).
+
+    SEC-001c fix (2026-04-26): made admin-only.  Per-tenant viewers should
+    use /releases/{release_id}/violations for their own releases (SEC-001d
+    also patches that endpoint with require_release_in_scope ownership)."""
     _seed_defaults(db)
     rules = db.query(PolicyRule).filter(PolicyRule.enabled == True).all()
     vulns = db.query(Vulnerability).all()
@@ -182,15 +188,19 @@ def violations_summary(db: Session = Depends(get_db)):
 
 
 @router.get("/releases/{release_id}/violations")
-def release_violations(release_id: str, db: Session = Depends(get_db)):
-    """Violations for a specific release."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
+def release_violations(
+    release: Release = Depends(require_release_in_scope),
+    db: Session = Depends(get_db),
+):
+    """Violations for a specific release.
 
+    SEC-001d fix (2026-04-26): release-ownership check via SDLC-001
+    middleware.  404 (not 403) returned for both 'not found' and
+    'cross-org' cases — CWE-204 oracle prevention.  Pre-fix this
+    endpoint had no org_scope param at all in signature."""
     _seed_defaults(db)
     rules = db.query(PolicyRule).filter(PolicyRule.enabled == True).all()
-    components = db.query(Component).filter(Component.release_id == release_id).all()
+    components = db.query(Component).filter(Component.release_id == release.id).all()
     vulns = [v for c in components for v in c.vulnerabilities]
 
     violations = []
@@ -218,7 +228,7 @@ def release_violations(release_id: str, db: Session = Depends(get_db)):
 
     violations.sort(key=lambda x: (x["action"] == "block", x["days_open"] or 0), reverse=True)
     return {
-        "release_id": release_id,
+        "release_id": release.id,
         "total": len(violations),
         "violations": violations,
     }

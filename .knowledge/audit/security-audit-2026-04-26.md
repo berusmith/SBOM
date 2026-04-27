@@ -568,9 +568,9 @@ Same as SEC-001a + Postgres Row-Level Security (long-term defence in depth) — 
 |---------------------------|-------|
 | finding_id                | SEC-001c |
 | parent_finding            | SEC-001 |
-| status                    | open |
+| status                    | **fixed (2026-04-26 by Phase 5 #4 commit)** |
 | discovered_phase          | 3 |
-| verification_method       | static + dynamic-poc-pending |
+| verification_method       | static + dynamic-poc-confirmed (viewerB → HTTP 403; require_admin enforced) |
 | first_observed_commit     | `e207d53` (2026-04-21) |
 | exploitation_complexity   | **trivial** (rev-2 differentiation:exposes vuln state directly,no per-CVE crafting needed,one GET) |
 | severity_lan_only         | **Medium** |
@@ -707,9 +707,9 @@ Same as SEC-001a + OWASP Multi-tenancy Cheat Sheet — https://cheatsheetseries.
 |---------------------------|-------|
 | finding_id                | SEC-001d |
 | parent_finding            | SEC-001 |
-| status                    | open |
+| status                    | **fixed (2026-04-26 by Phase 5 #5 commit)** |
 | discovered_phase          | 3 |
-| verification_method       | static + dynamic-poc-pending |
+| verification_method       | static + dynamic-poc-confirmed (viewerB → HTTP 404; SDLC-001 ownership enforced) |
 | first_observed_commit     | `e207d53` (2026-04-21) |
 | exploitation_complexity   | **low** (worse than SEC-001b in code-readability terms — no org_scope param at all in signature so a future maintainer can't tell isolation was intended; same exploit shape) |
 | severity_lan_only         | **Medium** |
@@ -857,7 +857,7 @@ monitoring_detection:
 | finding_id                | SDLC-001 |
 | parent_finding            | null (top-level architectural finding) |
 | **scope**                 | **cross-cutting** (rev-2 elevation:references multiple TLTs;Phase 4 報告放在 "Architectural / SDLC findings" section,不放在 per-TLT 列表)|
-| status                    | **in-progress** (Phase 5 #1: helpers + enforcement test landed 2026-04-26; full completion requires SEC-001a/b/c/d migration in Phase 5 #2-#5 — enforcement test moves from 2 missing → 0 missing) |
+| status                    | **fixed (2026-04-26 by Phase 5 #1-#5 commits)** — helpers + enforcement test landed in Phase 5 #1; SEC-001a/b/c/d migrations completed in #2-#5; SEC-023 (placeholder route discovered by enforcement test on first run) folded into #1; enforcement test now reports 42/42 release-scoped endpoints have ownership dependency |
 | discovered_phase          | 3 (extracted from SEC-001 RCA;**位階提升**:不只是 SEC-001 的 root cause,是跨 TLT 的 systemic gap)|
 | verification_method       | manual-review (process / architecture finding, not a runtime bug per se) |
 | first_observed_commit     | n/a (architectural absence is "since beginning of project") |

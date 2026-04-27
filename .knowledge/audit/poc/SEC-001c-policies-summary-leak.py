@@ -109,8 +109,19 @@ def main():
         viewerB_tok = body["access_token"]
         print("[6] viewerB logged in")
 
-        # THE EXPLOIT
+        # THE EXPLOIT — re-runnable pre/post-fix:
+        #   Pre-fix:                   HTTP 200 + count > 0   → LEAK CONFIRMED
+        #   Post-fix (require_admin):  HTTP 403               → NO LEAK
         code, body = _req("/api/policies/violations/summary", token=viewerB_tok)
+        if code == 403:
+            print(f"[7] viewerB GET /api/policies/violations/summary -> HTTP 403")
+            print(f"    {body if isinstance(body, dict) else str(body)[:80]}")
+            print()
+            print("=" * 70)
+            print("[NO LEAK] viewerB blocked at endpoint (require_admin enforced)")
+            print("  SEC-001c primary_remediation verified post-fix")
+            print("=" * 70)
+            return 0
         viewer_total = body.get("total_violations", 0) if isinstance(body, dict) else 0
         print(f"[7] viewerB sees total_violations={viewer_total}")
         print()
