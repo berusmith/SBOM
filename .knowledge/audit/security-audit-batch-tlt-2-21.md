@@ -51,9 +51,9 @@ Compact format. SEC-001a in `security-audit-2026-04-26.md` remains the canonical
 |-------|-------|
 | finding_id | SEC-002 |
 | parent_finding | null |
-| status | open |
+| status | **fixed (2026-04-26 by Phase 5 #8 commit)** |
 | discovered_phase | 3 |
-| verification_method | static + dynamic-poc-timing |
+| verification_method | static + dynamic-poc-confirmed (post-fix: 499-byte 4-level entity payload → HTTP 400 in 0.00s with detail "XML SBOM 中不支援 DOCTYPE / ENTITY"; pre-fix baseline was HTTP 200 in 2.03s, expanding entities) |
 | first_observed_commit | (XML conversion was added in `bbc786c`, 2026-04-NN; predates audit) |
 | exploitation_complexity | low |
 | severity_lan_only | **Low** (single worker freeze ≈ 30s with lol5; recovers; no data leak) |

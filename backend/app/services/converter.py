@@ -225,7 +225,22 @@ def _cdx_json_to_xml(cdx: dict) -> bytes:
 
 # ── CycloneDX XML → JSON ──────────────────────────────────────────────────────
 
+# SEC-002 fix (2026-04-26): pre-parse rejection of DOCTYPE / ENTITY.
+# Stdlib xml.etree.ElementTree closes the XXE path (no external DTD)
+# but does NOT cap internal entity expansion ("billion-laughs" /
+# CWE-776).  CycloneDX XML schema does not require DOCTYPE / ENTITY,
+# so legitimate SBOMs are not affected.  Size cap is defence-in-depth
+# against pathological non-entity payloads.
+_XML_MAX_BYTES = 5 * 1024 * 1024  # 5 MB — generous for real SBOMs
+
+
 def _cdx_xml_to_json(content: bytes) -> dict:
+    if len(content) > _XML_MAX_BYTES:
+        raise ValueError(
+            f"XML SBOM 超過大小限制 ({_XML_MAX_BYTES // (1024 * 1024)} MB)"
+        )
+    if b"<!DOCTYPE" in content or b"<!ENTITY" in content:
+        raise ValueError("XML SBOM 中不支援 DOCTYPE / ENTITY 宣告（防止 entity expansion 攻擊）")
     try:
         root = ET.fromstring(content)
     except ET.ParseError as e:
