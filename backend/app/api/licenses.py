@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin
+from app.core.deps import get_org_scope, require_admin, require_release_in_scope
 from app.models.component import Component
 from app.models.license_rule import LicenseRule
 from app.models.release import Release
@@ -143,17 +143,15 @@ def violations_summary(_admin: dict = Depends(require_admin),
 
 @router.get("/releases/{release_id}/violations")
 def release_violations(
-    release_id: str,
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-
+    """SEC-001b fix (2026-04-26): release-ownership check via SDLC-001
+    middleware.  404 (not 403) returned for both 'not found' and
+    'cross-org' cases — CWE-204 oracle prevention."""
     _seed_defaults(db)
     rules = db.query(LicenseRule).filter(LicenseRule.enabled == True).all()  # noqa: E712
-    comps = db.query(Component).filter(Component.release_id == release_id).all()
+    comps = db.query(Component).filter(Component.release_id == release.id).all()
 
     violations: list[dict] = []
     for comp in comps:
@@ -174,7 +172,7 @@ def release_violations(
 
     violations.sort(key=lambda x: x["action"] == "block", reverse=True)
     return {
-        "release_id":     release_id,
+        "release_id":     release.id,
         "total":          len(violations),
         "block_count":    sum(1 for v in violations if v["action"] == "block"),
         "warn_count":     sum(1 for v in violations if v["action"] == "warn"),

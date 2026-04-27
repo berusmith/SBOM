@@ -326,9 +326,9 @@ Long term: SOC 2 Type II evidence — quarterly run of `tests/test_multi_tenant_
 |---------------------------|-------|
 | finding_id                | SEC-001b |
 | parent_finding            | SEC-001 |
-| status                    | open |
+| status                    | **fixed (2026-04-26 by Phase 5 #3 commit)** |
 | discovered_phase          | 3 |
-| verification_method       | static + dynamic-poc-pending |
+| verification_method       | static + dynamic-poc + post-fix-rerun |
 | first_observed_commit     | `4bb8a75` (2026-04-22) |
 | exploitation_complexity   | **low** (need a release_id from another tenant — leakable via PDF / share link / log; UUIDs unguessable but not unfindable) |
 | severity_lan_only         | **Medium** |
