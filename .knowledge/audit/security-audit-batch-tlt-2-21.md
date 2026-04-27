@@ -166,9 +166,10 @@ monitoring_detection:
 |-------|-------|
 | finding_id | SEC-003 |
 | parent_finding | null |
-| status | open |
+| status | **fixed (2026-04-26 by Phase 5 #6 commit)** |
 | discovered_phase | 1 (predicted in recon) → 3 (verified) |
-| verification_method | static + dynamic-poc-pending (would require sending crafted XFF; trivially confirmable) |
+| verification_method | static + dynamic-poc-confirmed (12 spoofed-XFF logins → attempts 11+ get HTTP 429; audit log records real `127.0.0.1` instead of injected value) |
+| post_fix_note | three-layer fix required: (1) nginx clears incoming `X-Forwarded-For` at edge; (2) backend `_client_ip` reads only `X-Real-IP` (set by nginx from `$remote_addr`); (3) **uvicorn must run with `--no-proxy-headers`** — otherwise its built-in ProxyHeadersMiddleware silently rewrites `request.client.host` from XFF when source IP is in `forwarded_allow_ips` (default `127.0.0.1`), defeating layers 1+2.  Discovery: first-pass fix only touched (1) + (2); PoC still leaked via uvicorn middleware until layer (3) was added. |
 | first_observed_commit | nginx config first added in `fc8d065` (2026-04-NN); rate_limit.py in earlier commit |
 | exploitation_complexity | **trivial** (one curl with `-H "X-Forwarded-For: 1.2.3.4"`) |
 | severity_lan_only | **Low** (rate limit bypass on LAN doesn't matter much; audit log spoofing is the real concern) |

@@ -268,7 +268,7 @@ def oidc_callback(
     )
     audit.record(db, "login_ok",
                  {"username": db_user.username, "user_id": db_user.id, "via": "oidc"},
-                 ip=request.client.host if request.client else "unknown")
+                 ip=_client_ip(request))
     db.commit()
 
     # Redirect to /login#sso_token=xxx — pass token in the URL FRAGMENT, not

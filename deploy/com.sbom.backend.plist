@@ -21,6 +21,11 @@
         <string>--no-access-log</string>
         <string>--timeout-keep-alive</string>
         <string>30</string>
+        <!-- SEC-003: disable uvicorn's proxy_headers middleware so it
+             cannot rewrite request.client based on X-Forwarded-For.
+             We read X-Real-IP from headers (set by nginx from
+             $remote_addr — the trusted socket peer). -->
+        <string>--no-proxy-headers</string>
     </array>
 
     <key>WorkingDirectory</key>
