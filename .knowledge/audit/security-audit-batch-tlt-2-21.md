@@ -803,8 +803,8 @@ Files added:
 | field | value |
 |-------|-------|
 | finding_id | SEC-018 |
-| status | open |
-| verification_method | static (nginx-sbom.conf) |
+| status | **fixed (2026-04-26 by Phase 5 #9 commit)** |
+| verification_method | static (nginx-sbom.conf) — 4 add_header directives at server level + duplicated in static-asset location to defeat nginx add_header inheritance quirk; PoC `.knowledge/audit/poc/SEC-018-nginx-security-headers.py` for runtime verification post-deploy |
 | severity_lan_only | Info | severity_if_public | Medium |
 | blocks_commercialization | true (general best-practice; auditors flag) |
 
