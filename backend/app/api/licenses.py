@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_org_scope
+from app.core.deps import get_org_scope, require_admin
 from app.models.component import Component
 from app.models.license_rule import LicenseRule
 from app.models.release import Release
@@ -116,8 +116,13 @@ def delete_rule(rule_id: str, db: Session = Depends(get_db)):
 # ── Violation check ───────────────────────────────────────────────────────────
 
 @router.get("/violations/summary")
-def violations_summary(db: Session = Depends(get_db)):
-    """Platform-wide license violation counts per rule."""
+def violations_summary(_admin: dict = Depends(require_admin),
+                       db: Session = Depends(get_db)):
+    """Platform-wide license violation counts per rule (admin only).
+
+    SEC-001a fix (2026-04-26): made admin-only.  Per-tenant viewers should
+    use /releases/{release_id}/violations for their own releases (which
+    SEC-001b also patches with proper ownership check)."""
     _seed_defaults(db)
     rules = db.query(LicenseRule).filter(LicenseRule.enabled == True).all()  # noqa: E712
     comps = db.query(Component).filter(Component.license != None, Component.license != "").all()  # noqa: E711

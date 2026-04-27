@@ -101,9 +101,9 @@ compliance_impact:
 |---------------------------|-------|
 | finding_id                | SEC-001a |
 | parent_finding            | SEC-001 |
-| status                    | open |
+| status                    | **fixed (2026-04-26 by Phase 5 #2 commit)** |
 | discovered_phase          | 3 |
-| verification_method       | static + dynamic-poc |
+| verification_method       | static + dynamic-poc + post-fix-rerun |
 | first_observed_commit     | `4bb8a75` (2026-04-22, "feat: license compliance policy engine") |
 | exploitation_complexity   | **low** (authenticated viewer JWT; one GET request; no payload crafting) |
 | severity_lan_only         | **Medium** |

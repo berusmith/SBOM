@@ -174,9 +174,21 @@ def main():
         own_count = len(body) if isinstance(body, list) else 0
         print(f"[7] viewerB's own org has {own_count} products (expect 0)")
 
-        # 8. THE EXPLOIT
+        # 8. THE EXPLOIT — re-runnable pre/post-fix:
+        #   Pre-fix:                   HTTP 200 + count > 0   → LEAK CONFIRMED
+        #   Post-fix (require_admin):  HTTP 403               → NO LEAK
+        #   Post-fix (org-scoped):     HTTP 200 + count == 0  → NO LEAK
         code, body = _req("/api/licenses/violations/summary", token=viewerB_tok)
-        assert code == 200, f"viewer summary: {code} {body}"
+        if code == 403:
+            print(f"[8] viewerB GET /api/licenses/violations/summary -> HTTP 403")
+            print(f"    {body if isinstance(body, dict) else str(body)[:80]}")
+            print()
+            print("=" * 70)
+            print("[NO LEAK] viewerB blocked at endpoint (require_admin enforced)")
+            print("  SEC-001a primary_remediation verified post-fix")
+            print("=" * 70)
+            return 0
+        assert code == 200, f"viewer summary unexpected: {code} {body}"
         viewer_total = body.get("total_violations", 0)
         viewer_gpl = next((r["violation_count"] for r in body.get("by_rule", [])
                            if r["license_id"] == "GPL-3.0"), 0)
