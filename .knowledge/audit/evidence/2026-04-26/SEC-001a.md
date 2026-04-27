@@ -21,6 +21,24 @@ poc_metadata:
     backend_must_be_running: true
     admin_credentials_required: true
     runtime_seconds: ~3
+
+after_fix_verification:
+  poc_id: SEC-001a
+  executed_at: 2026-04-28T01:10:15+08:00
+  executor: claude-code-instance
+  environment: local-dev (commit 9a69fe2, post-fix; backend on 127.0.0.1:9100, DEBUG mode, --no-proxy-headers)
+  fix_commit_responsible: 21b7ee7   # fix(security): [SEC-001a] licenses.py /violations/summary → require_admin
+  poc_rerun_verdict: NOT_REPRODUCED
+  observed_response:
+    code: 403
+    body: '{"detail":"此操作需要管理員權限"}'
+    verdict_line: "[NO LEAK] viewerB blocked at endpoint (require_admin enforced)"
+  cleanup_verified: true            # both throwaway orgs deleted at end (HTTP 204)
+  notes: |
+    Pre-fix: viewerB (zero-data org) saw GPL-3.0 violation_count > 0 from orgA.
+    Post-fix: viewerB → HTTP 403 immediately; no aggregate data is computed
+    or returned for non-admin callers.  require_admin Depends enforced at
+    the endpoint level (Phase 5 #2 commit).
 ---
 
 # SEC-001a — Dynamic PoC evidence

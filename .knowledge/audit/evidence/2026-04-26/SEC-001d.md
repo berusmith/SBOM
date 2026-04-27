@@ -19,6 +19,27 @@ poc_metadata:
     seed_data_required: false
     backend_must_be_running: true
     runtime_seconds: ~10
+
+after_fix_verification:
+  poc_id: SEC-001d
+  executed_at: 2026-04-28T01:10:15+08:00
+  executor: claude-code-instance
+  environment: local-dev (commit 9a69fe2, post-fix; backend on 127.0.0.1:9100, DEBUG mode, --no-proxy-headers)
+  fix_commits_responsible:
+    - a604c56   # SDLC-001 — require_release_in_scope Depends middleware
+    - f0355ec   # fix(security): [SEC-001c+d] policies.py: require_admin on summary, ownership on release violations
+  poc_rerun_verdict: NOT_REPRODUCED
+  observed_response:
+    code: 404                       # not 403 — CWE-204 oracle prevention
+    body: '{"detail":"Release not found"}'
+    verdict_line: "[NO LEAK] 404 — release_id hidden from cross-tenant viewer (post-fix expected)"
+  cleanup_verified: true            # both throwaway orgs deleted at end (HTTP 204)
+  notes: |
+    Pre-fix: endpoint had no org_scope param at all — any authenticated
+    user could view violations for any release_id.
+    Post-fix: viewerB → HTTP 404 (same code as "release truly missing",
+    oracle-safe); require_release_in_scope Depends performs org_scope
+    check before any DB lookup of components/vulns.
 ---
 
 # SEC-001d — Dynamic PoC evidence

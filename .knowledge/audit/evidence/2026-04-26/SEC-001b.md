@@ -20,6 +20,28 @@ poc_metadata:
     seed_data_required: false
     backend_must_be_running: true
     runtime_seconds: ~3
+
+after_fix_verification:
+  poc_id: SEC-001b
+  executed_at: 2026-04-28T01:10:15+08:00
+  executor: claude-code-instance
+  environment: local-dev (commit 9a69fe2, post-fix; backend on 127.0.0.1:9100, DEBUG mode, --no-proxy-headers)
+  fix_commits_responsible:
+    - a604c56   # SDLC-001 — require_release_in_scope Depends middleware
+    - f5dc94c   # fix(security): [SEC-001b] licenses.py /releases/{id}/violations IDOR
+  poc_rerun_verdict: NOT_REPRODUCED
+  observed_response:
+    code: 404                       # not 403 — CWE-204 oracle prevention
+    body: '{"detail":"Release not found"}'
+    verdict_line: "[NO LEAK] 404 — release_id is hidden from cross-tenant viewer (post-fix expected behaviour)"
+  cleanup_verified: true            # both throwaway orgs deleted at end (HTTP 204)
+  notes: |
+    Pre-fix: viewerB GET /api/licenses/releases/{orgA_release_id}/violations
+             returned 200 with full GPL-3.0 violation list — IDOR confirmed.
+    Post-fix: viewerB → HTTP 404 (oracle-safe — same code as "release truly
+             missing", so attacker cannot probe for release IDs by status code).
+    require_release_in_scope Depends performs the org_scope check + raises 404
+    for both 'not found' and 'cross-org' cases.
 ---
 
 # SEC-001b — Dynamic PoC evidence

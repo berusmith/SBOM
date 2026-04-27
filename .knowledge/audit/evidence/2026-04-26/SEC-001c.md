@@ -25,6 +25,28 @@ poc_metadata:
       Vulnerability row at scan time.  At run-time, the test PURL
       yielded zero vulns — ambiguous outcome (admin and viewer both
       see total=0).
+
+after_fix_verification:
+  poc_id: SEC-001c
+  executed_at: 2026-04-28T01:10:15+08:00
+  executor: claude-code-instance
+  environment: local-dev (commit 9a69fe2, post-fix; backend on 127.0.0.1:9100, DEBUG mode, --no-proxy-headers)
+  fix_commit_responsible: f0355ec   # fix(security): [SEC-001c+d] policies.py: require_admin on summary, ownership on release violations
+  poc_rerun_verdict: NOT_REPRODUCED
+  promoted_from: STRUCTURALLY_CONFIRMED → NOT_REPRODUCED   # post-fix dynamic verification supersedes ambiguous pre-fix outcome
+  observed_response:
+    code: 403
+    body: '{"detail":"此操作需要管理員權限"}'
+    verdict_line: "[NO LEAK] viewerB blocked at endpoint (require_admin enforced)"
+  cleanup_verified: true            # both throwaway orgs deleted at end (HTTP 204)
+  notes: |
+    The original PoC (pre-fix) was inconclusive because OSV.dev returned
+    no vulnerabilities for the test PURL.  Post-fix the require_admin
+    Depends rejects the request before any data lookup, so OSV state is
+    no longer relevant — verdict can be promoted to NOT_REPRODUCED with
+    full confidence based on the static fix + 403 observed.
+    PoC re-run also exposed an auto-pause-#2 incident (stale uvicorn
+    workers); root cause documented in phase-4-summary §5.4.
 ---
 
 # SEC-001c — Dynamic PoC evidence (inconclusive)
