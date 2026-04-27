@@ -965,9 +965,9 @@ Background:Phase 3 SEC-002 PoC investigation discovered the codebase has zero ma
 |-------|-------|
 | finding_id | SEC-022 |
 | parent_finding | null |
-| status | open |
+| status | **fixed (2026-04-26 by Phase 5 #7 commit)** |
 | discovered_phase | 3 (incidental finding from SEC-002 PoC investigation;split from SEC-002 fix scope per rev-5 amend) |
-| verification_method | static (file inspection) |
+| verification_method | static — `backend/pyproject.toml` declares `requires-python = ">=3.11.4"`; SpecifierSet parses cleanly; rejects 3.11.3, accepts 3.11.4+/3.12.x. CI workflow `.github/workflows/security.yml` already pins `python-version: '3.11'` (resolves to ≥ 3.11.4 patch). |
 | first_observed_commit | initial commit (architectural absence) |
 | exploitation_complexity | trivial (any contributor on Python 3.10 silently breaks defense layers) |
 | severity_lan_only | **Low** (current Mac mini brew route uses python@3.11 ≥ 3.11.4) |

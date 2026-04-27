@@ -1,0 +1,39 @@
+# SEC-022 fix (2026-04-26): packaging-level Python version floor.
+#
+# requires-python is read by pip during install — pip refuses to install
+# this package on a Python interpreter below the floor.  This protects
+# stdlib-version-dependent defense layers; specifically:
+#
+#   • SEC-002 — xml.etree.ElementTree's expat 2.5+ billion-laughs
+#     amplification check requires Python 3.11.4+ (expat 2.5 was bundled
+#     with cpython 3.11.4 on 2023-06-06 and backported via security
+#     release).  Earlier 3.11.x ships expat 2.4.x without the limit.
+#   • CVE-2023-24329 (urllib parsing) backport landed in 3.11.4.
+#
+# CI / contributor / packaging modes all pick this up:
+#   • `pip install -e backend` honours requires-python.
+#   • setup-python action with python-version: '3.11' resolves to
+#     latest 3.11 patch (≥ 3.11.4 since 2023-06-06).
+#   • `pip install -r backend/requirements.txt` does NOT honour
+#     requires-python (it's a flat pinning file, not a project install)
+#     — but contributors should `pip install -e backend` per docs.
+#
+# When raising the floor (e.g. to 3.12.x for new stdlib feature),
+# update CI matrix in .github/workflows/security.yml at the same time.
+
+[project]
+name = "sbom-platform-backend"
+version = "0.1.0"
+description = "SBOM Management Platform — backend (FastAPI)"
+requires-python = ">=3.11.4"
+license = {text = "Apache-2.0"}
+readme = {file = "../README.md", content-type = "text/markdown"}
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["tests*", "uploads*"]
