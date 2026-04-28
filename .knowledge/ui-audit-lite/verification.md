@@ -95,6 +95,42 @@ Walk records at `.knowledge/ui-audit-lite/keyboard-walk.json`.
 | 768-viewport navbar bleed | Documented in §matrix; treated as transitional gap, not a finding |
 | `/api/stats/top-vulns` 404 console errors | Pre-existing — the endpoint isn't implemented (Dashboard.jsx queries it on mount). Out of UI/UX scope. |
 
+## Retrospective on `TopVulns` removal (commit `ab3579d`, 2026-04-28)
+
+The Phase 4 verification log noted two pre-existing console-error 404s
+on the dashboard for `/api/stats/top-vulns` and explicitly scoped them
+out ("Pre-existing — the endpoint isn't implemented (Dashboard.jsx
+queries it on mount). Out of UI/UX scope."). A subsequent
+self-extending session removed the dead frontend code in `ab3579d`
+**without first verifying whether the endpoint was**: (a) planned-future
+(in which case the frontend is correct and the backend owes an
+implementation), (b) abandoned/superseded (the frontend is the orphan),
+or (c) something else.
+
+`git log` answers this cleanly:
+
+| Commit | Date | Effect on `/api/stats/top-vulns` |
+|--------|------|----------------------------------|
+| `6dfda55` | 2026-04-21 | **Adds** the backend route + the frontend `TopVulns` component as a single feature commit ("Dashboard 高風險漏洞清單"). |
+| `2ba697f` | 2026-04-23 | UI/UX P1 error-handling pass; per `e819608`'s commit message it "意外清空" (accidentally cleared) Dashboard.jsx. |
+| `e819608` | 2026-04-24 | "還原 Dashboard" — restores the frontend block that 2ba697f cleared, but the **backend endpoint is replaced** with the better-named `/top-risky-components` + `/top-threats` (which functionally cover the same role). The frontend `TopVulns` was re-introduced by the "restore" without re-pointing it at the new endpoints. |
+| HEAD pre-`ab3579d` | 2026-04-28 | Frontend `TopVulns` still queried the (now gone) `/top-vulns`; the catch-all `setItems([])` + `if length === 0 return null` masked the 404 in production but generated 2 console errors per dashboard mount. |
+| `ab3579d` | 2026-04-28 | Frontend `TopVulns` removed. |
+
+**Verdict**: case **(b) — abandoned/superseded**. The endpoint wasn't a
+"prototype that never wired up" (it was wired up correctly in
+`6dfda55`); it was a real route that got refactored into two
+better-named replacements during e819608, and the frontend
+side-component was forgotten. `ab3579d`'s removal is correct; **no
+sprint backlog item is owed** for "reimplement" because the
+functionality already exists in the threatHighlights +
+riskyComponents tables further down the same dashboard.
+
+**Process note**: this verification should have been done *before*
+the removal commit, not after. The retrospective stands; the work is
+defensible. Filing it here so a future reviewer sees the (b)
+classification was reached on evidence, not assumption.
+
 ## Phase 1 → Phase 4 budget reality
 
 | Phase | Budget | Actual |
