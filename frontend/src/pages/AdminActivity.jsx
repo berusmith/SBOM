@@ -142,6 +142,7 @@ export default function AdminActivity() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            <caption className="sr-only">{t("auditLog.summary")}</caption>
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-xs">
                 <th scope="col" className="px-4 py-2 text-left">客戶</th>
@@ -225,6 +226,7 @@ export default function AdminActivity() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+            <caption className="sr-only">{t("auditLog.title")}</caption>
             <thead>
               <tr className="bg-gray-50 text-gray-600 text-xs border-b">
                 <th scope="col" className="px-4 py-2.5 text-left">時間</th>

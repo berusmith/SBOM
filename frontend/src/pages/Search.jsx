@@ -81,6 +81,7 @@ export default function Search() {
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[320px]">
+                <caption className="sr-only">{t("search.title")}</caption>
                 <thead className="bg-gray-50 text-gray-600 text-left">
                   <tr>
                     <th scope="col" className="px-4 py-3">元件名稱</th>

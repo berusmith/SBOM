@@ -115,3 +115,19 @@ thead↔tbody, then `UX-3.028b — sticky first column` as a follow-up.
 
 Other wide tables (AdminActivity, ReleaseDetail vuln table) are candidates
 for the same sticky-col treatment in a future iter — not blocking.
+
+## UX-3.036 caption sweep — extension
+
+F4 commit added `<caption className="sr-only">` to 3 tables:
+- AdminActivity per-customer summary
+- AdminActivity event feed
+- Search results
+
+8 more tables on other pages still lack captions and should receive one
+when those files are next touched (touched-code policy):
+- Help.jsx:793
+- FirmwareUpload.jsx:286 (scan list)
+- CRAIncidents.jsx:89
+- ReleaseDiff.jsx:177 + 200 (component diff + vuln diff)
+- ReleaseDetail.jsx:1017 (vuln history sub-table — may be intentional)
+- TISAXDetail.jsx:366 + 401 (control / gap tables)
