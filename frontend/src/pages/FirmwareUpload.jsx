@@ -54,7 +54,7 @@ export default function FirmwareUpload() {
     if (file && (file.name.endsWith(".bin") || file.name.endsWith(".img") || file.name.endsWith(".zip"))) {
       setSelectedFile(file);
     } else {
-      toast.error("請上傳 .bin, .img 或 .zip 檔案");
+      toast.error(t("firmware.errors.invalidFileType"));
     }
   };
 
@@ -115,7 +115,7 @@ export default function FirmwareUpload() {
 
   const handleImportConfirm = async () => {
     if (!importingScan || !importData.org || !importData.product || !importData.version) {
-      toast.error("請填寫所有欄位");
+      toast.error(t("firmware.errors.missingFields"));
       return;
     }
 
@@ -201,7 +201,7 @@ export default function FirmwareUpload() {
                 if (f && (f.name.endsWith(".bin") || f.name.endsWith(".img") || f.name.endsWith(".zip"))) {
                   setSelectedFile(f);
                 } else if (f) {
-                  toast.error("請上傳 .bin, .img 或 .zip 檔案");
+                  toast.error(t("firmware.errors.invalidFileType"));
                 }
               }}
             />

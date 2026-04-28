@@ -16,33 +16,18 @@ const DependencyGraph = lazy(() => import("../components/DependencyGraph").then(
 
 const STATUS_OPTIONS = ["open", "in_triage", "not_affected", "affected", "fixed"];
 
-const STATUS_LABEL = {
-  open: "Open",
-  in_triage: "In Triage",
-  not_affected: "Not Affected",
-  affected: "Affected",
-  fixed: "Fixed",
-};
-
-
-const JUSTIFICATION_OPTIONS = [
-  { value: "code_not_present",               label: "程式碼不存在 (code_not_present)" },
-  { value: "code_not_reachable",             label: "程式碼不可達 (code_not_reachable)" },
-  { value: "requires_configuration",         label: "需特殊設定才觸發 (requires_configuration)" },
-  { value: "requires_dependency",            label: "需特殊相依才觸發 (requires_dependency)" },
-  { value: "requires_environment",           label: "需特殊環境才觸發 (requires_environment)" },
-  { value: "protected_by_compiler",          label: "編譯器保護 (protected_by_compiler)" },
-  { value: "protected_at_runtime",           label: "執行期保護 (protected_at_runtime)" },
-  { value: "protected_at_perimeter",         label: "邊界防護 (protected_at_perimeter)" },
-  { value: "protected_by_mitigating_control", label: "緩解控制保護 (protected_by_mitigating_control)" },
+// UX-3.002 — STATUS_LABEL / JUSTIFICATION_OPTIONS / RESPONSE_OPTIONS used to
+// be module-scope with hardcoded zh strings; they're now translated inside the
+// component via useMemo + t() so EN users see English.  Module-scope keeps
+// the *keys* arrays (stable, no t() needed) so the order/identity is shared.
+const JUSTIFICATION_KEYS = [
+  "code_not_present", "code_not_reachable", "requires_configuration",
+  "requires_dependency", "requires_environment", "protected_by_compiler",
+  "protected_at_runtime", "protected_at_perimeter", "protected_by_mitigating_control",
 ];
 
-const RESPONSE_OPTIONS = [
-  { value: "can_not_fix",          label: "無法修復 (can_not_fix)" },
-  { value: "will_not_fix",         label: "不予修復 (will_not_fix)" },
-  { value: "update",               label: "升級版本 (update)" },
-  { value: "rollback",             label: "回滾版本 (rollback)" },
-  { value: "workaround_available", label: "有暫時解法 (workaround_available)" },
+const RESPONSE_KEYS = [
+  "can_not_fix", "will_not_fix", "update", "rollback", "workaround_available",
 ];
 
 export default function ReleaseDetail() {
@@ -55,6 +40,27 @@ export default function ReleaseDetail() {
   const location = useLocation();
   const { orgId, orgName, productId, productName, version: releaseVersion } = location.state || {};
   const fileRef = useRef();
+
+  // UX-3.002 — translated dictionaries for status labels + VEX option lists.
+  // Memoised so re-renders don't recreate the option arrays (which would
+  // break <select>'s key reconciliation on rapid lang toggle).
+  const STATUS_LABEL = useMemo(() => ({
+    open:         t("vexStatus.open"),
+    in_triage:    t("vexStatus.in_triage"),
+    not_affected: t("vexStatus.not_affected"),
+    affected:     t("vexStatus.affected"),
+    fixed:        t("vexStatus.fixed"),
+  }), [t]);
+
+  const JUSTIFICATION_OPTIONS = useMemo(
+    () => JUSTIFICATION_KEYS.map(value => ({ value, label: t(`vex.justifications.${value}`) })),
+    [t]
+  );
+
+  const RESPONSE_OPTIONS = useMemo(
+    () => RESPONSE_KEYS.map(value => ({ value, label: t(`vex.responses.${value}`) })),
+    [t]
+  );
 
   const [tab, setTab] = useState("components");
   const [components, setComponents] = useState([]);
@@ -123,7 +129,7 @@ export default function ReleaseDetail() {
   const [shareNewLink, setShareNewLink] = useState(null);
 
   const fetchComponents = () => {
-    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data.items ?? r.data)).catch(() => toast.error("元件清單載入失敗"));
+    api.get(`/releases/${releaseId}/components`).then((r) => setComponents(r.data.items ?? r.data)).catch(() => toast.error(t("releaseDetail.errors.componentsLoad")));
   };
   const fetchQuality = () => {
     api.get(`/releases/${releaseId}/sbom-quality`).then((r) => setSbomQuality(r.data)).catch(() => setSbomQuality(null));
@@ -135,7 +141,7 @@ export default function ReleaseDetail() {
     api.get(`/releases/${releaseId}/dependency-graph`).then((r) => setDepGraph(r.data)).catch(() => setDepGraph(null));
   };
   const fetchVulns = () => {
-    api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => toast.error("漏洞清單載入失敗"));
+    api.get(`/releases/${releaseId}/vulnerabilities`).then((r) => setVulns(r.data)).catch(() => toast.error(t("releaseDetail.errors.vulnsLoad")));
   };
   const fetchViolations = () => {
     api.get(`/policies/releases/${releaseId}/violations`).then((r) => setViolations(r.data)).catch(() => {});
@@ -145,7 +151,7 @@ export default function ReleaseDetail() {
     api.get(`/releases/${releaseId}`).then((r) => {
       setLocked(r.data.locked ?? false);
       setNotes(r.data.notes ?? "");
-    }).catch(() => toast.error("版本資料載入失敗"));
+    }).catch(() => toast.error(t("releaseDetail.errors.releaseLoad")));
   };
 
   useEffect(() => {
@@ -198,7 +204,7 @@ export default function ReleaseDetail() {
     try {
       const r = await api.get(`/releases/${releaseId}/integrity`);
       setIntegrity(r.data);
-    } catch { setIntegrity({ status: "error", message: "驗證失敗" }); }
+    } catch { setIntegrity({ status: "error", message: t("releaseDetail.errors.integrityFailed") }); }
     finally { setCheckingIntegrity(false); }
   };
 
@@ -211,13 +217,13 @@ export default function ReleaseDetail() {
 
   const handleUploadSignature = async () => {
     if (!sigForm.signature || !sigForm.public_key) {
-      toast.error("請提供簽章與公鑰");
+      toast.error(t("releaseDetail.errors.signatureRequired"));
       return;
     }
     setSigUploading(true);
     try {
       await api.post(`/releases/${releaseId}/signature`, sigForm);
-      toast.success("簽章上傳成功");
+      toast.success(t("releaseDetail.successes.signatureUploaded"));
       setShowSigUpload(false);
       setSigForm({ signature: "", public_key: "", algorithm: "", signer_identity: "" });
       fetchSigStatus();
@@ -530,7 +536,7 @@ export default function ReleaseDetail() {
       });
       setSelected(new Set());
       fetchVulns();
-      toast.success(`已批次更新 ${count} 筆漏洞狀態為「${STATUS_LABEL[batchStatus] || batchStatus}」`);
+      toast.success(t("releaseDetail.successes.batchUpdated", { count, status: STATUS_LABEL[batchStatus] || batchStatus }));
     } catch (err) {
       toast.error(formatApiError(err, t("errors.updateFailed")));
     } finally {
@@ -936,7 +942,7 @@ export default function ReleaseDetail() {
                 <code className="text-xs bg-violet-100 px-2 py-1 rounded break-all">
                   {window.location.origin}/api/share/{shareNewLink.token}
                 </code>
-                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/share/${shareNewLink.token}`).then(() => toast.success("連結已複製")).catch(() => toast.error("複製失敗，請手動選取"))}
+                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/share/${shareNewLink.token}`).then(() => toast.success(t("releaseDetail.successes.linkCopied"))).catch(() => toast.error(t("releaseDetail.errors.copyFailed")))}
                   className="text-xs text-violet-600 hover:text-violet-800 border border-violet-300 px-2 py-0.5 rounded">
                   複製
                 </button>
@@ -1191,7 +1197,7 @@ export default function ReleaseDetail() {
                     await api.patch(`/releases/${releaseId}/notes`, { notes });
                     setNotesEditing(false);
                     toast.success("備註已儲存");
-                  } catch { toast.error("儲存失敗"); }
+                  } catch { toast.error(t("releaseDetail.errors.notesSaveFailed")); }
                   finally { setNotesSaving(false); }
                 }}
                 disabled={notesSaving}

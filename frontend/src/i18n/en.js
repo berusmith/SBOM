@@ -128,6 +128,30 @@ const en = {
     fixed:        "Fixed",
   },
 
+  // ── VEX justification / response copy ─────────────────────────────────────
+  // English-side keeps the CSAF tokens parenthesised so reviewers can align
+  // with the CSAF spec wording verbatim.
+  vex: {
+    justifications: {
+      code_not_present:                "Code not present (code_not_present)",
+      code_not_reachable:              "Code not reachable (code_not_reachable)",
+      requires_configuration:          "Requires configuration (requires_configuration)",
+      requires_dependency:             "Requires dependency (requires_dependency)",
+      requires_environment:            "Requires environment (requires_environment)",
+      protected_by_compiler:           "Protected by compiler (protected_by_compiler)",
+      protected_at_runtime:            "Protected at runtime (protected_at_runtime)",
+      protected_at_perimeter:          "Protected at perimeter (protected_at_perimeter)",
+      protected_by_mitigating_control: "Protected by mitigating control (protected_by_mitigating_control)",
+    },
+    responses: {
+      can_not_fix:          "Cannot fix (can_not_fix)",
+      will_not_fix:         "Will not fix (will_not_fix)",
+      update:               "Update (update)",
+      rollback:             "Rollback (rollback)",
+      workaround_available: "Workaround available (workaround_available)",
+    },
+  },
+
   // ── Reachability ──────────────────────────────────────────────────────────
   reachability: {
     function_reachable: "Function Confirmed",
@@ -334,6 +358,20 @@ const en = {
       passed: "Passed",
       failed: "Failed",
     },
+    errors: {
+      componentsLoad:    "Failed to load components",
+      vulnsLoad:         "Failed to load vulnerabilities",
+      releaseLoad:       "Failed to load release",
+      integrityFailed:   "Verification failed",
+      signatureRequired: "Provide both signature and public key",
+      copyFailed:        "Copy failed, please select manually",
+      notesSaveFailed:   "Save failed",
+    },
+    successes: {
+      signatureUploaded: "Signature uploaded",
+      linkCopied:        "Link copied",
+      batchUpdated:      "Batch updated {{count}} vulnerabilities to '{{status}}'",
+    },
     locked:      "This release is locked. SBOM upload, rescan, and VEX edits are disabled.",
     lockConfirm: "Lock this release? Upload, rescan, and VEX edits will be disabled. Confirm?",
   },
@@ -485,6 +523,10 @@ const en = {
     failed:     "Failed",
     components: "Components",
     noScans:    "No scan records yet",
+    errors: {
+      invalidFileType: "Please upload a .bin, .img or .zip file",
+      missingFields:   "Please fill in all fields",
+    },
   },
 
   // ── Help ──────────────────────────────────────────────────────────────────

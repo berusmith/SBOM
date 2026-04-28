@@ -130,6 +130,30 @@ const zh = {
     fixed:        "已修補",
   },
 
+  // ── VEX justification / response 文案 ─────────────────────────────────────
+  // 用於 VEX modal 的下拉選項;label 後括號保留英文 token 是因為 CSAF 規範
+  // 直接使用這些英文鍵值,顯示時讓使用者同時看到中英對照便於與 CSAF 報告比對。
+  vex: {
+    justifications: {
+      code_not_present:                "程式碼不存在 (code_not_present)",
+      code_not_reachable:              "程式碼不可達 (code_not_reachable)",
+      requires_configuration:          "需特殊設定才觸發 (requires_configuration)",
+      requires_dependency:             "需特殊相依才觸發 (requires_dependency)",
+      requires_environment:            "需特殊環境才觸發 (requires_environment)",
+      protected_by_compiler:           "編譯器保護 (protected_by_compiler)",
+      protected_at_runtime:            "執行期保護 (protected_at_runtime)",
+      protected_at_perimeter:          "邊界防護 (protected_at_perimeter)",
+      protected_by_mitigating_control: "緩解控制保護 (protected_by_mitigating_control)",
+    },
+    responses: {
+      can_not_fix:          "無法修復 (can_not_fix)",
+      will_not_fix:         "不予修復 (will_not_fix)",
+      update:               "升級版本 (update)",
+      rollback:             "回滾版本 (rollback)",
+      workaround_available: "有暫時解法 (workaround_available)",
+    },
+  },
+
   // ── 可達性 ────────────────────────────────────────────────────────────────
   reachability: {
     function_reachable: "函式確認",
@@ -336,6 +360,20 @@ const zh = {
       passed: "通過",
       failed: "未通過",
     },
+    errors: {
+      componentsLoad:    "元件清單載入失敗",
+      vulnsLoad:         "漏洞清單載入失敗",
+      releaseLoad:       "版本資料載入失敗",
+      integrityFailed:   "驗證失敗",
+      signatureRequired: "請提供簽章與公鑰",
+      copyFailed:        "複製失敗，請手動選取",
+      notesSaveFailed:   "儲存失敗",
+    },
+    successes: {
+      signatureUploaded: "簽章上傳成功",
+      linkCopied:        "連結已複製",
+      batchUpdated:      "已批次更新 {{count}} 筆漏洞狀態為「{{status}}」",
+    },
     locked: "此版本已鎖定，禁止上傳 SBOM、重新掃描及修改 VEX 狀態。",
     lockConfirm: "鎖定後將無法上傳 SBOM、重新掃描或修改 VEX 狀態，確定鎖定？",
   },
@@ -487,6 +525,10 @@ const zh = {
     failed:     "失敗",
     components: "元件數",
     noScans:    "尚無掃描記錄",
+    errors: {
+      invalidFileType: "請上傳 .bin, .img 或 .zip 檔案",
+      missingFields:   "請填寫所有欄位",
+    },
   },
 
   // ── 說明 ──────────────────────────────────────────────────────────────────
