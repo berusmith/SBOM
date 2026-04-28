@@ -1,7 +1,12 @@
-import { useRef, useId } from "react";
+import { useRef, useId, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { useFocusTrap } from "../hooks/useFocusTrap";
+
+// UX-3.023 — keep the panel mounted while the exit animation plays so the
+// content can fade/scale out instead of vanishing instantly.  Must match the
+// `duration-base` class on the panel below.  If you change this, change both.
+const EXIT_MS = 200;
 
 /**
  * Accessible modal wrapper.  Handles every detail of the WAI-ARIA modal
