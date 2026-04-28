@@ -142,6 +142,26 @@ export default {
         "prose":     "40rem",    // 640  — long-form text (~75 chars)
       },
 
+      // Elevation scale (UX-3.026) — six layers of depth so visual hierarchy
+      // is intentional. Tailwind's default `shadow` (== shadow-sm) is too
+      // weak on a gray-50 page background; the elev-* scale below is tuned
+      // to read on light surfaces while staying flat enough for B2B density.
+      //
+      //   elev-0  flat       — borders only (inline edit, ghost containers)
+      //   elev-1  subtle     — cards on the page
+      //   elev-2  raised     — cards on hover, popovers below dropdown
+      //   elev-3  overlay    — dropdowns, comboboxes
+      //   elev-4  modal      — Modal dialog
+      //   elev-5  toast      — Toast (above modal so action acks read clearly)
+      boxShadow: {
+        "elev-0": "none",
+        "elev-1": "0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px 0 rgb(0 0 0 / 0.03)",
+        "elev-2": "0 2px 4px -1px rgb(0 0 0 / 0.06), 0 4px 8px -2px rgb(0 0 0 / 0.05)",
+        "elev-3": "0 4px 6px -1px rgb(0 0 0 / 0.08), 0 8px 16px -4px rgb(0 0 0 / 0.06)",
+        "elev-4": "0 12px 24px -8px rgb(0 0 0 / 0.18), 0 20px 40px -16px rgb(0 0 0 / 0.12)",
+        "elev-5": "0 16px 40px -12px rgb(0 0 0 / 0.22), 0 24px 48px -16px rgb(0 0 0 / 0.16)",
+      },
+
       // Spacing rhythm tokens (UX-3.017) — give the page-level rhythm
       // semantic names so contributors stop reaching for arbitrary mt-4/6/8.
       // Use these for *between sections*, not inside cards.
