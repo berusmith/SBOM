@@ -1,0 +1,142 @@
+{
+  "dashboard@360": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 30,
+    "focusables": 29,
+    "unnamed_focusables": 0
+  },
+  "organizations@360": {
+    "overflow": 0,
+    "clipped_count": 3,
+    "total_focusable": 22,
+    "focusables": 26,
+    "unnamed_focusables": 0
+  },
+  "products@360": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 21,
+    "focusables": 24,
+    "unnamed_focusables": 0
+  },
+  "risk-overview@360": {
+    "overflow": 0,
+    "clipped_count": 5,
+    "total_focusable": 25,
+    "focusables": 28,
+    "unnamed_focusables": 0
+  },
+  "policies@360": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 78,
+    "focusables": 80,
+    "unnamed_focusables": 0
+  },
+  "dashboard@768": {
+    "overflow": 67,
+    "clipped_count": 4,
+    "total_focusable": 30,
+    "focusables": 29,
+    "unnamed_focusables": 0
+  },
+  "organizations@768": {
+    "overflow": 67,
+    "clipped_count": 4,
+    "total_focusable": 22,
+    "focusables": 26,
+    "unnamed_focusables": 0
+  },
+  "products@768": {
+    "overflow": 67,
+    "clipped_count": 4,
+    "total_focusable": 21,
+    "focusables": 24,
+    "unnamed_focusables": 0
+  },
+  "risk-overview@768": {
+    "overflow": 67,
+    "clipped_count": 6,
+    "total_focusable": 25,
+    "focusables": 28,
+    "unnamed_focusables": 0
+  },
+  "policies@768": {
+    "overflow": 67,
+    "clipped_count": 4,
+    "total_focusable": 78,
+    "focusables": 80,
+    "unnamed_focusables": 0
+  },
+  "dashboard@1280": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 30,
+    "focusables": 29,
+    "unnamed_focusables": 0
+  },
+  "organizations@1280": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 22,
+    "focusables": 26,
+    "unnamed_focusables": 0
+  },
+  "products@1280": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 21,
+    "focusables": 24,
+    "unnamed_focusables": 0
+  },
+  "risk-overview@1280": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 25,
+    "focusables": 28,
+    "unnamed_focusables": 0
+  },
+  "policies@1280": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 78,
+    "focusables": 80,
+    "unnamed_focusables": 0
+  },
+  "dashboard@1920": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 30,
+    "focusables": 29,
+    "unnamed_focusables": 0
+  },
+  "organizations@1920": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 22,
+    "focusables": 26,
+    "unnamed_focusables": 0
+  },
+  "products@1920": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 21,
+    "focusables": 24,
+    "unnamed_focusables": 0
+  },
+  "risk-overview@1920": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 25,
+    "focusables": 28,
+    "unnamed_focusables": 0
+  },
+  "policies@1920": {
+    "overflow": 0,
+    "clipped_count": 0,
+    "total_focusable": 78,
+    "focusables": 80,
+    "unnamed_focusables": 0
+  }
+}

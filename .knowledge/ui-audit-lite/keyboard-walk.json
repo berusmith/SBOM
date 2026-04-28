@@ -1,0 +1,242 @@
+{
+  "dashboard": {
+    "tab_count": 20,
+    "null_active_count": 1,
+    "first_5": [
+      {
+        "tag": "BUTTON",
+        "name": "1\u5ba2\u6236\u6578"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "0\u7522\u54c1\u6578"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "0\u7248\u672c\u6578"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "0CRA \u9032\u884c\u4e2d"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "0SLA \u903e\u671f"
+      }
+    ],
+    "last_5": [
+      {
+        "tag": "A",
+        "name": "Policy"
+      },
+      {
+        "tag": "A",
+        "name": "CRA \u4e8b\u4ef6"
+      },
+      {
+        "tag": "A",
+        "name": "TISAX"
+      },
+      {
+        "tag": "A",
+        "name": "\u97cc\u9ad4\u6383\u63cf"
+      },
+      {
+        "tag": "A",
+        "name": "\u5e33\u865f\u7ba1\u7406"
+      }
+    ]
+  },
+  "organizations": {
+    "tab_count": 20,
+    "null_active_count": 0,
+    "first_5": [
+      {
+        "tag": "A",
+        "name": "\u8df3\u81f3\u4e3b\u5167\u5bb9"
+      },
+      {
+        "tag": "A",
+        "name": "\u5100\u8868\u677f"
+      },
+      {
+        "tag": "A",
+        "name": "\u5ba2\u6236\u7ba1\u7406"
+      },
+      {
+        "tag": "A",
+        "name": "\u98a8\u96aa\u7e3d\u89bd"
+      },
+      {
+        "tag": "A",
+        "name": "Policy"
+      }
+    ],
+    "last_5": [
+      {
+        "tag": "A",
+        "name": "admin"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u767b\u51fa"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "+ \u65b0\u589e\u5ba2\u6236"
+      },
+      {
+        "tag": "SELECT",
+        "name": "StarterStandardProfessional"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u67e5\u770b\u7522\u54c1"
+      }
+    ]
+  },
+  "products": {
+    "tab_count": 20,
+    "null_active_count": 0,
+    "first_5": [
+      {
+        "tag": "A",
+        "name": "\u8df3\u81f3\u4e3b\u5167\u5bb9"
+      },
+      {
+        "tag": "A",
+        "name": "\u5100\u8868\u677f"
+      },
+      {
+        "tag": "A",
+        "name": "\u5ba2\u6236\u7ba1\u7406"
+      },
+      {
+        "tag": "A",
+        "name": "\u98a8\u96aa\u7e3d\u89bd"
+      },
+      {
+        "tag": "A",
+        "name": "Policy"
+      }
+    ],
+    "last_5": [
+      {
+        "tag": "A",
+        "name": "admin"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u767b\u51fa"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u5ba2\u6236\u7ba1\u7406"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "+ \u65b0\u589e\u7522\u54c1"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "+ \u65b0\u589e\u7522\u54c1"
+      }
+    ]
+  },
+  "risk-overview": {
+    "tab_count": 20,
+    "null_active_count": 0,
+    "first_5": [
+      {
+        "tag": "A",
+        "name": "\u8df3\u81f3\u4e3b\u5167\u5bb9"
+      },
+      {
+        "tag": "A",
+        "name": "\u5100\u8868\u677f"
+      },
+      {
+        "tag": "A",
+        "name": "\u5ba2\u6236\u7ba1\u7406"
+      },
+      {
+        "tag": "A",
+        "name": "\u98a8\u96aa\u7e3d\u89bd"
+      },
+      {
+        "tag": "A",
+        "name": "Policy"
+      }
+    ],
+    "last_5": [
+      {
+        "tag": "A",
+        "name": "admin"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u767b\u51fa"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u98a8\u96aa\u5206\u6578\u2193"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u672a\u4fee Critical\u2195"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u672a\u4fee High\u2195"
+      }
+    ]
+  },
+  "policies": {
+    "tab_count": 20,
+    "null_active_count": 0,
+    "first_5": [
+      {
+        "tag": "BUTTON",
+        "name": "+ \u65b0\u589e\u898f\u5247"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u505c\u7528 \u898f\u5247\u300cCritical \u6f0f\u6d1e\u8d85\u904e 7 \u5929\u672a\u4fee\u88dc\u300d"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u7de8\u8f2f"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u522a\u9664"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u505c\u7528 \u898f\u5247\u300cKEV \u6f0f\u6d1e\u8d85\u904e 3 \u5929\u672a\u8655\u7406\u300d"
+      }
+    ],
+    "last_5": [
+      {
+        "tag": "BUTTON",
+        "name": "\u7de8\u8f2f"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u522a\u9664"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u505c\u7528 License \u898f\u5247\u300cGNU GPL v2\u300d"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u7de8\u8f2f"
+      },
+      {
+        "tag": "BUTTON",
+        "name": "\u522a\u9664"
+      }
+    ]
+  }
+}
