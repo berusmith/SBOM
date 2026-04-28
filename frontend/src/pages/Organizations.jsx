@@ -136,8 +136,11 @@ export default function Organizations() {
       {showForm && (
         <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 mb-4 space-y-3">
           <div className="font-medium text-sm text-gray-700">{t("organizations.add")}</div>
+          {/* UX-007: visually-hidden labels bound to each input so AT users hear field names. */}
           <div>
+            <label htmlFor="org-create-name" className="sr-only">客戶名稱（公司名，必填）</label>
             <input
+              id="org-create-name"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
@@ -154,7 +157,9 @@ export default function Organizations() {
             <div className="text-xs text-gray-600 mb-2">登入帳號（選填，留空則不建立）</div>
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="flex-1">
+                <label htmlFor="org-create-username" className="sr-only">登入帳號</label>
                 <input
+                  id="org-create-username"
                   value={username}
                   onChange={(e) => {
                     setUsername(e.target.value);
@@ -176,6 +181,7 @@ export default function Organizations() {
                   }}
                   placeholder="初始密碼（至少 6 字元）"
                   error={errors.password}
+                  aria-label="初始密碼（至少 6 字元）"
                 />
               </div>
             </div>

@@ -21,6 +21,7 @@ export function PasswordInput({
   id,
   name = "password",
   autoComplete = "current-password",
+  "aria-label": ariaLabel,
 }) {
   const { t } = useTranslation();
   const [show, setShow] = useState(false);
@@ -38,6 +39,7 @@ export function PasswordInput({
         onChange={onChange}
         placeholder={placeholder}
         autoComplete={autoComplete}
+        aria-label={ariaLabel}
         aria-invalid={error ? "true" : "false"}
         aria-describedby={error ? errId : undefined}
         className={`border rounded px-3 py-2 pr-10 text-base w-full focus:outline-none focus:ring-2 ${

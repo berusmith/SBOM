@@ -416,7 +416,10 @@ export default function Dashboard() {
       <div className="mt-4 bg-white rounded-lg shadow p-5">
         <h2 className="font-semibold text-gray-700 mb-3">{t("dashboard.cveImpact")}</h2>
         <form onSubmit={handleCveSearch} className="flex gap-2 mb-3">
+          {/* UX-006: visually-hidden label so screen readers announce the field after the placeholder is gone. */}
+          <label htmlFor="cve-impact-q" className="sr-only">{t("dashboard.cveInputHint")}</label>
           <input
+            id="cve-impact-q"
             value={cveQuery}
             onChange={e => setCveQuery(e.target.value)}
             placeholder={t("dashboard.cveInputHint")}
