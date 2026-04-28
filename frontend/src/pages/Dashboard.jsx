@@ -573,13 +573,14 @@ export default function Dashboard() {
               <caption className="sr-only">{t("dashboard.riskOverview")}</caption>
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
-                  <th scope="col" className="pb-2 pr-4">客戶</th>
-                  <th scope="col" className="pb-2 pr-4 text-center">產品</th>
-                  <th scope="col" className="pb-2 pr-4 text-center">總漏洞</th>
-                  <th scope="col" className="pb-2 pr-4 text-center">未修 Critical</th>
-                  <th scope="col" className="pb-2 pr-4 text-center">未修 High</th>
-                  <th scope="col" className="pb-2 pr-4 text-center">修補率</th>
-                  <th scope="col" className="pb-2 text-center">風險評分</th>
+                  {/* UX-3.004 — 7 column headers were hardcoded zh; now use t() */}
+                  <th scope="col" className="pb-2 pr-4">{t("dashboard.riskOverviewCol.customer")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskOverviewCol.products")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskOverviewCol.totalVulns")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskOverviewCol.unpatchedCritical")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskOverviewCol.unpatchedHigh")}</th>
+                  <th scope="col" className="pb-2 pr-4 text-center">{t("dashboard.riskOverviewCol.patchRate")}</th>
+                  <th scope="col" className="pb-2 text-center">{t("dashboard.riskOverviewCol.riskScore")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
