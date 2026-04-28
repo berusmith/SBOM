@@ -256,18 +256,33 @@ export default function Dashboard() {
           { label: t("dashboard.components"),  value: stats.components,                 color: "bg-teal-500",   link: null },
           { label: t("dashboard.craActive"),   value: stats.cra_incidents?.active ?? 0, color: stats.cra_incidents?.active > 0 ? "bg-red-500" : "bg-gray-400", link: "/cra" },
           { label: t("dashboard.slaOverdue"),  value: stats.overdue_vulns ?? 0,        color: (stats.overdue_vulns ?? 0) > 0 ? "bg-red-600" : "bg-gray-400", link: "/risk-overview" },
-        ].map((c) => (
-          <div
-            key={c.label}
-            onClick={() => c.link && navigate(c.link)}
-            className={`bg-white rounded-lg shadow p-5 flex items-center gap-4 ${c.link ? "cursor-pointer hover:shadow-md" : ""}`}
-          >
-            <div className={`${c.color} w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl font-bold shrink-0`}>
-              {c.value}
+        ].map((c) => {
+          // UX-001: clickable summary cards must be real <button>s — keyboard-focusable,
+          // announced as button by AT, Enter/Space activates.  Non-clickable cards
+          // (no link) become a plain <div> so they're not in the tab order.
+          const inner = (
+            <>
+              <div className={`${c.color} w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl font-bold shrink-0`}>
+                {c.value}
+              </div>
+              <span className="text-gray-600 font-medium text-sm">{c.label}</span>
+            </>
+          );
+          return c.link ? (
+            <button
+              type="button"
+              key={c.label}
+              onClick={() => navigate(c.link)}
+              className="bg-white rounded-lg shadow p-5 flex items-center gap-4 text-left w-full cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              {inner}
+            </button>
+          ) : (
+            <div key={c.label} className="bg-white rounded-lg shadow p-5 flex items-center gap-4">
+              {inner}
             </div>
-            <span className="text-gray-600 font-medium text-sm">{c.label}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Viewer quick-access banner */}
