@@ -50,7 +50,8 @@ export default function TrendChart({ data }) {
           {yTicks.map((v) => (
             <g key={v}>
               <line x1={PL} y1={yp(v)} x2={W - PR} y2={yp(v)} stroke={CHART_GRID_STROKE} strokeWidth="1"/>
-              <text x={PL - 4} y={yp(v) + 3} textAnchor="end" fontSize="8" fill={CHART_TICK_LABEL}>{v}</text>
+              {/* UX-3.003 — Y tick was fontSize=8 (≈ 6px on 1× displays = unreadable). Bumped to 10. */}
+              <text x={PL - 4} y={yp(v) + 4} textAnchor="end" fontSize="10" fill={CHART_TICK_LABEL}>{v}</text>
             </g>
           ))}
           {/* X axis */}
@@ -66,12 +67,29 @@ export default function TrendChart({ data }) {
               {/* Invisible wide hit area */}
               <rect x={xp(i) - 14} y={PT} width={28} height={cH} fill="transparent"/>
               {hovered === i && <line x1={xp(i)} y1={PT} x2={xp(i)} y2={PT + cH} stroke={CHART_AXIS_STROKE} strokeWidth="1" strokeDasharray="3,2"/>}
+              {/* UX-3.030 — circles transition `r` on hover (was a hard cut). */}
               {LINES.map(({ field, color, dot }) => (
-                d[field] > 0 && <circle key={field} cx={xp(i)} cy={yp(d[field])} r={hovered === i ? dot + 1 : dot} fill={color}/>
+                d[field] > 0 && (
+                  <circle
+                    key={field}
+                    cx={xp(i)}
+                    cy={yp(d[field])}
+                    r={hovered === i ? dot + 1 : dot}
+                    fill={color}
+                    style={{ transition: "r 150ms cubic-bezier(0.16, 1, 0.3, 1)" }}
+                  />
+                )
               ))}
-              <circle cx={xp(i)} cy={yp(d.total || 0)} r={hovered === i ? 4 : 3} fill={SEVERITY_HEX.total}/>
-              <text x={xp(i)} y={H - 4} textAnchor="middle" fontSize="7.5" fill={hovered === i ? CHART_LABEL_HOVER : CHART_TICK_LABEL} fontWeight={hovered === i ? "600" : "400"}>
-                {d.version.length > 8 ? d.version.slice(0, 8) + "…" : d.version}
+              <circle
+                cx={xp(i)}
+                cy={yp(d.total || 0)}
+                r={hovered === i ? 4 : 3}
+                fill={SEVERITY_HEX.total}
+                style={{ transition: "r 150ms cubic-bezier(0.16, 1, 0.3, 1)" }}
+              />
+              {/* UX-3.003 — X label was fontSize=7.5 (≈ 6px). Bumped to 11; truncate threshold raised from 8 → 12 chars to match. */}
+              <text x={xp(i)} y={H - 4} textAnchor="middle" fontSize="11" fill={hovered === i ? CHART_LABEL_HOVER : CHART_TICK_LABEL} fontWeight={hovered === i ? "600" : "400"}>
+                {d.version.length > 12 ? d.version.slice(0, 12) + "…" : d.version}
               </text>
             </g>
           ))}
@@ -87,7 +105,8 @@ export default function TrendChart({ data }) {
             >
               <div className="font-semibold mb-1">{d.version}</div>
               <div className="space-y-0.5">
-                <div className="flex gap-2 justify-between"><span className="text-gray-600">未解決總計</span><span className="font-bold text-blue-300">{d.total}</span></div>
+                {/* UX-3.032 — gray-600 on gray-900 was 3.8:1 (WCAG AA fail for body). gray-300 = 9.0:1. */}
+                <div className="flex gap-2 justify-between"><span className="text-gray-300">未解決總計</span><span className="font-bold text-blue-300">{d.total}</span></div>
                 {d.critical > 0 && <div className="flex gap-2 justify-between"><span className="text-red-400">Critical</span><span>{d.critical}</span></div>}
                 {d.high > 0 && <div className="flex gap-2 justify-between"><span className="text-orange-400">High</span><span>{d.high}</span></div>}
                 {d.medium > 0 && <div className="flex gap-2 justify-between"><span className="text-yellow-300">Medium</span><span>{d.medium}</span></div>}
