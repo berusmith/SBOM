@@ -29,12 +29,22 @@ export default function Organizations() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmPlan, setConfirmPlan] = useState(null); // {org, newPlan}
+  // UX-3.014 — row-flash trigger. Set this to a row's id after a successful
+  // mutation (create / edit / plan change); the row briefly tints to confirm
+  // "this is the one you just changed", then fades back. Auto-clears after
+  // the animation duration.
+  const [flashId, setFlashId] = useState(null);
   const navigate = useNavigate();
   const isAdmin = localStorage.getItem("role") === "admin";
 
+  const triggerFlash = (id) => {
+    setFlashId(id);
+    setTimeout(() => setFlashId((cur) => cur === id ? null : cur), 1500);
+  };
+
   const fetchOrgs = () => {
     setOrgsLoading(true);
-    api.get("/organizations")
+    return api.get("/organizations")
       .then((res) => setOrgs(res.data))
       .catch((err) => toast.error(formatApiError(err, t("errors.loadFailed"))))
       .finally(() => setOrgsLoading(false));
@@ -71,7 +81,8 @@ export default function Organizations() {
       setName(""); setUsername(""); setPassword("");
       setShowForm(false);
       setCreated(res.data);
-      fetchOrgs();
+      await fetchOrgs();
+      triggerFlash(res.data.id);
     } catch (err) {
       toast.error(formatApiError(err, t("errors.createFailed")));
     } finally {
@@ -83,9 +94,11 @@ export default function Organizations() {
     e.preventDefault();
     if (!editName.trim()) return;
     try {
+      const editedId = editOrg.id;
       await api.patch(`/organizations/${editOrg.id}`, { name: editName });
       setEditOrg(null);
-      fetchOrgs();
+      await fetchOrgs();
+      triggerFlash(editedId);
     } catch (err) {
       toast.error(formatApiError(err, t("errors.updateFailed")));
     }
@@ -243,7 +256,8 @@ export default function Organizations() {
             </thead>
             <tbody>
               {orgs.map((org) => (
-                <tr key={org.id} className="border-t hover:bg-gray-50">
+                /* UX-3.014 — row briefly flashes blue when this is the org the user just touched. */
+                <tr key={org.id} className={`border-t hover:bg-gray-50 ${flashId === org.id ? "row-flash" : ""}`}>
                   <td className="px-4 py-3 font-medium text-gray-800">{org.name}</td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -329,9 +343,11 @@ export default function Organizations() {
         confirmText="確認變更"
         cancelText={t("common.cancel")}
         onConfirm={async () => {
+          const orgId = confirmPlan.org.id;
           await api.patch(`/organizations/${confirmPlan.org.id}/plan`, { plan: confirmPlan.newPlan });
           setConfirmPlan(null);
-          fetchOrgs();
+          await fetchOrgs();
+          triggerFlash(orgId);
         }}
         onCancel={() => setConfirmPlan(null)}
       />

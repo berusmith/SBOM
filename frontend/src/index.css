@@ -160,6 +160,26 @@
   .chip-neutral { @apply bg-gray-50   text-gray-700   border-gray-200; }
 
   /*
+   * UX-3.014 — row flash. After a user creates / edits / deletes / changes
+   * a row's data, the parent re-fetches and re-renders the list. Without
+   * a flash, the user has to scan the rebuilt list to find their change.
+   * The flash briefly tints the row blue, then fades back to transparent
+   * so subsequent hover backgrounds still work.
+   *
+   * Trigger by setting a `flashId` state in the parent and conditionally
+   * applying `.row-flash` to the target <tr>:
+   *   <tr className={flashId === item.id ? "row-flash" : ""} ...>
+   * Schedule the unset 1500ms later (matches animation duration).
+   */
+  @keyframes row-flash {
+    0%   { background-color: rgb(219 234 254); }
+    100% { background-color: transparent; }
+  }
+  .row-flash {
+    animation: row-flash 1500ms ease-out;
+  }
+
+  /*
    * UX-3.024 — Skeleton shimmer. Replaces the Tailwind animate-pulse default
    * (opacity 0.5↔1 — barely perceptible on retina) with a left-to-right
    * gradient sweep that reads as "loading" much more clearly. The
