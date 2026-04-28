@@ -202,6 +202,30 @@ auto-pause #6 vocabulary):
 | T7 | Major dependency upgrade with security implications (FastAPI ≥ next major; SQLAlchemy 3.x; React 19 → 20; etc.) | Defense layers may shift; behavioural drift surfaces in PoCs                          |
 | **T8** | **SEC-025 candidate promotion** — backend uvicorn worker silently exits without a traceback on the production Mac mini path (NOT the dev Windows path documented in §2 Run-1 anomaly). Specifically: any of (a) more than 1 silent restart per 24 h sustained over a 7-day window, OR (b) a single silent restart whose root cause cannot be attributed to OS update / disk full / OOM-killer / nginx-`client_max_body_size` overflow within 1 hour of investigation, OR (c) any silent restart observed under organic customer traffic post-T1. | Promotes the §2 candidate to a real SEC-025 finding (DoS-resilience class, adjacent to SEC-015); requires PoC to reproduce, severity sizing, and remediation work (likely uvicorn `--workers > 1` + restart hook telemetry). |
 
+### T9 candidate (parked, not yet promoted) — dependency management strategy upgrade
+
+**Context**: The SEC-024 hotfix had to use `pg8000==1.31.5` (exact pin)
+because `pip-audit --strict` rejects range pins ("requirement is not
+pinned to an exact version"). The trade-off this imposes:
+
+- **Today**: dep version is exactly known; reproducible builds; pip-audit passes.
+- **Future**: when (e.g.) `pg8000 1.31.5` ships its own CRITICAL CVE, an exact pin in source-of-truth `requirements.txt` blocks dependabot / renovate's auto-PR for the patch range and forces manual updates. Latency between CVE publish and patch availability is then human-bounded, not bot-bounded.
+
+**Long-term remediation** (NOT for this audit cycle):
+
+1. Adopt a two-layer dep model — `requirements.in` (range pins, source of truth) + `requirements.txt` (exact-pin lockfile, generated). Tooling options: `pip-tools`, `uv lock`, or `poetry`. The lockfile keeps `pip-audit --strict` happy; the `.in` keeps the range that bots can update.
+2. `dependabot.yml` config: group all Python deps into one weekly PR against `requirements.in`; auto-regenerate the lockfile in the PR.
+
+**Promotion trigger** (would make this official T9):
+
+- Commercialisation is announced (T1-equivalent), OR
+- A dependabot / renovate integration PR is opened against this repo, OR
+- A second SEC-024-class CVE-on-pinned-dep finding lands in the audit register.
+
+Until any of those, this stays a parked candidate — recording the
+trade-off accepted on 2026-04-28 so future-us doesn't relitigate the
+exact-pin decision without remembering why we picked it.
+
 For each trigger, the Phase 7 entry checklist is:
 
 1. Re-run all 5 dynamic PoCs (SEC-001a/b/c/d + SEC-002) against the
