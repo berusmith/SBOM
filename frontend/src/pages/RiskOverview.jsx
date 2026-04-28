@@ -64,9 +64,10 @@ export default function RiskOverview() {
   const totalVulns = rows.reduce((s, r) => s + r.total_vulns, 0);
   const totalIncidents = rows.reduce((s, r) => s + r.active_incidents, 0);
 
+  // UX-013: arrow glyphs are pure decoration once aria-sort is set on <th>.
   const SortIcon = ({ field }) => {
-    if (sortKey !== field) return <span className="text-gray-300 ml-1">↕</span>;
-    return <span className="text-blue-500 ml-1">{sortAsc ? "↑" : "↓"}</span>;
+    if (sortKey !== field) return <span aria-hidden="true" className="text-gray-300 ml-1">↕</span>;
+    return <span aria-hidden="true" className="text-blue-500 ml-1">{sortAsc ? "↑" : "↓"}</span>;
   };
 
   return (
@@ -96,16 +97,23 @@ export default function RiskOverview() {
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">尚無客戶資料</div>
       ) : (
         <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[720px]">
+            <caption className="sr-only">{t("riskOverview.title")} — 跨客戶風險評分排序表</caption>
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th scope="col" className="px-4 py-3 text-left text-gray-600 font-medium w-8">#</th>
+                {/* UX-004: sortable headers expose state via aria-sort and an
+                    inner <button> so keyboard users can activate them. */}
                 {SORT_FIELDS.map((f) => (
                   <th scope="col" key={f.key}
-                    onClick={() => handleSort(f.key)}
-                    className="px-4 py-3 text-left text-gray-600 font-medium cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
+                    aria-sort={sortKey === f.key ? (sortAsc ? "ascending" : "descending") : "none"}
+                    className="px-4 py-3 text-left whitespace-nowrap"
                   >
-                    {f.label}<SortIcon field={f.key} />
+                    <button type="button"
+                            onClick={() => handleSort(f.key)}
+                            className="text-gray-600 font-medium hover:text-gray-800 select-none focus:outline-none focus:ring-2 focus:ring-blue-400 rounded">
+                      {f.label}<SortIcon field={f.key} />
+                    </button>
                   </th>
                 ))}
                 <th scope="col" className="px-4 py-3 text-left text-gray-600 font-medium whitespace-nowrap">修補率</th>
