@@ -63,6 +63,37 @@ export default {
         "ring-focus":      "rgb(96 165 250)",   // blue-400
       },
 
+      // Font stack — explicit CJK fallback so the same dashboard reads
+      // identically on macOS (PingFang TC), Windows (Microsoft JhengHei),
+      // and Linux (Noto Sans CJK). No web font is loaded; we only narrow
+      // the system fallback chain so renders converge.
+      fontFamily: {
+        sans: [
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "Noto Sans TC",
+          "PingFang TC",
+          "Microsoft JhengHei",
+          "sans-serif",
+        ],
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "Liberation Mono",
+          "Courier New",
+          "monospace",
+        ],
+      },
+
       fontSize: {
         // [size, lineHeight] in rem — modular 1.2 scale
         "caption": ["0.75rem",   "1rem"],

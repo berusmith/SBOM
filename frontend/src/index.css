@@ -21,6 +21,19 @@
  *   tailwind.config.js.
  */
 @layer base {
+  /*
+   * UX-3.025 — anchor the font stack so the dashboard renders consistently
+   * on macOS / Windows / Linux. Tailwind defaults to system-ui only, which
+   * means the CJK fallback chain is browser/OS-decided — that produces
+   * visibly different stroke weights and widths between machines. The
+   * explicit list (defined in tailwind.config.js theme.extend.fontFamily)
+   * pins the order so PingFang / JhengHei / Noto Sans CJK are all reached
+   * deterministically.
+   */
+  body {
+    font-family: theme('fontFamily.sans');
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
