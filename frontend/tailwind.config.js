@@ -93,6 +93,17 @@ export default {
         "slow":    "300ms",
       },
 
+      // Easing curves — cubic-beziers picked from world-class motion systems.
+      // ease-out-expo  : Linear-style "settles in" — best for entrances.
+      // ease-out-back  : subtle overshoot — best for confirmation feedback.
+      // spring         : playful overshoot — for delightful micro-actions only.
+      // (Tailwind's default `ease`, `ease-in`, `ease-out`, `ease-in-out` remain available.)
+      transitionTimingFunction: {
+        "ease-out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "ease-out-back": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "spring":        "cubic-bezier(0.5, 1.25, 0.75, 1.25)",
+      },
+
       maxWidth: {
         "page":  "80rem",   // 1280 — current de facto (= max-w-7xl)
         "form":  "32rem",   // 512  — single-column form
