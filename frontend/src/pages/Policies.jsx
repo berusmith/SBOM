@@ -413,7 +413,7 @@ export default function Policies() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">超過天數才違規</label>
               <input
-                type="number" min={0}
+                type="number" min={0} inputMode="numeric" pattern="[0-9]*"
                 value={form.min_days_open}
                 onChange={(e) => setForm({ ...form, min_days_open: parseInt(e.target.value) || 0 })}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-400"
