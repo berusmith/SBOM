@@ -27,22 +27,31 @@ const DURATIONS = {
   error:   6500,
 };
 
+// UX-3.023b — must match the toast leaving transition class duration below
+// (`duration-fast` = 150ms in tailwind.config.js).
+const EXIT_MS = 150;
+
 export function ToastProvider({ children }) {
   const { t } = useTranslation();
   const [toasts, setToasts] = useState([]);
 
-  const show = useCallback((message, type = "info") => {
-    const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message, type }]);
-    const ttl = DURATIONS[type] ?? 4000;
+  const startExit = useCallback((id) => {
+    setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, ttl);
+    }, EXIT_MS);
   }, []);
 
+  const show = useCallback((message, type = "info") => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type, leaving: false }]);
+    const ttl = DURATIONS[type] ?? 4000;
+    setTimeout(() => startExit(id), ttl);
+  }, [startExit]);
+
   const dismiss = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
+    startExit(id);
+  }, [startExit]);
 
   return (
     <ToastContext.Provider value={show}>
@@ -68,20 +77,29 @@ export function ToastProvider({ children }) {
         className="fixed z-toast flex flex-col gap-2 pointer-events-none
                    bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:bottom-5"
       >
-        {toasts.map(t => (
+        {/* Use `toast` not `t` for the iter var so it doesn't shadow the
+            useTranslation hook's t() function. */}
+        {toasts.map(toast => (
           <div
-            key={t.id}
-            className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-white text-sm w-full sm:max-w-sm pointer-events-auto ${STYLES[t.type]}`}
+            key={toast.id}
+            // UX-3.023b — `animate-toast-enter` runs once on mount (slide+fade in).
+            // `transition-[opacity,transform] duration-fast` handles exit via the
+            // `leaving` flag flipping the opacity / translate-y classes.
+            // Adopts shadow-elev-5 (Wave A) replacing shadow-lg.
+            className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-elev-5 text-white text-sm w-full sm:max-w-sm pointer-events-auto animate-toast-enter transition-[opacity,transform] duration-fast ease-out ${STYLES[toast.type]} ${toast.leaving ? "opacity-0 translate-y-1" : ""}`}
           >
-            <span className="font-bold mt-0.5 shrink-0">{ICONS[t.type]}</span>
-            <span className="flex-1 leading-snug break-words">{t.message}</span>
+            <span className="font-bold mt-0.5 shrink-0">{ICONS[toast.type]}</span>
+            <span className="flex-1 leading-snug break-words">{toast.message}</span>
             <button
               type="button"
-              onClick={() => dismiss(t.id)}
+              onClick={() => dismiss(toast.id)}
               aria-label={t("common.dismiss")}
-              className="ml-1 opacity-70 hover:opacity-100 shrink-0 text-base leading-none focus:outline-none focus:ring-2 focus:ring-white/60 rounded"
+              className="ml-1 -mr-1 opacity-70 hover:opacity-100 shrink-0 p-1 rounded focus:outline-none focus:ring-2 focus:ring-white/60"
             >
-              ×
+              {/* UX-3.011 — replace the literal × character with the lucide X icon
+                  so it matches Modal close (also lucide X) and renders identically
+                  on every platform. */}
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
         ))}
