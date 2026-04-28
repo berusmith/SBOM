@@ -242,7 +242,9 @@ def _cdx_xml_to_json(content: bytes) -> dict:
     if b"<!DOCTYPE" in content or b"<!ENTITY" in content:
         raise ValueError("XML SBOM 中不支援 DOCTYPE / ENTITY 宣告（防止 entity expansion 攻擊）")
     try:
-        root = ET.fromstring(content)
+        # B314: SEC-002 fix above (DOCTYPE/ENTITY pre-parse rejection + 5 MB size cap)
+        # mitigates billion-laughs / XXE.  Bandit can't see those guards.
+        root = ET.fromstring(content)  # nosec B314
     except ET.ParseError as e:
         raise ValueError(f"XML 解析失敗：{e}")
 

@@ -113,7 +113,8 @@ def _oidc_discover() -> dict:
         return _oidc_meta
     url = settings.OIDC_ISSUER.rstrip("/") + "/.well-known/openid-configuration"
     try:
-        with urllib.request.urlopen(url, timeout=10) as resp:
+        # B310: URL is built from server-side OIDC_ISSUER setting, not user input.
+        with urllib.request.urlopen(url, timeout=10) as resp:  # nosec B310
             _oidc_meta = json.loads(resp.read())
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"OIDC 發現文件載入失敗：{e}")
@@ -141,7 +142,8 @@ def _exchange_code(code: str, redirect_uri: str) -> dict:
     req = urllib.request.Request(token_url, data=body, method="POST",
                                   headers={"Content-Type": "application/x-www-form-urlencoded"})
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        # B310: token_url comes from the discovery doc above (server-side OIDC_ISSUER).
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
             return json.loads(resp.read())
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OIDC token 交換失敗：{e}")
@@ -156,7 +158,8 @@ def _get_userinfo(access_token: str) -> dict:
     req = urllib.request.Request(userinfo_url,
                                   headers={"Authorization": f"Bearer {access_token}"})
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        # B310: userinfo_url comes from the discovery doc (server-side OIDC_ISSUER).
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
             return json.loads(resp.read())
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"OIDC userinfo 取得失敗：{e}")

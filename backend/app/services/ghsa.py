@@ -80,7 +80,9 @@ def _get(url: str) -> list:
         headers["Authorization"] = f"Bearer {token}"
     try:
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        # B310: url is built from a hard-coded GitHub Advisory Database base URL
+        # plus PURL components that go through urllib.parse.quote (see callers).
+        with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
             return json.loads(resp.read())
     except Exception as e:
         logger.warning("GHSA fetch failed %s: %s", url, e)

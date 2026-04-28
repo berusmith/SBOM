@@ -112,7 +112,8 @@ def _download_font(style: str) -> Path | None:
         logger.info("Downloading CJK font from %s", url[:70])
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "sbom-platform/1.0"})
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            # B310: url is from a hard-coded list of CJK-font CDN URLs in this module, not user input.
+            with urllib.request.urlopen(req, timeout=45) as resp:  # nosec B310
                 data = resp.read()
             if len(data) < 100_000:   # sanity check — real font > 100KB
                 continue
