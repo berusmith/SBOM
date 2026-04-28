@@ -136,9 +136,23 @@ export default {
       },
 
       maxWidth: {
-        "page":  "80rem",   // 1280 — current de facto (= max-w-7xl)
-        "form":  "32rem",   // 512  — single-column form
-        "prose": "40rem",   // 640  — long-form text (~75 chars)
+        "page":      "80rem",    // 1280 — current de facto (= max-w-7xl), forms / narrow pages
+        "page-wide": "96rem",    // 1536 — data-heavy pages (RiskOverview, AdminActivity, ReleaseDetail vuln table)
+        "form":      "32rem",    // 512  — single-column form
+        "prose":     "40rem",    // 640  — long-form text (~75 chars)
+      },
+
+      // Spacing rhythm tokens (UX-3.017) — give the page-level rhythm
+      // semantic names so contributors stop reaching for arbitrary mt-4/6/8.
+      // Use these for *between sections*, not inside cards.
+      //
+      //   gap-section-sm  16px — between minor groups within a card
+      //   gap-section-md  24px — between cards in the same logical region
+      //   gap-section-lg  32px — between major page regions
+      spacing: {
+        "section-sm": "1rem",
+        "section-md": "1.5rem",
+        "section-lg": "2rem",
       },
     },
   },
