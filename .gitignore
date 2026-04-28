@@ -22,6 +22,10 @@ backend/uploads/
 /sbom.db
 /sbom.db-shm
 /sbom.db-wal
+# Throwaway PoC verification DBs (used by .knowledge/audit/poc/SEC-001*.py)
+backend/sbom-poc-*.db
+backend/sbom-poc-*.db-shm
+backend/sbom-poc-*.db-wal
 
 # Node
 frontend/node_modules/
@@ -45,3 +49,5 @@ test_sbom.json
 test_invalid.json
 a.png
 inspect_osv.py
+# Generated PDF report exports (regenerable from /api/releases/{id}/report etc.)
+test_pdfs/
