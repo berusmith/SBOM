@@ -16,8 +16,13 @@ function srLoadingLabel() {
   return lang.startsWith("en") ? "Loading..." : "載入中...";
 }
 
+// UX-3.024 — switched from `bg-gray-200 animate-pulse` (a barely-perceptible
+// opacity throb at retina densities) to a left-to-right gradient sweep
+// (`.skeleton-shimmer` defined in index.css). Reads as "loading" much more
+// clearly. The global prefers-reduced-motion rule still neutralises the
+// animation for motion-sensitive users.
 function SkeletonLine({ width = "w-full", height = "h-4" }) {
-  return <div className={`${width} ${height} bg-gray-200 rounded animate-pulse`} />;
+  return <div className={`${width} ${height} skeleton-shimmer`} />;
 }
 
 function StatusWrapper({ children, className = "" }) {
