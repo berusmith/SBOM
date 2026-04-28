@@ -98,3 +98,21 @@
     }
   }
 }
+
+/*
+ * UX-3.033 — `.press-feedback` utility for any clickable element that isn't
+ * a <Button> (links, table-row triggers, custom card buttons).  Adds the same
+ * subtle 2% scale-down on press as Button gets, so press-state is consistent
+ * across the product without forcing every author to remember the magic
+ * incantation.  Compose with existing focus-visible / hover utilities.
+ *
+ * Usage: <Link className="press-feedback hover:bg-gray-50 ...">…</Link>
+ */
+@layer utilities {
+  .press-feedback {
+    transition: transform 150ms ease-out;
+  }
+  .press-feedback:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}

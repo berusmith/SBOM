@@ -26,11 +26,16 @@ import { forwardRef } from "react";
  * <Button> inside a form does not accidentally submit.
  */
 
+// UX-3.022 — every variant gets an active: state so a press has visible
+// feedback (was: hover changed colour, click did nothing visible). active:bg
+// pushes one shade darker; active:scale-[0.98] subtly squashes the button by
+// 2%. The global prefers-reduced-motion rule drops transition-duration to
+// 1ms which makes the scale snap instantly for motion-sensitive users.
 const VARIANT = {
-  primary:   "bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-400 disabled:hover:bg-blue-600",
-  secondary: "border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus-visible:ring-blue-400 disabled:hover:bg-white",
-  danger:    "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-400 disabled:hover:bg-red-600",
-  ghost:     "text-gray-700 hover:bg-gray-100 focus-visible:ring-blue-400 disabled:hover:bg-transparent",
+  primary:   "bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-400 disabled:hover:bg-blue-600 disabled:active:bg-blue-600",
+  secondary: "border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-blue-400 disabled:hover:bg-white disabled:active:bg-white",
+  danger:    "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-400 disabled:hover:bg-red-600 disabled:active:bg-red-600",
+  ghost:     "text-gray-700 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-blue-400 disabled:hover:bg-transparent disabled:active:bg-transparent",
 };
 
 const SIZE = {
@@ -57,7 +62,12 @@ export const Button = forwardRef(function Button(
   const isDisabled = disabled || loading;
   const cls = [
     "inline-flex items-center justify-center gap-2 rounded font-medium",
-    "transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+    // UX-3.022 — transition both transform (active scale) and colors so the
+    // press feels physical. `active:scale-[0.98]` is fine for motion-reduce
+    // users because the global prefers-reduced-motion rule clamps duration
+    // to 1ms, making the scale-down effectively instantaneous.
+    "transition-[transform,colors] duration-fast active:scale-[0.98] disabled:active:scale-100",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
     "disabled:opacity-50 disabled:cursor-not-allowed",
     SIZE[size] || SIZE.md,
     VARIANT[variant] || VARIANT.primary,
