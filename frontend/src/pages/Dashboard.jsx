@@ -362,7 +362,7 @@ export default function Dashboard() {
 
 
       {/* SBOM Quality Summary */}
-      <div className="mt-4 bg-white rounded-lg shadow p-5">
+      <div className="mt-section-lg bg-white rounded-lg shadow p-5">
         <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.sbomQuality")}</h2>
         {qualitySummary && qualitySummary.graded > 0 ? (
           <div className="flex flex-wrap gap-6 items-center">
@@ -395,7 +395,7 @@ export default function Dashboard() {
       </div>
 
       {/* CVE Impact Lookup */}
-      <div className="mt-4 bg-white rounded-lg shadow p-5">
+      <div className="mt-section-lg bg-white rounded-lg shadow p-5">
         <h2 className="font-semibold text-gray-700 mb-3">{t("dashboard.cveImpact")}</h2>
         <form onSubmit={handleCveSearch} className="flex gap-2 mb-3">
           {/* UX-006: visually-hidden label so screen readers announce the field after the placeholder is gone. */}
@@ -469,7 +469,7 @@ export default function Dashboard() {
 
       {/* Patch tracking summary */}
       {stats.patch_tracking && (
-        <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <div className="mt-section-lg bg-white rounded-lg shadow p-5">
           <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.patchTracking")}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Patch rate gauge */}
@@ -509,7 +509,7 @@ export default function Dashboard() {
 
       {/* Threat highlights */}
       {topThreats && (
-        <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <div className="mt-section-lg bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-700">{t("dashboard.threatHighlights")}</h2>
             {topThreats.active_kev_count > 0 && (
@@ -568,7 +568,7 @@ export default function Dashboard() {
 
       {/* Top risky components */}
       {riskyComponents.length > 0 && (
-        <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <div className="mt-section-lg bg-white rounded-lg shadow p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-700">{t("dashboard.riskyComponents")}</h2>
             <span className="text-xs text-gray-600">{t("dashboard.riskySubtitle")}</span>
@@ -627,7 +627,7 @@ export default function Dashboard() {
 
       {/* Risk overview table */}
       {riskOverview.length > 0 && (
-        <div className="mt-4 bg-white rounded-lg shadow p-5">
+        <div className="mt-section-lg bg-white rounded-lg shadow p-5">
           <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.riskOverview")}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
