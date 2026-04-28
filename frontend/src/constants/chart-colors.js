@@ -22,7 +22,10 @@ export const SEVERITY_HEX = {
   critical: "#ef4444",   // red-500
   high:     "#fb923c",   // orange-400
   medium:   "#facc15",   // yellow-400
-  low:      "#3b82f6",   // blue-500
+  // UX-3.031 — was blue-500 (#3b82f6), too close to total's blue-400 — overlapping
+  // dots in TrendChart became indistinguishable. Cyan-500 keeps a "cool /
+  // calmer than warning" feel while being clearly separate from total.
+  low:      "#06b6d4",   // cyan-500
   info:     "#9ca3af",   // gray-400
 };
 
