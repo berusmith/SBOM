@@ -42,3 +42,35 @@ a different context (floating action), keep.
 
 Recommend a single sweep commit `UX-3.008b — rounded-xl sweep on data cards`
 when next touching AdminActivity / TISAX pages.
+
+## UX-3.012 focus-ring sweep — DEFERRED with analysis
+
+The plan asked to sweep `focus:ring-2 focus:ring-blue-400` (97 occurrences
+across 24 files) and rely on the global `:focus-visible` outline added in
+iter 1. Investigation while attempting this revealed it's NOT a safe
+mechanical sweep:
+
+**Why it's not safe**: Most pages pair `focus:ring-2 focus:ring-blue-400`
+with `outline-none` and/or `focus:outline-none`. The `outline-none` class
+selector beats the global `:focus-visible { outline: 2px }` rule on CSS
+specificity (0,2,0 vs 0,1,0), so the global outline NEVER fires on those
+elements. The per-element ring is the *only* visible focus indicator on
+all 97 sites. Mechanical removal = invisible focus = WCAG 2.4.7 fail.
+
+**Correct fix is bigger than estimated**:
+1. Remove `outline-none` + `focus:outline-none` everywhere first
+2. THEN either rely on global outline (option A) OR convert
+   `focus:ring-*` → `focus-visible:ring-*` + add `ring-offset-2` (option B)
+3. Each element manually verified — some inputs/cards/tabs may need
+   custom handling (e.g. inputs that already have a visible border may
+   double-up with outline)
+
+**Recommendation**: schedule an `UX-3.012b — focus-state systemisation`
+iter 4 task with explicit budget. Need a design call between option A
+(simpler, less visual weight on focus) and option B (closer to current
+look, takes longer).
+
+**Current state**: Button uses option B correctly (focus-visible:ring-2
+focus-visible:ring-offset-1). Other components mix focus:ring (incorrect:
+fires on click) with outline-none (incorrect: kills global outline on
+keyboard). The result is functional but not consistent.
