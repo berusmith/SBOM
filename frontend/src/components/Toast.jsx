@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X, AlertTriangle, Info } from "lucide-react";
 
@@ -111,10 +111,17 @@ export function ToastProvider({ children }) {
 export function useToast() {
   const show = useContext(ToastContext);
   if (!show) throw new Error("useToast must be used within ToastProvider");
-  return {
+  // Memoise so the returned object reference is stable across renders.
+  // Without this, every render would yield a new {success, error, warning,
+  // info} literal — that breaks consumers that put `toast` into useEffect
+  // or useCallback dependency arrays (the Dashboard infinite-refetch bug
+  // shipped in iter 3 commit 445c308 was a victim of this).  show() itself
+  // is already stable (useCallback inside ToastProvider), so memoising on
+  // [show] yields a forever-stable result.
+  return useMemo(() => ({
     success: (msg) => show(msg, "success"),
     error:   (msg) => show(msg, "error"),
     warning: (msg) => show(msg, "warning"),
     info:    (msg) => show(msg, "info"),
-  };
+  }), [show]);
 }
