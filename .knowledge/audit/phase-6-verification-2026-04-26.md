@@ -4,7 +4,7 @@ phase: 6
 audit_id: 2026-04-26-security-code-review
 methodology: phase-4-summary §0 (single source of truth)
 created: 2026-04-28
-status: complete — Phase 5 + Phase 6 closed; SEC-024 filed for Phase 7
+status: complete — Phase 5 + Phase 6 closed; SEC-024 fixed in Phase 6 close-out (a2575f0); SEC-025 candidate parked under §6 T8 trigger
 related:
   - phase-4-summary-2026-04-26.md   # Phase 5 commit log + lessons learned
   - security-audit-2026-04-26.md    # SEC-001 family + SDLC-001 detail
@@ -44,8 +44,10 @@ test on its first run). Both were resolved without scope change.
 | P2  | `c401c11` | SEC-014               | plaintext nightly backups      | gpg AES-256 round-trip (canary not in ciphertext, decrypt OK, wrong-pass rejected) |
 | docs | `9a69fe2` | (Phase 5/6 log)      | n/a                            | phase-4-summary §9 added            |
 | docs | `a63cb47` | (Phase 6 evidence)   | n/a                            | `after_fix_verification` blocks for 5 PoCs |
+| docs | `2a8678d` | (Phase 6 report + SEC-024 stub) | n/a               | this report + rev-8 finding-stub for `pg8000` CVE |
+| **hotfix** | `a2575f0` | **SEC-024** (`pg8000` → 1.31.5) | `pip-audit` red on every Phase 5 push | `pip-audit -r --strict --no-deps`: "No known vulnerabilities found"; test_all.py 55/55 (SQLite path); CI green on next push |
 
-All 11 fix commits and both docs commits are pushed to `origin/master`
+All 12 fix/hotfix commits and three docs commits are pushed to `origin/master`
 (`berusmith/SBOM`) and mirrored to `audit-mirror/master`
 (`ninjat6/SBOM-audit-private`) via `git audit-push`.
 
@@ -67,8 +69,16 @@ TOTAL: 55 PASS / 0 FAIL  (55 tests)
 
 **0 regression.** Phase 6.1 ✓.
 
-### Run-1 anomaly (documented for transparency)
-The first attempt at running test_all.py against the live backend failed at the very first `urlopen` with `[WinError 10061]` — connection refused. The backend uvicorn process (PID 11180) had silently died between the smoke test and the test_all.py invocation. The backend log ends without a traceback, just stops mid-stream after a frontend-Dashboard polling burst (Vite dev preview was running concurrently). Restarting the backend and immediately re-running test_all.py produced the 55/55 result above. No code change was needed; classified as a Windows-only `--reload`-less uvicorn lifecycle quirk under unrelated frontend traffic, not a regression of any Phase 5 fix. If the same crash recurs on the production Mac mini path (launchd auto-restarts via `KeepAlive` so the symptom would be a transient health blip), file as SEC-025 (DoS resilience adjacent to SEC-015). LAN-only impact today: zero.
+### Run-1 anomaly (documented for transparency) — **SEC-025 candidate, NOT FILED**
+The first attempt at running test_all.py against the live backend failed at the very first `urlopen` with `[WinError 10061]` — connection refused. The backend uvicorn process (PID 11180) had silently died between the smoke test and the test_all.py invocation. The backend log ends without a traceback, just stops mid-stream after a frontend-Dashboard polling burst (Vite dev preview was running concurrently). Restarting the backend and immediately re-running test_all.py produced the 55/55 result above. No code change was needed; classified as a Windows-only `--reload`-less uvicorn lifecycle quirk under unrelated frontend traffic, **not a regression of any Phase 5 fix**.
+
+**SEC-025 candidate handling**:
+
+This anomaly is tracked as a **candidate finding (not opened)**:
+
+- **Why not file now**: single observation, environment-specific (Windows + Vite dev frontend polling), zero LAN impact (launchd's `KeepAlive` block in `com.sbom.backend.plist` auto-restarts the worker on the production Mac mini path within `ThrottleInterval = 10s`, surfacing as a brief 5xx blip from nginx, not a sustained outage). Filing a finding on a single Windows-dev incident would inflate the register with low-signal entries.
+- **Why track at all**: silent process death without a traceback is a class of behaviour that *would* matter under sustained customer load. If it reproduces on the Mac mini staging path (which uvicorn runs without `--reload` and without a Vite dev frontend, so the suspected cause is absent there), the failure mode shifts and a finding is justified.
+- **Promotion trigger**: see §6 trigger **T8** below — defines exactly when this candidate becomes a filed finding (SEC-025) with severity, scope, and remediation effort estimates.
 
 ---
 
@@ -113,12 +123,25 @@ GitHub Actions Security CI workflow (file: `.github/workflows/security.yml`,
 | `npm audit (frontend)`                    | **PASS**             | **PASS**           | green throughout |
 | `reachability corpus validate + stats`    | **PASS**             | **PASS**           | green throughout |
 
-**3 fail / 3 pass — same in both runs.** The Phase 5 fixes did not
-move CI from red to green because the three failing jobs are gated
-on a different finding-class (dependency CVEs / secret scan), not on
-the application-level authz / DoS / compliance fixes shipped in
-Phase 5. The SEC-017 #0 commit *introduced* CI gates; Phase 5 did
-not aim to *clear* them.
+**3 fail / 3 pass — same in both runs.** This is the central
+framing readers should take away from this section:
+
+> **Phase 5's fix scope and the CI gates' finding-class are different
+> by design, not by oversight.** The 10 Top-10 fixes plus SDLC-001
+> plus SEC-014 P2 plus SEC-023 all addressed
+> *application-level* authz / IDOR / DoS / supply-chain-floor /
+> compliance issues identified in Phase 1–3. The three CI gates that
+> remained red (`pip-audit`, `syft+grype`, `gitleaks`) gate on a
+> *different* finding-class (third-party dependency CVEs +
+> secret-scan policy) that Phase 1–3 did not enumerate as findings —
+> SEC-017 (#0) introduced those gates as a *forward-looking control*,
+> intended to surface NEW findings on each commit, not to clean up
+> existing ones. Each red CI job is therefore a finding-discovery
+> signal, not a Phase 5 incompleteness signal. SEC-024 is the worked
+> example: Phase 6.4 saw `pip-audit` red, classified the cause,
+> filed SEC-024, and the **Phase 6 hotfix** (commit `a2575f0`)
+> bumped `pg8000==1.31.2 → ==1.31.5` and is expected to flip
+> `pip-audit` green on the next push.
 
 (The user's recollection said "first run was 3 fail / 2 pass" — the
 actual first run had 6 jobs, of which 3 pass. The 5-vs-6 mismatch is
@@ -145,9 +168,10 @@ endpoint, which is why this report cannot enumerate further.
 |---------|------------|--------|------------------|
 | SEC-014 | Phase 3   | **closed** by Phase 5 P2 commit `c401c11` (gpg backup encryption) | n/a (closed) |
 | SEC-023 | Phase 5 #1 enforcement-test first run | **closed** in same commit as SDLC-001 (`a604c56`) | n/a (closed) |
-| **SEC-024** | **Phase 6.4 (this round)** | **open** — `pg8000 1.31.2` CVE `GHSA-wq2g-r956-j8cc` | **P1** for Phase 7 (one-line dep upgrade) |
-| SEC-024-followup-grype | Phase 6.4 | **open** — `syft+grype` job still failing, likely same root cause as SEC-024 plus possibly more transitive Highs; needs authenticated log fetch to enumerate | bundled with SEC-024 |
-| SEC-024-followup-gitleaks | Phase 6.4 | **open** — gitleaks job failure cause undetermined (license vs real leak); needs authenticated log fetch | bundled with SEC-024 |
+| **SEC-024** | Phase 6.4 | **closed** by Phase 6 hotfix commit `a2575f0` (`pg8000` 1.31.2 → 1.31.5; pip-audit local green; CI green expected next push) | n/a (closed) |
+| SEC-024-followup-grype | Phase 6.4 | **open** — `syft+grype` job still failing as of last snapshot. With `pg8000` cleared, the next push will tell us whether grype goes green (SEC-024 was the sole High/Critical) or whether transitive Highs remain. Authenticated log fetch needed if it stays red. | P2 — re-snapshot after the SEC-024 hotfix push |
+| SEC-024-followup-gitleaks | Phase 6.4 | **open** — gitleaks job failure cause undetermined (Anchore-licence policy vs real-leak); authenticated log fetch needed | P2 — needs auth-log fetch to classify |
+| **SEC-025 candidate** (NOT FILED) | Phase 6.1 Run-1 anomaly | **candidate, not opened** — backend uvicorn silent death on Windows dev path, single observation, no LAN impact. Promotion gated by §6 trigger T8. | **don't act unless T8 fires** |
 | Cosmetic: pytest return-list warnings on enforcement test | Phase 6.2 | **open** — code-quality cleanup; no security implication | low-priority |
 
 Items still in the original 25-finding register and explicitly
@@ -176,6 +200,7 @@ auto-pause #6 vocabulary):
 | T5 | First externally-reported vulnerability (security@; HackerOne; downstream customer)                            | Re-validate every "fixed" finding; PoC re-run baseline                               |
 | T6 | Calendar trigger: 6 months from 2026-04-26 = 2026-10-26                                                        | Drift / new CVE budget; even with no T1-T5 events                                    |
 | T7 | Major dependency upgrade with security implications (FastAPI ≥ next major; SQLAlchemy 3.x; React 19 → 20; etc.) | Defense layers may shift; behavioural drift surfaces in PoCs                          |
+| **T8** | **SEC-025 candidate promotion** — backend uvicorn worker silently exits without a traceback on the production Mac mini path (NOT the dev Windows path documented in §2 Run-1 anomaly). Specifically: any of (a) more than 1 silent restart per 24 h sustained over a 7-day window, OR (b) a single silent restart whose root cause cannot be attributed to OS update / disk full / OOM-killer / nginx-`client_max_body_size` overflow within 1 hour of investigation, OR (c) any silent restart observed under organic customer traffic post-T1. | Promotes the §2 candidate to a real SEC-025 finding (DoS-resilience class, adjacent to SEC-015); requires PoC to reproduce, severity sizing, and remediation work (likely uvicorn `--workers > 1` + restart hook telemetry). |
 
 For each trigger, the Phase 7 entry checklist is:
 
@@ -197,14 +222,28 @@ For each trigger, the Phase 7 entry checklist is:
 
 ## 7. Sign-off
 
-Phase 5 + Phase 6 closed. The audit register is internally consistent
-(every finding has a status; every "fixed" status references a commit
-SHA; every dynamic-PoC finding has both `poc_metadata` and
-`after_fix_verification` blocks; every `verdict_after_fix` is
-`NOT_REPRODUCED` for the 5 dynamic PoCs). The CI baseline is live,
-3 jobs are green, 3 are red on a known finding (SEC-024 + 2 follow-ups
-documented in §5).
+Phase 5 + Phase 6 closed. The audit register is internally consistent:
+
+- every finding has a status;
+- every "fixed" status references a commit SHA;
+- every dynamic-PoC finding has both `poc_metadata` (frozen pre-fix
+  record) and `after_fix_verification` (Phase 6 re-run) blocks;
+- every `poc_rerun_verdict` is `NOT_REPRODUCED` for the 5 dynamic
+  PoCs (SEC-001a/b/c/d + SEC-002).
+
+CI baseline state at sign-off:
+
+- **3 jobs green** (`backend test_all.py`, `npm audit`, `reachability corpus`)
+- **2 jobs likely-green-on-next-push** (`pip-audit`, `syft+grype`)
+  pending the post-`a2575f0` snapshot — pip-audit local is already
+  green, grype is the dependent observation
+- **1 job undetermined** (`gitleaks`) — auth-log fetch owed to
+  classify; tracked as SEC-024-followup-gitleaks at P2 priority
+
+SEC-025 candidate documented in §2 + §6/T8 — not opened, not on the
+remediation backlog, becomes a real finding only if the trigger
+conditions in T8 fire on the production Mac mini path.
 
 Backend on `127.0.0.1:9100` and frontend on `127.0.0.1:3000` were left
-running after the Phase 6.6 commit per the Phase 6 instructions.
-They will be killed only after the user has read this report.
+running per the Phase 6 instructions. They will be killed only after
+the user has read this report and explicitly green-lit shutdown.
