@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Search } from "lucide-react";
@@ -118,6 +118,8 @@ export default function Dashboard() {
   const [riskyComponents, setRiskyComponents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasErrors, setHasErrors] = useState(false);
+  // UX-3.013 — bumped on retry to re-fire the load effect.
+  const [reloadKey, setReloadKey] = useState(0);
   const [qualitySummary, setQualitySummary] = useState(null);
   const [cveQuery, setCveQuery] = useState("");
   const [cveResult, setCveResult] = useState(null);
@@ -128,48 +130,45 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const toast = useToast();
 
-  // UX-3.007 + UX-3.013 — Promise.allSettled instead of Promise.all so a single
-  // API failure doesn't kill the whole dashboard. Sections whose fetch fulfils
-  // render normally; sections that reject stay null and their conditional
-  // rendering kicks in (the per-section card is hidden or shows its own empty
-  // state). A page-level retry banner triggers loadAll() again. Toast fires
-  // only if ALL five APIs fail (true outage), not on partial degradation.
-  const loadAll = useCallback((signal) => {
+  // UX-3.007 + UX-3.013 — Promise.allSettled instead of Promise.all so one
+  // API failure doesn't kill the whole dashboard. Sections whose fetch
+  // fulfils render normally; sections that reject stay null and their
+  // existing conditional renderers hide them gracefully. The page-level
+  // retry banner bumps reloadKey to re-fire this effect.
+  //
+  // Note: NOT wrapped in useCallback. useToast() returns a new object every
+  // render, so a useCallback([t, toast]) wrapper would re-create the function
+  // every render, which would re-fire the effect every render = infinite
+  // refetch loop. Inlining inside useEffect with empty deps + reloadKey
+  // sidesteps that entirely while keeping the retry path simple.
+  useEffect(() => {
+    const ac = new AbortController();
+    const sig = { signal: ac.signal };
+    setLoading(true);
     setHasErrors(false);
-    const sig = { signal };
-    return Promise.allSettled([
+    Promise.allSettled([
       api.get("/stats", sig),
       api.get("/stats/risk-overview", sig),
       api.get("/stats/top-threats", sig),
       api.get("/stats/top-risky-components", sig),
       api.get("/stats/sbom-quality-summary", sig),
-    ]).then(([s, r, th, rc, q]) => {
-      if (signal?.aborted) return;
+    ]).then((results) => {
+      if (ac.signal.aborted) return;
+      const [s, r, th, rc, q] = results;
       if (s.status  === "fulfilled") setStats(s.value.data);
       if (r.status  === "fulfilled") setRiskOverview(r.value.data);
       if (th.status === "fulfilled") setTopThreats(th.value.data);
       if (rc.status === "fulfilled") setRiskyComponents(rc.value.data);
       if (q.status  === "fulfilled") setQualitySummary(q.value.data);
-      const failed = [s, r, th, rc, q].filter(x => x.status === "rejected").length;
-      if (failed === 5) {
-        toast.error(t("dashboard.loadError"));
-      }
+      const failed = results.filter(x => x.status === "rejected").length;
+      if (failed === 5) toast.error(t("dashboard.loadError"));
       if (failed > 0) setHasErrors(true);
-    });
-  }, [t, toast]);
-
-  useEffect(() => {
-    const ac = new AbortController();
-    setLoading(true);
-    loadAll(ac.signal).finally(() => { if (!ac.signal.aborted) setLoading(false); });
+    }).finally(() => { if (!ac.signal.aborted) setLoading(false); });
     return () => ac.abort();
-  }, [loadAll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
-  const handleRetry = () => {
-    const ac = new AbortController();
-    setLoading(true);
-    loadAll(ac.signal).finally(() => { if (!ac.signal.aborted) setLoading(false); });
-  };
+  const handleRetry = () => setReloadKey(k => k + 1);
 
   const handleCveSearch = async (e) => {
     e.preventDefault();
