@@ -77,7 +77,7 @@ function ViewerOnboarding({ orgId }) {
   ];
 
   return (
-    <div className="bg-white rounded-xl border-2 border-dashed border-blue-200 p-6 mb-6">
+    <div className="bg-white rounded-lg border-2 border-dashed border-blue-200 p-6 mb-6">
       <div className="flex items-start gap-4">
         <div className="bg-blue-100 text-blue-600 rounded-full p-3 shrink-0">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

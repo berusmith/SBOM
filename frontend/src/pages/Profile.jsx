@@ -83,7 +83,7 @@ export default function Profile() {
       )}
 
       {/* Info */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5 space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-5 mb-5 space-y-4">
         <div>
           <div className="text-xs text-gray-700 mb-1">{t("profile.loginAccount")}</div>
           <div className="font-medium text-gray-800">{username}</div>
@@ -120,7 +120,7 @@ export default function Profile() {
       </div>
 
       {/* Change password */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-5 mb-5">
         <h2 className="font-semibold text-gray-700 mb-4">{t("profile.changePassword")}</h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
@@ -145,7 +145,7 @@ export default function Profile() {
       </div>
 
       {/* Logout */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white rounded-lg border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-700 mb-2">{t("profile.logoutTitle")}</h2>
         <p className="text-xs text-gray-700 mb-3">{t("profile.logoutHint")}</p>
         <Button onClick={handleLogout} variant="danger" size="md">
