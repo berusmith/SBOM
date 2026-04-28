@@ -1307,9 +1307,9 @@ machine-checkable and to link the CVE → planned upgrade.
 |-------|-------|
 | finding_id | SEC-024 |
 | parent_finding | null |
-| status | **open** (P2 backlog — not on the Phase 5 critical path; Phase 6 discovered, Phase 7 candidate) |
-| discovered_phase | 6 (auto-discovered by Phase 5 #0 SEC-017 CI baseline, ratified during Phase 6.4 snapshot) |
-| verification_method | static (`pip-audit -r backend/requirements.txt --strict --no-deps` — local + CI) |
+| status | **fixed (2026-04-28 by Phase 6 SEC-024 hotfix commit)** — `pg8000` advanced from `==1.31.2` to `==1.31.5`; pip-audit returns "No known vulnerabilities found"; test_all.py 55/55 against the live SQLite backend; CI confirmation expected on the next push. |
+| discovered_phase | 6 (auto-discovered by Phase 5 #0 SEC-017 CI baseline, ratified during Phase 6.4 snapshot, fixed during Phase 6 close-out) |
+| verification_method | static (`pip-audit -r backend/requirements.txt --strict --no-deps --disable-pip` → "No known vulnerabilities found" post-fix) + dynamic (test_all.py 55/55 against live backend on SQLite path; Postgres-driver path is Mac-mini-staging-only and out of scope here) |
 | discovered_via | ci_snapshot_phase_6 |
 | first_observed_commit | (pg8000 1.31.2 was pinned in `backend/requirements.txt` before the audit period; CVE published after the pin) |
 | exploitation_complexity | depends on Postgres-driver code path (not used in default SQLite deploy) |
