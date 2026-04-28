@@ -72,6 +72,15 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* UX-015: skip-to-main link.  Visually hidden until focused so
+          keyboard users can jump past the 11-link nav + search + user
+          cluster on every page. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:text-blue-700 focus:px-3 focus:py-2 focus:rounded focus:shadow"
+      >
+        {t("nav.skipToMain", { defaultValue: "跳至主內容" })}
+      </a>
       <nav className="bg-gray-900 text-white">
         <div className="max-w-7xl mx-auto px-4">
           {/* Top bar */}
@@ -114,7 +123,12 @@ export default function Layout({ children }) {
               ))}
             </div>
 
-            {/* Desktop search + lang toggle + user */}
+            {/* Desktop search + lang toggle + user — UX-008: tighten gap/widths
+                so the whole right cluster fits inside max-w-page (1280) without
+                bleeding past `登出`.  Search input no longer widens at lg:; gap
+                shrinks from 3 to 2; lang button loses its border (still has
+                hover state).  Total intrinsic width drops below the 1280
+                threshold so the user section is no longer clipped at 1280. */}
             <form
               onSubmit={handleSearch}
               role="search"
@@ -127,7 +141,7 @@ export default function Layout({ children }) {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder={t("nav.search")}
-                className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-36 lg:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-32 xl:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="submit"
@@ -137,23 +151,23 @@ export default function Layout({ children }) {
                 <Search size={16} aria-hidden="true" />
               </button>
             </form>
-            <div className="hidden md:flex items-center gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-2 min-w-0">
               <button
                 onClick={toggleLang}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 hover:border-gray-400 px-2.5 py-1.5 rounded transition-colors"
+                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded hover:bg-gray-700 transition-colors"
                 title="Switch language / 切換語言"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
               </button>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PLAN_COLOR[currentPlan]}`}>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${PLAN_COLOR[currentPlan]}`}>
                 {PLAN_LABEL[currentPlan]}
               </span>
-              <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
+              <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors max-w-[8rem] truncate">
                 {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-600 hover:text-white transition-colors"
+                className="text-sm text-gray-300 hover:text-white transition-colors shrink-0"
               >
                 {t("nav.logout")}
               </button>
@@ -246,7 +260,7 @@ export default function Layout({ children }) {
           )}
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">{children}</main>
+      <main id="main" tabIndex="-1" className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 focus:outline-none">{children}</main>
 
       <footer className="border-t border-gray-200 bg-white mt-8">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">
