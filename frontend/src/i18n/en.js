@@ -109,6 +109,14 @@ const en = {
     imported:        "Imported",
   },
 
+  // ── Trend chart (UX-3.005 keyboard a11y) ─────────────────────────────────
+  trendChart: {
+    dataTableToggle: "Show data as table",
+    ariaPoint:       "{{version}}: total {{total}} unresolved (Critical {{critical}}, High {{high}}, Medium {{medium}}, Low {{low}})",
+    colVersion:      "Version",
+    colTotal:        "Unresolved total",
+  },
+
   // ── Severity ──────────────────────────────────────────────────────────────
   severity: {
     critical: "Critical",

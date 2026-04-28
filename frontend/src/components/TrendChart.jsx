@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   SEVERITY_HEX,
   CHART_AXIS_STROKE,
@@ -8,6 +9,7 @@ import {
 } from "../constants/chart-colors";
 
 export default function TrendChart({ data }) {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState(null);
   const W = 500, H = 160;
   const PL = 32, PR = 16, PT = 12, PB = 36;
@@ -61,9 +63,28 @@ export default function TrendChart({ data }) {
             const pts = data.map((d, i) => `${xp(i)},${yp(d[field] || 0)}`).join(" ");
             return <polyline key={field} points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.85"/>;
           })}
-          {/* Dots + X labels + hover zones */}
+          {/* Dots + X labels + hover zones — UX-3.005: each <g> is keyboard-focusable
+              (tabIndex=0) + role=img + aria-label so screen-reader / keyboard users
+              get the same data the mouse user gets via tooltip. */}
           {data.map((d, i) => (
-            <g key={i} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} style={{ cursor: "pointer" }}>
+            <g
+              key={i}
+              tabIndex={0}
+              role="img"
+              aria-label={t("trendChart.ariaPoint", {
+                version:  d.version,
+                total:    d.total ?? 0,
+                critical: d.critical ?? 0,
+                high:     d.high ?? 0,
+                medium:   d.medium ?? 0,
+                low:      d.low ?? 0,
+              })}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              onFocus={() => setHovered(i)}
+              onBlur={() => setHovered(null)}
+              style={{ cursor: "pointer", outline: "none" }}
+            >
               {/* Invisible wide hit area */}
               <rect x={xp(i) - 14} y={PT} width={28} height={cH} fill="transparent"/>
               {hovered === i && <line x1={xp(i)} y1={PT} x2={xp(i)} y2={PT + cH} stroke={CHART_AXIS_STROKE} strokeWidth="1" strokeDasharray="3,2"/>}
@@ -116,6 +137,42 @@ export default function TrendChart({ data }) {
           );
         })()}
       </div>
+
+      {/* UX-3.005 — keyboard / screen-reader fallback: a real <table> is the
+          authoritative source of the same data that the SVG visualises.  Hidden
+          inside <details> so it doesn't compete visually with the chart. */}
+      <details className="mt-2">
+        <summary className="text-xs text-gray-700 cursor-pointer hover:text-gray-900 select-none focus:outline-none focus:ring-2 focus:ring-blue-400 rounded inline-block px-1">
+          {t("trendChart.dataTableToggle")}
+        </summary>
+        <div className="mt-2 overflow-x-auto">
+          <table className="text-xs w-full">
+            <caption className="sr-only">{t("trendChart.dataTableToggle")}</caption>
+            <thead className="text-left text-gray-700 border-b">
+              <tr>
+                <th scope="col" className="py-1 pr-3">{t("trendChart.colVersion")}</th>
+                <th scope="col" className="py-1 pr-3 text-right">{t("trendChart.colTotal")}</th>
+                <th scope="col" className="py-1 pr-3 text-right">{t("severity.critical")}</th>
+                <th scope="col" className="py-1 pr-3 text-right">{t("severity.high")}</th>
+                <th scope="col" className="py-1 pr-3 text-right">{t("severity.medium")}</th>
+                <th scope="col" className="py-1 pr-3 text-right">{t("severity.low")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data.map((d, i) => (
+                <tr key={i}>
+                  <td className="py-1 pr-3 font-mono text-gray-700">{d.version}</td>
+                  <td className="py-1 pr-3 text-right tabular-nums">{d.total ?? 0}</td>
+                  <td className="py-1 pr-3 text-right tabular-nums">{d.critical ?? 0}</td>
+                  <td className="py-1 pr-3 text-right tabular-nums">{d.high ?? 0}</td>
+                  <td className="py-1 pr-3 text-right tabular-nums">{d.medium ?? 0}</td>
+                  <td className="py-1 pr-3 text-right tabular-nums">{d.low ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }

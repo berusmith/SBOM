@@ -111,6 +111,14 @@ const zh = {
     imported:        "已匯入",
   },
 
+  // ── 趨勢圖 (UX-3.005 鍵盤可達) ───────────────────────────────────────────
+  trendChart: {
+    dataTableToggle: "顯示資料表",
+    ariaPoint:       "{{version}}：未解決總計 {{total}}（Critical {{critical}}、High {{high}}、Medium {{medium}}、Low {{low}}）",
+    colVersion:      "版本",
+    colTotal:        "未解決總計",
+  },
+
   // ── 嚴重度 ────────────────────────────────────────────────────────────────
   severity: {
     critical: "嚴重",
