@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 //
 // Design-token surface for SBOM Platform.  Coexists with raw Tailwind
-// utilities — see audit-report.md UX-005 for rationale and migration policy:
+// utilities — see .knowledge/ui-audit/audit-report.md UX-005 for rationale and migration policy:
 //   * tokens are additive (Tailwind defaults still work everywhere)
 //   * new code and *touched* code adopt tokens
 //   * no mass-rewrite of existing utility classes
