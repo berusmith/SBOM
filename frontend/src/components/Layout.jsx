@@ -5,6 +5,15 @@ import { Lock, Search } from "lucide-react";
 import { getPlan, hasPlan, PLAN_LABEL, PLAN_COLOR } from "../utils/plan";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 
+// UX-3.015 — pages that benefit from a wider container on big screens.
+// Data-heavy pages (risk overview, audit log) get max-w-page-wide (1536)
+// instead of the default max-w-page (1280, == max-w-7xl) so monitors
+// > 1280 actually use the space. Form / narrow pages stay at 7xl.
+const WIDE_ROUTES = new Set([
+  "/risk-overview",
+  "/admin/activity",
+]);
+
 const ALL_NAV = [
   { path: "/",               key: "dashboard",    adminOnly: false, minPlan: null },
   { path: "/organizations",  key: "customers",    adminOnly: true,  minPlan: null },
@@ -260,7 +269,16 @@ export default function Layout({ children }) {
           )}
         </div>
       </nav>
-      <main id="main" tabIndex="-1" className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 focus:outline-none">{children}</main>
+      {/* UX-3.015 — wide layout on data-heavy routes; narrow elsewhere. The
+          navbar above stays at max-w-7xl so the product chrome is consistent
+          across pages — main is the only thing that breathes wider. */}
+      <main
+        id="main"
+        tabIndex="-1"
+        className={`${WIDE_ROUTES.has(location.pathname) ? "max-w-page-wide" : "max-w-7xl"} mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 focus:outline-none`}
+      >
+        {children}
+      </main>
 
       <footer className="border-t border-gray-200 bg-white mt-8">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-600">

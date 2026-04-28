@@ -91,3 +91,27 @@ H1 pattern that should also adopt for consistency:
 Auth pages (Login / ForgotPassword / ResetPassword / Profile) and detail
 pages (CRAIncidentDetail / TISAXAssessments / AdminActivity) keep
 text-xl — they're narrower contexts where 36px would feel oversized.
+
+## UX-3.028 sticky first column — DEFERRED + RiskOverview column count bug
+
+E4 commit landed wide-screen container (UX-3.015). The companion sticky-
+first-column work was blocked by a pre-existing column count mismatch in
+`RiskOverview.jsx`:
+
+- thead renders 10 cells: # + 6 SORT_FIELDS + 修補率 + 進行中事件 + (action)
+- tbody renders 9 cells: # + risk_score + unpatched_critical + unpatched_high
+  + total_vulns + org_name + PatchBar + incidents + action
+
+That's a real off-by-one (header has both `patch_rate` AND `修補率` columns,
+but tbody only renders one PatchBar cell). The sortable header's
+`patch_rate` column has no tbody counterpart — sort still works but the
+column visually merges with neighbours. Plus org_name/PatchBar are swapped
+relative to header order.
+
+Sticky-first-column is unsafe to add until the column structure is fixed
+(otherwise the sticky cell may attach to the wrong column). Recommend a
+focused commit `UX-3.028a — RiskOverview column structure fix` that aligns
+thead↔tbody, then `UX-3.028b — sticky first column` as a follow-up.
+
+Other wide tables (AdminActivity, ReleaseDetail vuln table) are candidates
+for the same sticky-col treatment in a future iter — not blocking.
