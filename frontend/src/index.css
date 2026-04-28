@@ -42,6 +42,19 @@
   }
 
   /*
+   * Defence-in-depth against viewport-level horizontal scroll.  Any
+   * single component with intrinsic width > viewport (e.g. a navbar
+   * whose flex children can't shrink — see Layout.jsx) would otherwise
+   * bleed into a `<body>`-level horizontal scrollbar that shifts the
+   * whole page sideways. Setting overflow-x: hidden at body level
+   * confines the bleed to the offending component instead of the
+   * viewport.  Vertical scroll is untouched.
+   */
+  body {
+    overflow-x: hidden;
+  }
+
+  /*
    * UX-008 — Honour iOS safe-area insets so content (especially any
    * future sticky bottom UI like a tab bar) stays out of the notch /
    * Home Indicator.  Pairs with viewport-fit=cover in index.html.

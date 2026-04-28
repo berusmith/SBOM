@@ -78,8 +78,13 @@ export default function Layout({ children }) {
           <div className="flex items-center h-14 gap-3">
             <span className="font-bold text-base tracking-tight shrink-0">SBOM Platform</span>
 
-            {/* Desktop nav */}
-            <div className="hidden md:flex gap-1 ml-2">
+            {/* Desktop nav — `min-w-0 overflow-x-auto` lets this section
+                shrink below the sum of its children's intrinsic widths
+                and gives the items a horizontal scroll inside the navbar
+                (instead of bleeding past `max-w-7xl` and forcing the
+                viewport into a horizontal scroll on screens narrower
+                than ~1417px, e.g. 1366×768 / 1440×900). */}
+            <div className="hidden md:flex gap-1 ml-2 min-w-0 overflow-x-auto">
               {visibleItems.map((item) => (
                 <Link
                   key={item.path}
