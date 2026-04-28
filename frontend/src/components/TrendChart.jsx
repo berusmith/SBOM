@@ -83,7 +83,11 @@ export default function TrendChart({ data }) {
               onMouseLeave={() => setHovered(null)}
               onFocus={() => setHovered(i)}
               onBlur={() => setHovered(null)}
-              style={{ cursor: "pointer", outline: "none" }}
+              // No `outline: "none"` — keep the global :focus-visible outline so
+              // keyboard users actually see which point they tabbed to. The
+              // outline draws around the <g>'s bounding box (the wide
+              // transparent rect below) which neatly highlights the column.
+              style={{ cursor: "pointer" }}
             >
               {/* Invisible wide hit area */}
               <rect x={xp(i) - 14} y={PT} width={28} height={cH} fill="transparent"/>
