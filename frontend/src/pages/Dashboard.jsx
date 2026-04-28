@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { CheckCircle2, Search } from "lucide-react";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
 import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
+import { EmptyState } from "../components/EmptyState";
 
 // (TopVulns component removed — backend has no /api/stats/top-vulns endpoint;
 //  the component always 404'd then rendered nothing.  Logic moved fully into
@@ -237,8 +239,12 @@ export default function Dashboard() {
         role === "viewer" && orgId ? (
           <ViewerOnboarding orgId={orgId} />
         ) : (
-          <div className="bg-white rounded-lg shadow p-8 text-center text-gray-600">
-            {t("dashboard.noVulns")}
+          // UX-3.006 — EmptyState replaces the previous single-line "no data" rendering.
+          <div className="bg-white rounded-lg shadow">
+            <EmptyState
+              icon={<CheckCircle2 size={36} aria-hidden="true" />}
+              title={t("dashboard.noVulns")}
+            />
           </div>
         )
       ) : (
@@ -371,7 +377,12 @@ export default function Dashboard() {
         </form>
         {cveResult && (
           cveResult.affected_count === 0 ? (
-            <p className="text-sm text-gray-600">{t("dashboard.cveNoResult")}</p>
+            // UX-3.006 — empty state with search icon for "no result" semantics.
+            <EmptyState
+              compact
+              icon={<Search size={28} aria-hidden="true" />}
+              title={t("dashboard.cveNoResult")}
+            />
           ) : (
             <>
               <p className="text-sm font-medium text-red-700 mb-2">{t("dashboard.cveAffected", { n: cveResult.affected_count })}</p>
@@ -468,7 +479,12 @@ export default function Dashboard() {
             )}
           </div>
           {topThreats.top_epss.length === 0 ? (
-            <p className="text-sm text-gray-600">{t("dashboard.noHighEpss")}</p>
+            // UX-3.006 — empty state with positive icon (no urgent threats = good).
+            <EmptyState
+              compact
+              icon={<CheckCircle2 size={28} aria-hidden="true" />}
+              title={t("dashboard.noHighEpss")}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
