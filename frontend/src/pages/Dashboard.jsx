@@ -3,81 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../api/client";
 import { useToast } from "../components/Toast";
-import { SEVERITY_COLOR, DEFAULT_BADGE } from "../constants/colors";
 import { SkeletonStatCards, SkeletonTable } from "../components/Skeleton";
 
-function TopVulns() {
-  const [items, setItems] = useState(null);
-  const { t } = useTranslation();
-
-  useEffect(() => {
-    api.get("/stats/top-vulns").then((r) => setItems(r.data)).catch(() => setItems([]));
-  }, []);
-
-  if (items === null) return null;
-  if (items.length === 0) return null;
-
-  return (
-    <div className="mt-4 bg-white rounded-lg shadow p-5">
-      <h2 className="font-semibold text-gray-700 mb-3">
-        {t("dashboard.topThreats")}
-      </h2>
-      <div className="overflow-x-auto">
-        <p className="sm:hidden text-xs text-gray-600 pb-1">{t("dashboard.scrollHint")}</p>
-        <table className="w-full text-sm min-w-[320px]">
-          <caption className="sr-only">{t("dashboard.topThreats")}</caption>
-          <thead>
-            <tr className="text-left text-xs text-gray-600 border-b">
-              <th scope="col" className="pb-2 pr-4">CVE</th>
-              <th scope="col" className="pb-2 pr-4">{t("releaseDetail.vulns.severity")}</th>
-              <th scope="col" className="pb-2 pr-4 hidden md:table-cell">CVSS</th>
-              <th scope="col" className="pb-2 pr-4">{t("dashboard.component")}</th>
-              <th scope="col" className="pb-2 pr-4 hidden sm:table-cell">{t("dashboard.product")}</th>
-              <th scope="col" className="pb-2 pr-4 hidden lg:table-cell">{t("dashboard.customer")}</th>
-              <th scope="col" className="pb-2">{t("common.status")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/*
-              UX-007 — row navigation moved off <tr onClick> (which is
-              keyboard-inaccessible) and onto a <Link> wrapping the CVE
-              identifier.  Mouse users now click the CVE; the row still
-              hover-highlights for visual continuity.  Keyboard users
-              tab through the focusable CVE links.
-            */}
-            {items.map((v) => (
-              <tr key={v.vuln_id} className="border-b last:border-0 hover:bg-gray-50">
-                <td className="py-3 pr-4 font-mono text-xs">
-                  <Link
-                    to={`/releases/${v.release_id}`}
-                    className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
-                  >
-                    {v.cve_id}
-                  </Link>
-                  {v.is_kev && (
-                    <span className="ml-1 px-1 py-0.5 rounded text-white bg-red-600 font-bold text-xs">KEV</span>
-                  )}
-                </td>
-                <td className="py-3 pr-4">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${SEVERITY_COLOR[v.severity] || DEFAULT_BADGE}`}>
-                    {v.severity}
-                  </span>
-                </td>
-                <td className="py-3 pr-4 text-gray-600 hidden md:table-cell">{v.cvss_score ?? "—"}</td>
-                <td className="py-3 pr-4 text-gray-700">{v.component_name} <span className="text-gray-600">{v.component_version}</span></td>
-                <td className="py-3 pr-4 text-gray-700 hidden sm:table-cell">{v.product_name} <span className="text-gray-600 text-xs">{v.release_version}</span></td>
-                <td className="py-3 pr-4 text-gray-600 hidden lg:table-cell">{v.org_name}</td>
-                <td className="py-3">
-                  <span className="px-2 py-0.5 rounded text-xs bg-red-50 text-red-700">{v.status}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+// (TopVulns component removed — backend has no /api/stats/top-vulns endpoint;
+//  the component always 404'd then rendered nothing.  Logic moved fully into
+//  the threatHighlights / riskyComponents tables further down in the page.)
 
 const CRA_DEADLINE = new Date("2026-09-11T00:00:00Z");
 
@@ -380,7 +310,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <TopVulns />
 
       {/* SBOM Quality Summary */}
       <div className="mt-4 bg-white rounded-lg shadow p-5">
