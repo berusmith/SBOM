@@ -227,7 +227,11 @@ export default function Organizations() {
           <div className="p-8 text-center text-gray-600">{t("organizations.noData")}</div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[280px]">
+          {/* UX-010: bump min-w so the 3-button action cell on narrow viewports
+              triggers wrapper horizontal scroll (predictable) instead of
+              cells getting cropped under body{overflow-x:hidden}. */}
+          <table className="w-full text-sm min-w-[480px]">
+            <caption className="sr-only">{t("organizations.title")}</caption>
             <thead className="bg-gray-50 text-gray-600 text-left">
               <tr>
                 <th scope="col" className="px-4 py-3">{t("organizations.name")}</th>

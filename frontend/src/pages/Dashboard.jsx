@@ -25,6 +25,7 @@ function TopVulns() {
       <div className="overflow-x-auto">
         <p className="sm:hidden text-xs text-gray-600 pb-1">{t("dashboard.scrollHint")}</p>
         <table className="w-full text-sm min-w-[320px]">
+          <caption className="sr-only">{t("dashboard.topThreats")}</caption>
           <thead>
             <tr className="text-left text-xs text-gray-600 border-b">
               <th scope="col" className="pb-2 pr-4">CVE</th>
@@ -441,6 +442,7 @@ export default function Dashboard() {
               <p className="text-sm font-medium text-red-700 mb-2">{t("dashboard.cveAffected", { n: cveResult.affected_count })}</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs min-w-[320px]">
+                  <caption className="sr-only">{t("dashboard.cveImpact")}</caption>
                   <thead className="text-left text-gray-600 border-b">
                     <tr>
                       <th scope="col" className="pb-2 pr-3">{t("organizations.name")}</th>
@@ -534,6 +536,7 @@ export default function Dashboard() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
+                <caption className="sr-only">{t("dashboard.threatHighlights")}</caption>
                 <thead>
                   <tr className="text-left text-xs text-gray-600 border-b">
                     <th scope="col" className="pb-2 pr-4">CVE</th>
@@ -580,6 +583,7 @@ export default function Dashboard() {
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">{t("dashboard.riskyComponents")}</caption>
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
                   <th scope="col" className="pb-2 pr-4">{t("dashboard.riskyCol")}</th>
@@ -635,6 +639,7 @@ export default function Dashboard() {
           <h2 className="font-semibold text-gray-700 mb-4">{t("dashboard.riskOverview")}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
+              <caption className="sr-only">{t("dashboard.riskOverview")}</caption>
               <thead>
                 <tr className="text-left text-xs text-gray-600 border-b">
                   <th scope="col" className="pb-2 pr-4">客戶</th>

@@ -158,6 +158,7 @@ export default function Products() {
           ) : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[360px]">
+              <caption className="sr-only">{t("products.title")}</caption>
               <thead className="bg-gray-50 text-gray-600 text-left">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t("products.name")}</th>
