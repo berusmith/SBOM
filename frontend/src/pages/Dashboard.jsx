@@ -448,9 +448,15 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
+                    {/* UX-002: row navigation via <Link> on the org-name cell, not <tr onClick>. */}
                     {cveResult.affected.map((r, i) => (
-                      <tr key={i} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/releases/${r.release_id}`)}>
-                        <td className="py-2 pr-3 text-gray-700">{r.org_name}</td>
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-2 pr-3 text-gray-700">
+                          <Link to={`/releases/${r.release_id}`}
+                                className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded">
+                            {r.org_name}
+                          </Link>
+                        </td>
                         <td className="py-2 pr-3 text-gray-700">{r.product_name}</td>
                         <td className="py-2 pr-3 font-mono text-gray-600">{r.release_version}</td>
                         <td className="py-2 pr-3 text-gray-600">{r.component}</td>
@@ -580,14 +586,14 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
+                {/* UX-002: search-by-component navigation via <Link> on the name cell, not <tr onClick>. */}
                 {riskyComponents.map((c, i) => (
-                  <tr
-                    key={i}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(c.name)}`)}
-                  >
+                  <tr key={i} className="hover:bg-gray-50">
                     <td className="py-3 pr-4">
-                      <span className="font-medium text-gray-800">{c.name}</span>
+                      <Link to={`/search?q=${encodeURIComponent(c.name)}`}
+                            className="font-medium text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded">
+                        {c.name}
+                      </Link>
                       {c.version && <span className="ml-1.5 text-xs text-gray-600">{c.version}</span>}
                     </td>
                     <td className="py-2.5 pr-4 text-center">
@@ -638,15 +644,17 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
+                {/* UX-002: drill-down via <Link> on the org-name cell, not <tr onClick>. */}
                 {riskOverview.map((org) => {
                   const scoreColor = org.risk_score >= 50 ? "bg-red-100 text-red-700" : org.risk_score >= 20 ? "bg-orange-100 text-orange-700" : org.risk_score > 0 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
                   return (
-                    <tr
-                      key={org.org_id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => navigate(`/organizations/${org.org_id}/products`)}
-                    >
-                      <td className="py-2.5 pr-4 font-medium text-gray-800">{org.org_name}</td>
+                    <tr key={org.org_id} className="hover:bg-gray-50">
+                      <td className="py-2.5 pr-4 font-medium text-gray-800">
+                        <Link to={`/organizations/${org.org_id}/products`}
+                              className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded">
+                          {org.org_name}
+                        </Link>
+                      </td>
                       <td className="py-2.5 pr-4 text-center text-gray-600">{org.products}</td>
                       <td className="py-2.5 pr-4 text-center text-gray-600">{org.total_vulns}</td>
                       <td className="py-2.5 pr-4 text-center">
