@@ -383,7 +383,7 @@ export default function Dashboard() {
                       <th scope="col" className="pb-2">{t("releaseDetail.vulns.severity")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {/* UX-002: row navigation via <Link> on the org-name cell, not <tr onClick>. */}
                     {cveResult.affected.map((r, i) => (
                       <tr key={i} className="hover:bg-gray-50">
@@ -477,7 +477,7 @@ export default function Dashboard() {
                     <th scope="col" className="pb-2">KEV</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-100">
                   {topThreats.top_epss.map((v) => {
                     const sevColor = { critical: "text-red-600 bg-red-50", high: "text-orange-600 bg-orange-50", medium: "text-yellow-600 bg-yellow-50", low: "text-blue-600 bg-blue-50" }[v.severity] || "text-gray-600 bg-gray-50";
                     return (
@@ -523,7 +523,7 @@ export default function Dashboard() {
                   <th scope="col" className="pb-2 text-center">{t("dashboard.riskyColEpss")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {/* UX-002: search-by-component navigation via <Link> on the name cell, not <tr onClick>. */}
                 {riskyComponents.map((c, i) => (
                   <tr key={i} className="hover:bg-gray-50">
@@ -583,7 +583,7 @@ export default function Dashboard() {
                   <th scope="col" className="pb-2 text-center">{t("dashboard.riskOverviewCol.riskScore")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-100">
                 {/* UX-002: drill-down via <Link> on the org-name cell, not <tr onClick>. */}
                 {riskOverview.map((org) => {
                   const scoreColor = org.risk_score >= 50 ? "bg-red-100 text-red-700" : org.risk_score >= 20 ? "bg-orange-100 text-orange-700" : org.risk_score > 0 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
