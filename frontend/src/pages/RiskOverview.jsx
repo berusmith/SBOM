@@ -72,7 +72,7 @@ export default function RiskOverview() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t("riskOverview.title")}</h1>
+      <h1 className="text-h1-fluid font-bold text-gray-800 mb-6">{t("riskOverview.title")}</h1>
 
       {/* Summary bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
