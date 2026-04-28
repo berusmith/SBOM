@@ -42,10 +42,25 @@ export function SkeletonCard({ lines = 3 }) {
 }
 
 // 多欄統計卡片列
-export function SkeletonStatCards({ count = 4 }) {
+//
+// UX-3.001 — `md:grid-cols-${n}` from a template literal is invisible to
+// Tailwind JIT (the scanner extracts class names by literal regex match,
+// not by evaluating expressions).  Earlier versions interpolated `count`
+// into the class name AND used `count={4}` while Dashboard rendered 6
+// cards — so the skeleton both rendered the wrong cell count *and* fell
+// back to a single grid-cols-2 layout because Tailwind never generated
+// `md:grid-cols-6`.  Switching to a typed `layout` enum with literal
+// class strings fixes both bugs.
+const STAT_CARD_LAYOUTS = {
+  4: { cols: "grid-cols-2 md:grid-cols-4",                                                count: 4 },
+  6: { cols: "grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6", count: 6 },
+};
+
+export function SkeletonStatCards({ layout = 4 }) {
+  const cfg = STAT_CARD_LAYOUTS[layout] ?? STAT_CARD_LAYOUTS[4];
   return (
-    <StatusWrapper className={`grid grid-cols-2 md:grid-cols-${count} gap-4`}>
-      {Array.from({ length: count }).map((_, i) => (
+    <StatusWrapper className={`grid ${cfg.cols} gap-4`}>
+      {Array.from({ length: cfg.count }).map((_, i) => (
         <div key={i} className="bg-white rounded-lg shadow p-5 space-y-2">
           <SkeletonLine width="w-1/2" height="h-3" />
           <SkeletonLine width="w-2/3" height="h-8" />

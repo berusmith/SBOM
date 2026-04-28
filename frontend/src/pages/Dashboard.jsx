@@ -160,7 +160,9 @@ export default function Dashboard() {
 
   if (loading) return (
     <div className="p-6 space-y-6">
-      <SkeletonStatCards count={4} />
+      {/* layout=6 mirrors the 6-card grid below (Dashboard.jsx ~L182).
+          Earlier `count={4}` skeletoned 4 cards then mounted 6 = layout shift. */}
+      <SkeletonStatCards layout={6} />
       <SkeletonTable rows={5} cols={5} />
     </div>
   );
