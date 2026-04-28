@@ -195,7 +195,9 @@ export default function Dashboard() {
           // (no link) become a plain <div> so they're not in the tab order.
           const inner = (
             <>
-              <div className={`${c.color} w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl font-bold shrink-0`}>
+              {/* UX-3.016 — tabular-nums on metric cards so numbers align
+                  vertically when the dashboard polls and values update. */}
+              <div className={`${c.color} w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl font-bold shrink-0 tabular-nums`}>
                 {c.value}
               </div>
               <span className="text-gray-600 font-medium text-sm">{c.label}</span>

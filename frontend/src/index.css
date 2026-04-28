@@ -97,6 +97,18 @@
       font-size: 16px;
     }
   }
+
+  /*
+   * UX-3.016 — every <table> uses tabular-nums by default. Without this,
+   * proportional digits jitter horizontally on data refresh (the "8" is
+   * narrower than "0", so a column of changing numbers wobbles). Tables are
+   * the right granularity to opt-in: prose paragraphs prefer proportional
+   * for readability, but data tables want alignment. Per-column overrides
+   * are still possible via tailwind's `font-variant-numeric` utility.
+   */
+  table {
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 /*
