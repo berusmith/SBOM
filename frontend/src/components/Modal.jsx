@@ -55,9 +55,32 @@ export function Modal({
   const containerRef = useRef(null);
   const titleId = useId();
 
+  // UX-3.023 — two-phase mount/visible state so the panel can fade + scale
+  // in on open and fade + scale out on close without vanishing instantly.
+  // - isMounted: should the DOM exist? (false initially, false after exit)
+  // - isVisible: should the visual transition target the "open" classes?
+  //   We flip this AFTER mount via rAF so the browser sees the closed
+  //   classes for one frame and can transition off them.
+  const [isMounted, setIsMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+      const id = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setIsVisible(false);
+      const id = setTimeout(() => setIsMounted(false), EXIT_MS);
+      return () => clearTimeout(id);
+    }
+  }, [isOpen]);
+
   // a11y: focus trap, Escape-to-close, body-scroll lock, restore focus on
   // close — all delegated to the shared useFocusTrap hook so dropdowns /
-  // popovers can reuse the same primitive later.
+  // popovers can reuse the same primitive later.  Driven by `isOpen` (not
+  // isVisible) so focus restores to the opener at the instant of close,
+  // not 200ms later.
   useFocusTrap({
     active: isOpen,
     containerRef,
@@ -65,14 +88,14 @@ export function Modal({
     initialFocusRef,
   });
 
-  if (!isOpen) return null;
+  if (!isMounted) return null;
 
   const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
 
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center px-4 py-4">
       <div
-        className="absolute inset-0 bg-black/40"
+        className={`absolute inset-0 bg-black/40 transition-opacity duration-base ease-out ${isVisible ? "opacity-100" : "opacity-0"}`}
         aria-hidden="true"
         onClick={() => closeOnBackdrop && onClose?.()}
       />
@@ -83,7 +106,7 @@ export function Modal({
         aria-labelledby={titleId}
         aria-describedby={ariaDescribedBy}
         tabIndex={-1}
-        className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClass} max-h-[90vh] overflow-y-auto focus:outline-none`}
+        className={`relative bg-white rounded-lg shadow-elev-4 w-full ${sizeClass} max-h-[90vh] overflow-y-auto focus:outline-none transition-[opacity,transform] duration-base ease-out-expo ${isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
       >
         <div className="flex items-start justify-between p-5 sm:p-6 pb-3">
           <h2 id={titleId} className="text-lg font-bold text-gray-800">{title}</h2>
