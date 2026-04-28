@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AlertTriangle } from "lucide-react";
 import api from "../api/client";
@@ -98,13 +98,15 @@ export default function CRAIncidents() {
               </tr>
             </thead>
             <tbody>
+              {/* UX-003: incident drill-down via <Link> on the title cell, not <tr onClick>. */}
               {incidents.map((inc) => (
-                <tr
-                  key={inc.id}
-                  className="border-t hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/cra/${inc.id}`)}
-                >
-                  <td className="px-4 py-3 font-medium text-gray-800 max-w-[120px] sm:max-w-xs truncate">{inc.title}</td>
+                <tr key={inc.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium max-w-[120px] sm:max-w-xs truncate">
+                    <Link to={`/cra/${inc.id}`}
+                          className="text-blue-700 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400 rounded">
+                      {inc.title}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-blue-700 hidden sm:table-cell">
                     {inc.trigger_cve_ids || "—"}
                   </td>
