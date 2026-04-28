@@ -204,11 +204,14 @@ export default function Policies() {
             const vc = violationCount(rule.id);
             return (
               <div key={rule.id} className={`bg-white rounded-lg shadow p-4 flex items-start gap-4 ${!rule.enabled ? "opacity-50" : ""}`}>
-                {/* Toggle */}
+                {/* UX-005: switch semantics — role="switch" + aria-checked + aria-label. */}
                 <button
+                  type="button"
+                  role="switch"
+                  aria-checked={rule.enabled}
+                  aria-label={`${rule.enabled ? "停用" : "啟用"} 規則「${rule.name}」`}
                   onClick={() => handleToggle(rule)}
-                  className={`mt-0.5 w-10 h-6 rounded-full transition-colors shrink-0 ${rule.enabled ? "bg-blue-500" : "bg-gray-300"}`}
-                  title={rule.enabled ? "停用" : "啟用"}
+                  className={`mt-0.5 w-10 h-6 rounded-full transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-blue-400 ${rule.enabled ? "bg-blue-500" : "bg-gray-300"}`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full mx-auto transition-transform ${rule.enabled ? "translate-x-2" : "-translate-x-2"}`} />
                 </button>
@@ -292,8 +295,13 @@ export default function Policies() {
               const vc = licenseViolationCount(rule.id);
               return (
                 <div key={rule.id} className={`bg-white rounded-lg shadow p-4 flex items-center gap-4 ${!rule.enabled ? "opacity-50" : ""}`}>
-                  <button onClick={() => handleToggleLicense(rule)}
-                    className={`w-10 h-6 rounded-full transition-colors shrink-0 ${rule.enabled ? "bg-purple-500" : "bg-gray-300"}`}>
+                  {/* UX-005: switch semantics for license-rule toggle. */}
+                  <button type="button"
+                    role="switch"
+                    aria-checked={rule.enabled}
+                    aria-label={`${rule.enabled ? "停用" : "啟用"} License 規則「${rule.label || rule.license_id}」`}
+                    onClick={() => handleToggleLicense(rule)}
+                    className={`w-10 h-6 rounded-full transition-colors shrink-0 focus:outline-none focus:ring-2 focus:ring-purple-400 ${rule.enabled ? "bg-purple-500" : "bg-gray-300"}`}>
                     <div className={`w-4 h-4 bg-white rounded-full mx-auto transition-transform ${rule.enabled ? "translate-x-2" : "-translate-x-2"}`} />
                   </button>
                   <div className="flex-1 min-w-0">
