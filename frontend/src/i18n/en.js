@@ -234,6 +234,8 @@ const en = {
     riskyColEpss:         "Max EPSS",
     riskyHint:            "Click component name to search all affected versions",
     loadError:            "Failed to load dashboard data, please refresh the page",
+    partialLoadError:     "Some sections failed to load",
+    retry:                "Retry",
     riskOverview:         "Customer Risk Overview",
     releaseCount:         "{{n}} release(s)",
     qualityAvg:           "Avg. Score",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CheckCircle2, Search } from "lucide-react";
@@ -117,6 +117,7 @@ export default function Dashboard() {
   const [topThreats, setTopThreats] = useState(null);
   const [riskyComponents, setRiskyComponents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasErrors, setHasErrors] = useState(false);
   const [qualitySummary, setQualitySummary] = useState(null);
   const [cveQuery, setCveQuery] = useState("");
   const [cveResult, setCveResult] = useState(null);
@@ -127,26 +128,48 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const toast = useToast();
 
-  useEffect(() => {
-    const ac = new AbortController();
-    const sig = { signal: ac.signal };
-    Promise.all([
+  // UX-3.007 + UX-3.013 — Promise.allSettled instead of Promise.all so a single
+  // API failure doesn't kill the whole dashboard. Sections whose fetch fulfils
+  // render normally; sections that reject stay null and their conditional
+  // rendering kicks in (the per-section card is hidden or shows its own empty
+  // state). A page-level retry banner triggers loadAll() again. Toast fires
+  // only if ALL five APIs fail (true outage), not on partial degradation.
+  const loadAll = useCallback((signal) => {
+    setHasErrors(false);
+    const sig = { signal };
+    return Promise.allSettled([
       api.get("/stats", sig),
       api.get("/stats/risk-overview", sig),
       api.get("/stats/top-threats", sig),
       api.get("/stats/top-risky-components", sig),
       api.get("/stats/sbom-quality-summary", sig),
     ]).then(([s, r, th, rc, q]) => {
-      setStats(s.data);
-      setRiskOverview(r.data);
-      setTopThreats(th.data);
-      setRiskyComponents(rc.data);
-      setQualitySummary(q.data);
-    }).catch((err) => {
-      if (!ac.signal.aborted) toast.error(t("dashboard.loadError", "儀表板資料載入失敗，請重新整理頁面"));
-    }).finally(() => { if (!ac.signal.aborted) setLoading(false); });
+      if (signal?.aborted) return;
+      if (s.status  === "fulfilled") setStats(s.value.data);
+      if (r.status  === "fulfilled") setRiskOverview(r.value.data);
+      if (th.status === "fulfilled") setTopThreats(th.value.data);
+      if (rc.status === "fulfilled") setRiskyComponents(rc.value.data);
+      if (q.status  === "fulfilled") setQualitySummary(q.value.data);
+      const failed = [s, r, th, rc, q].filter(x => x.status === "rejected").length;
+      if (failed === 5) {
+        toast.error(t("dashboard.loadError"));
+      }
+      if (failed > 0) setHasErrors(true);
+    });
+  }, [t, toast]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    setLoading(true);
+    loadAll(ac.signal).finally(() => { if (!ac.signal.aborted) setLoading(false); });
     return () => ac.abort();
-  }, []);
+  }, [loadAll]);
+
+  const handleRetry = () => {
+    const ac = new AbortController();
+    setLoading(true);
+    loadAll(ac.signal).finally(() => { if (!ac.signal.aborted) setLoading(false); });
+  };
 
   const handleCveSearch = async (e) => {
     e.preventDefault();
@@ -181,6 +204,23 @@ export default function Dashboard() {
       <h1 className="text-h1-fluid font-bold text-gray-800 mb-6">{t("dashboard.title")}</h1>
 
       <CRACountdown />
+
+      {/* UX-3.007 + UX-3.013 — partial-failure banner with retry. Hidden on
+          full success; shown when at least one section failed to load.
+          Toast still fires for total outage; this banner handles the "some
+          sections rendered, others didn't" middle ground. */}
+      {hasErrors && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 mb-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-amber-700">{t("dashboard.partialLoadError")}</span>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="text-sm font-medium text-amber-700 hover:text-amber-900 underline focus:outline-none focus:ring-2 focus:ring-amber-400 rounded px-1"
+          >
+            {t("dashboard.retry")}
+          </button>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">

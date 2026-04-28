@@ -236,6 +236,8 @@ const zh = {
     riskyColEpss:         "最高 EPSS",
     riskyHint:            "點擊元件名稱可在全域搜尋中查看所有受影響版本",
     loadError:            "儀表板資料載入失敗，請重新整理頁面",
+    partialLoadError:     "部分區塊資料載入失敗",
+    retry:                "重新載入",
     riskOverview:         "客戶風險總覽",
     releaseCount:         "{{n}} 個版本",
     qualityAvg:           "平均分數",
