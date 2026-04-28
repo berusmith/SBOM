@@ -327,7 +327,9 @@ export default function Dashboard() {
                   <span className={`text-2xl font-bold ${g==="A"?"text-green-600":g==="B"?"text-blue-600":g==="C"?"text-yellow-600":"text-red-600"}`}>
                     {qualitySummary.grade_dist[g]}
                   </span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-1 ${g==="A"?"bg-green-100 text-green-700":g==="B"?"bg-blue-100 text-blue-700":g==="C"?"bg-yellow-100 text-yellow-700":"bg-red-100 text-red-700"}`}>
+                  {/* UX-3.010 — added border-{color}-200 so the chip reads as a chip
+                      not a recoloured rectangle. */}
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full mt-1 border ${g==="A"?"bg-green-100 text-green-700 border-green-200":g==="B"?"bg-blue-100 text-blue-700 border-blue-200":g==="C"?"bg-yellow-100 text-yellow-700 border-yellow-200":"bg-red-100 text-red-700 border-red-200"}`}>
                     {g}
                   </span>
                 </div>
@@ -399,7 +401,8 @@ export default function Dashboard() {
                         <td className="py-2 pr-3 font-mono text-gray-600">{r.release_version}</td>
                         <td className="py-2 pr-3 text-gray-600">{r.component}</td>
                         <td className="py-2">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${r.severity==="critical"?"bg-red-100 text-red-700":r.severity==="high"?"bg-orange-100 text-orange-700":"bg-yellow-100 text-yellow-700"}`}>
+                          {/* UX-3.010 — chip border for layered visibility. */}
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${r.severity==="critical"?"bg-red-100 text-red-700 border-red-200":r.severity==="high"?"bg-orange-100 text-orange-700 border-orange-200":"bg-yellow-100 text-yellow-700 border-yellow-200"}`}>
                             {r.severity}
                           </span>
                         </td>
@@ -588,7 +591,9 @@ export default function Dashboard() {
               <tbody className="divide-y divide-gray-100">
                 {/* UX-002: drill-down via <Link> on the org-name cell, not <tr onClick>. */}
                 {riskOverview.map((org) => {
-                  const scoreColor = org.risk_score >= 50 ? "bg-red-100 text-red-700" : org.risk_score >= 20 ? "bg-orange-100 text-orange-700" : org.risk_score > 0 ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700";
+                  // UX-3.010 — added border-{color}-200 alongside bg/text so the chip
+                  // gets a 1px tinted edge (helps it read on white card hover surfaces).
+                  const scoreColor = org.risk_score >= 50 ? "bg-red-100 text-red-700 border-red-200" : org.risk_score >= 20 ? "bg-orange-100 text-orange-700 border-orange-200" : org.risk_score > 0 ? "bg-yellow-100 text-yellow-700 border-yellow-200" : "bg-green-100 text-green-700 border-green-200";
                   return (
                     <tr key={org.org_id} className="hover:bg-gray-50">
                       <td className="py-2.5 pr-4 font-medium text-gray-800">
@@ -615,7 +620,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="py-2.5 text-center">
-                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${scoreColor}`}>{org.risk_score}</span>
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${scoreColor}`}>{org.risk_score}</span>
                       </td>
                     </tr>
                   );

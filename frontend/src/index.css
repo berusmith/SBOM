@@ -143,6 +143,23 @@
   }
 
   /*
+   * UX-3.010 — chip-* utilities. Chips on white cards used to be bg-{color}-50
+   * + text-{color}-700 only — no border, so on hover-elevated cards the chips
+   * read flat. These helpers add a 1px tinted border that anchors the chip
+   * visually (Linear / GitHub Security style). Adopt incrementally per the
+   * touched-code policy; raw bg-{color}-{50,100} chips can co-exist.
+   */
+  .chip {
+    @apply inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full border;
+  }
+  .chip-danger  { @apply bg-red-50    text-red-700    border-red-200; }
+  .chip-warning { @apply bg-amber-50  text-amber-700  border-amber-200; }
+  .chip-success { @apply bg-green-50  text-green-700  border-green-200; }
+  .chip-info    { @apply bg-cyan-50   text-cyan-700   border-cyan-200; }
+  .chip-brand   { @apply bg-blue-50   text-blue-700   border-blue-200; }
+  .chip-neutral { @apply bg-gray-50   text-gray-700   border-gray-200; }
+
+  /*
    * UX-3.024 — Skeleton shimmer. Replaces the Tailwind animate-pulse default
    * (opacity 0.5↔1 — barely perceptible on retina) with a left-to-right
    * gradient sweep that reads as "loading" much more clearly. The
