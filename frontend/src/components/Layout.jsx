@@ -81,7 +81,7 @@ export default function Layout({ children }) {
       >
         {t("nav.skipToMain", { defaultValue: "跳至主內容" })}
       </a>
-      <nav className="bg-gray-900 text-white">
+      <nav className="bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto px-4">
           {/* Top bar */}
           <div className="flex items-center h-14 gap-3">
@@ -101,7 +101,7 @@ export default function Layout({ children }) {
                   className={`px-2.5 py-1.5 rounded text-sm transition-colors whitespace-nowrap ${
                     isActive(item.path)
                       ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:text-white hover:bg-gray-700"
+                      : "text-slate-300 hover:text-white hover:bg-slate-700"
                   }`}
                 >
                   {t(`nav.${item.key}`)}
@@ -115,7 +115,7 @@ export default function Layout({ children }) {
                   title={t("nav.lockedHint", {
                     plan: item.minPlan === "standard" ? "Standard" : "Professional",
                   })}
-                  className="px-2.5 py-1.5 rounded text-sm text-gray-600 cursor-not-allowed flex items-center gap-1 whitespace-nowrap"
+                  className="px-2.5 py-1.5 rounded text-sm text-slate-500 cursor-not-allowed flex items-center gap-1 whitespace-nowrap"
                 >
                   <Lock size={12} aria-hidden="true" />
                   <span>{t(`nav.${item.key}`)}</span>
@@ -141,12 +141,12 @@ export default function Layout({ children }) {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder={t("nav.search")}
-                className="bg-gray-700 text-white text-sm rounded px-3 py-1.5 w-32 xl:w-44 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="bg-slate-700 text-white text-sm rounded px-3 py-1.5 w-32 xl:w-44 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
               <button
                 type="submit"
                 aria-label={t("common.search")}
-                className="text-gray-300 hover:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="text-slate-300 hover:text-white p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 <Search size={16} aria-hidden="true" />
               </button>
@@ -154,7 +154,7 @@ export default function Layout({ children }) {
             <div className="hidden md:flex items-center gap-2 min-w-0">
               <button
                 onClick={toggleLang}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded hover:bg-gray-700 transition-colors"
+                className="text-xs text-slate-400 hover:text-white px-2 py-1.5 rounded hover:bg-slate-700 transition-colors"
                 title="Switch language / 切換語言"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
@@ -162,12 +162,12 @@ export default function Layout({ children }) {
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${PLAN_COLOR[currentPlan]}`}>
                 {PLAN_LABEL[currentPlan]}
               </span>
-              <Link to="/profile" className="text-sm text-gray-300 hover:text-white transition-colors max-w-[8rem] truncate">
+              <Link to="/profile" className="text-sm text-slate-300 hover:text-white transition-colors max-w-[8rem] truncate">
                 {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-300 hover:text-white transition-colors shrink-0"
+                className="text-sm text-slate-300 hover:text-white transition-colors shrink-0"
               >
                 {t("nav.logout")}
               </button>
@@ -180,13 +180,13 @@ export default function Layout({ children }) {
               <button
                 onClick={toggleLang}
                 aria-label={i18n.language === "zh" ? "Switch to English" : "切換為中文"}
-                className="text-xs text-gray-400 hover:text-white border border-gray-600 px-3 py-2 min-w-[44px] rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="text-xs text-slate-400 hover:text-white border border-slate-600 px-3 py-2 min-w-[44px] rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {i18n.language === "zh" ? "EN" : "中"}
               </button>
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="text-gray-300 hover:text-white p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="text-slate-300 hover:text-white p-2.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
                 aria-label={menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
                 aria-expanded={menuOpen}
                 aria-controls="mobile-menu"
@@ -209,7 +209,7 @@ export default function Layout({ children }) {
             <div
               id="mobile-menu"
               ref={mobileMenuRef}
-              className="md:hidden border-t border-gray-700 py-3 space-y-1"
+              className="md:hidden border-t border-slate-700 py-3 space-y-1"
             >
               {navItems.map((item) => (
                 <Link
@@ -219,7 +219,7 @@ export default function Layout({ children }) {
                   className={`block px-3 py-3 rounded text-sm ${
                     isActive(item.path)
                       ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:text-white hover:bg-gray-700"
+                      : "text-slate-300 hover:text-white hover:bg-slate-700"
                   }`}
                 >
                   {t(`nav.${item.key}`)}
@@ -237,7 +237,7 @@ export default function Layout({ children }) {
                   value={searchQ}
                   onChange={(e) => setSearchQ(e.target.value)}
                   placeholder={t("nav.search")}
-                  className="bg-gray-700 text-white text-base rounded px-3 py-2 flex-1 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="bg-slate-700 text-white text-base rounded px-3 py-2 flex-1 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
                 />
                 <button type="submit" className="bg-gray-600 text-white px-3 py-2 rounded text-sm">
                   {t("common.search")}
@@ -246,13 +246,13 @@ export default function Layout({ children }) {
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="block px-3 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded"
+                className="block px-3 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded"
               >
                 {username || t("nav.account")}
               </Link>
               <button
                 onClick={handleLogout}
-                className="block w-full text-left px-3 py-3 text-sm text-gray-300 hover:text-white hover:bg-gray-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="block w-full text-left px-3 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
                 {t("nav.logout")}
               </button>
