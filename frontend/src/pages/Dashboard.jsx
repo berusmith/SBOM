@@ -176,7 +176,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t("dashboard.title")}</h1>
+      <h1 className="text-h1-fluid font-bold text-gray-800 mb-6">{t("dashboard.title")}</h1>
 
       <CRACountdown />
 

@@ -74,3 +74,20 @@ look, takes longer).
 focus-visible:ring-offset-1). Other components mix focus:ring (incorrect:
 fires on click) with outline-none (incorrect: kills global outline on
 keyboard). The result is functional but not consistent.
+
+## UX-3.029 fluid H1 — extend to remaining data pages
+
+D7 commit applied `text-h1-fluid` to Dashboard / Releases / RiskOverview
+per plan. Other data pages with the same `text-2xl font-bold text-gray-800`
+H1 pattern that should also adopt for consistency:
+- Organizations.jsx:110
+- Products.jsx:95
+- Policies.jsx:167
+- Users.jsx:113
+- FirmwareUpload.jsx:172
+- CRAIncidents.jsx:63
+- About.jsx:70
+
+Auth pages (Login / ForgotPassword / ResetPassword / Profile) and detail
+pages (CRAIncidentDetail / TISAXAssessments / AdminActivity) keep
+text-xl — they're narrower contexts where 36px would feel oversized.

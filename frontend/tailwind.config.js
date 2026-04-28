@@ -105,6 +105,11 @@ export default {
         "h3":      ["1.5rem",    "2rem"],
         "h2":      ["1.875rem",  "2.25rem"],
         "h1":      ["2.25rem",   "2.5rem"],
+        // UX-3.029 — fluid H1 for data-page titles. Scales from 24 (narrow
+        // mobile) to 36 (wide desktop) so the page heading reads with the
+        // right weight regardless of viewport. Use only on top-level page
+        // titles; modal titles / inline H1 should stay at the fixed h1 size.
+        "h1-fluid": ["clamp(1.5rem, 1.2rem + 1vw, 2.25rem)", "1.2"],
       },
 
       zIndex: {
