@@ -1,6 +1,17 @@
 import os
 import secrets
 import urllib.request, urllib.error, json, time
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Anchor .env lookup to script location so test_all.py works from any cwd
+# (e.g. invoked from project root or from backend/).  Loads from backend/.env
+# — the same file the backend itself reads via pydantic-settings BaseSettings
+# config in app/core/config.py, keeping a single source of truth.
+# override=False (default): an explicit env var (e.g. CI secrets) wins
+# over .env, so this works both locally (.env) and in CI (env vars).
+load_dotenv(Path(__file__).resolve().parent / "backend" / ".env")
 
 # Admin password is read from the environment so the test suite never carries a
 # default in source.  Match this to whatever ADMIN_PASSWORD you set in
@@ -10,7 +21,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 if not ADMIN_PASSWORD:
     raise RuntimeError(
         "ADMIN_PASSWORD not set, refusing to run tests with default. "
-        "Export ADMIN_PASSWORD=<...> matching backend/.env before running."
+        "Set ADMIN_PASSWORD in backend/.env (auto-loaded) or export it before running."
     )
 
 # QA viewer fixture password is generated fresh per run.  The test creates the
