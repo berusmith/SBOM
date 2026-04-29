@@ -106,6 +106,16 @@ These principles are **observed in the codebase** or **written in CLAUDE.md / .k
 - **J4.** **Tidy First still applies**: even within a multi-commit PR, structural moves (rename, extract, move) come in `tidy:` commits separate from any logic change. Mixing tidy + refactor in one commit is rejected even under J2.
 - **J5.** **No bypass for security commits**: any commit touching `core/security.py`, `core/deps.py`, authn/authz logic, or input validation reverts to J1 (one-commit-one-finding) regardless of size, so the security review is per-commit.
 - **J5-footnote** (added 2026-04-29 per iter-1 Q-P7-2 confirmation): a J5-tagged commit MUST carry the prefix `[J5-security-carveout]` in the first line of its commit message, AND the commit body MUST explicitly list the surface diff for each of the 4 J5-tracked surfaces (`core/security.py`, `core/deps.py`, authn/authz logic, input validation). For each surface, the body either says "no changes to <surface>" (with one-line rationale) OR lists the diff hunks. **This is the per-commit security review made auditable**; without this body, J5 is only nominal discipline. The auditor reading `git log` should be able to confirm the security surface diff without opening the actual code diff.
+- **J6.** **Phase-8 incidental-fix policy** (added 2026-04-30 per iter-1 retrospective on commit `510ec8d` Stage A.3). During Phase-8 execution, a small fix discovered mid-commit MAY be bundled into the current commit if AND ONLY IF **all three** conditions hold:
+  1. **Size cap**: `< 20 LOC` of diff total
+  2. **Surface cap**: pure test infra OR build infra (e.g. `conftest.py`, `pytest.ini`, `requirements-dev.txt`); **zero production-code surface** (`backend/app/`, `frontend/src/`, `tools/` are forbidden — those require their own commit)
+  3. **Disclosure**: the bundling is explicitly listed in (a) the commit message body AND (b) the iteration's `ledger.md` as a numbered decision (`D{N}`) with rationale
+  
+  If any condition fails — e.g. the fix is 25 LOC, OR touches production code, OR cannot be disclosed without obscuring the parent commit — STOP, open a fresh commit (or new finding ID), do not bundle.
+  
+  **Why this exists**: discovered through iter-1 A.3, where the in-memory SQLite StaticPool fix surfaced naturally during cross-org test write. Splitting it into its own commit would have produced a 5-line `fix(test):` commit that obscures A.3's narrative without adding audit value. Bundling + ledger entry preserves both narrative AND audit trail. Without this principle, future audits reading `git log` would flag every multi-concern commit as a J1 violation; with this principle, the disclosed bundling is on-record and clean.
+  
+  **Trigger for promotion to a separate commit**: if the same incidental-fix class repeats (e.g. another `< 20 LOC` test-infra fix in Stage B/C/D), promote it to a separate commit at that point — bundling is forgivable once per "discovery moment", not as a habit.
 
 ## I. Ops & deployment conventions
 
