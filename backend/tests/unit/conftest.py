@@ -26,6 +26,7 @@ if str(_BACKEND) not in sys.path:
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
@@ -58,9 +59,14 @@ def db_engine():
     import app.models.vex_history    # noqa: F401
     import app.models.compliance     # noqa: F401
 
+    # CRITICAL: `sqlite:///:memory:` creates a SEPARATE database per connection.
+    # Two pool checkouts → two independent empty databases → tables missing in
+    # the second one.  StaticPool forces every "connection" to be the same
+    # underlying sqlite3.Connection, so all sessions see the same in-memory DB.
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
     yield engine
