@@ -1,0 +1,9 @@
+# Dev-only dependencies (NOT shipped at deploy)
+# License Path B (runtime 100% permissive) unaffected — these are not imported
+# from anything under backend/app/, only from backend/tests/.
+#
+# Allowlisted per .refactor-audit/code-principles.md §F7.
+# Per .refactor-audit/iteration-1/refactor-plan.md §0 pre-flight 0.1.
+
+pytest==8.3.3
+pytest-cov==5.0.0
