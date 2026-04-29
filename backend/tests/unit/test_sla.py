@@ -20,8 +20,8 @@ from types import SimpleNamespace
 
 import pytest
 
-# IMPORT PIN — updated to backend/app/domain/sla.py in B.2
-from app.api.releases import _sla_info
+# IMPORT updated in B.2 (2026-04-30) — was: from app.api.releases import _sla_info
+from app.domain.sla import sla_info
 
 
 def _vuln(*, severity, status, scanned_days_ago=None, suppressed=False, suppressed_until=None):
@@ -39,7 +39,7 @@ def _vuln(*, severity, status, scanned_days_ago=None, suppressed=False, suppress
 
 @pytest.mark.function_level
 def test_suppressed_returns_na():
-    info = _sla_info(_vuln(severity="critical", status="open", scanned_days_ago=100, suppressed=True))
+    info = sla_info(_vuln(severity="critical", status="open", scanned_days_ago=100, suppressed=True))
     assert info == {"sla_days": None, "sla_status": "n/a"}
 
 
@@ -48,7 +48,7 @@ def test_suppressed_returns_na():
 @pytest.mark.function_level
 @pytest.mark.parametrize("status", ["fixed", "not_affected"])
 def test_terminal_status_returns_na(status):
-    info = _sla_info(_vuln(severity="critical", status=status, scanned_days_ago=100))
+    info = sla_info(_vuln(severity="critical", status=status, scanned_days_ago=100))
     assert info == {"sla_days": None, "sla_status": "n/a"}
 
 
@@ -57,7 +57,7 @@ def test_terminal_status_returns_na(status):
 @pytest.mark.function_level
 @pytest.mark.parametrize("severity", ["info", None, ""])
 def test_unknown_severity_returns_na(severity):
-    info = _sla_info(_vuln(severity=severity, status="open", scanned_days_ago=10))
+    info = sla_info(_vuln(severity=severity, status="open", scanned_days_ago=10))
     assert info == {"sla_days": None, "sla_status": "n/a"}
 
 
@@ -65,7 +65,7 @@ def test_unknown_severity_returns_na(severity):
 
 @pytest.mark.function_level
 def test_missing_scanned_at_returns_na():
-    info = _sla_info(_vuln(severity="critical", status="open", scanned_days_ago=None))
+    info = sla_info(_vuln(severity="critical", status="open", scanned_days_ago=None))
     assert info == {"sla_days": None, "sla_status": "n/a"}
 
 
@@ -78,7 +78,7 @@ def test_missing_scanned_at_returns_na():
 )
 def test_sla_status_overdue(severity, sla_days_total):
     """Scanned more days ago than the SLA permits → overdue, sla_days < 0."""
-    info = _sla_info(_vuln(severity=severity, status="open", scanned_days_ago=sla_days_total + 5))
+    info = sla_info(_vuln(severity=severity, status="open", scanned_days_ago=sla_days_total + 5))
     assert info["sla_status"] == "overdue"
     assert info["sla_days"] < 0
 
@@ -90,7 +90,7 @@ def test_sla_status_overdue(severity, sla_days_total):
 )
 def test_sla_status_warning_within_7_days(severity, sla_days_total):
     """Scanned (sla_days_total - 3) days ago → 3 days remaining → warning band."""
-    info = _sla_info(_vuln(severity=severity, status="open", scanned_days_ago=sla_days_total - 3))
+    info = sla_info(_vuln(severity=severity, status="open", scanned_days_ago=sla_days_total - 3))
     assert info["sla_status"] == "warning"
     assert 0 <= info["sla_days"] <= 7
 
@@ -105,7 +105,7 @@ def test_sla_status_ok_well_before_warning_band(severity, sla_days_total):
     (high/medium/low), test that comfortably-early scan returns ok."""
     if sla_days_total <= 7:
         pytest.skip("critical's 7-day window has no 'ok' band — first day is already warning")
-    info = _sla_info(_vuln(severity=severity, status="open", scanned_days_ago=1))
+    info = sla_info(_vuln(severity=severity, status="open", scanned_days_ago=1))
     assert info["sla_status"] == "ok"
     assert info["sla_days"] > 7
 
@@ -117,7 +117,7 @@ def test_naive_scanned_at_coerced():
     """scanned_at without tzinfo treated as UTC (per code-principles.md §E1)."""
     naive_recent = datetime.utcnow() - timedelta(days=1)
     assert naive_recent.tzinfo is None
-    info = _sla_info(SimpleNamespace(
+    info = sla_info(SimpleNamespace(
         severity="medium", status="open", scanned_at=naive_recent,
         suppressed=False, suppressed_until=None,
     ))

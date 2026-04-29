@@ -16,8 +16,8 @@ from types import SimpleNamespace
 
 import pytest
 
-# IMPORT PIN — updated to backend/app/domain/suppression.py in B.2
-from app.api.releases import _is_suppressed
+# IMPORT updated in B.2 (2026-04-30) — was: from app.api.releases import _is_suppressed
+from app.domain.suppression import is_suppressed
 
 
 def _vuln(suppressed: bool, until=None):
@@ -29,21 +29,21 @@ def _vuln(suppressed: bool, until=None):
 
 @pytest.mark.function_level
 def test_not_suppressed_returns_false():
-    assert _is_suppressed(_vuln(False)) is False
+    assert is_suppressed(_vuln(False)) is False
 
 
 @pytest.mark.function_level
 def test_not_suppressed_with_until_set_still_false():
     """suppressed=False trumps any suppressed_until value."""
     future = datetime.now(timezone.utc) + timedelta(days=1)
-    assert _is_suppressed(_vuln(False, future)) is False
+    assert is_suppressed(_vuln(False, future)) is False
 
 
 # ── Headline: permanently suppressed (no expiry) ──────────────────────────────
 
 @pytest.mark.function_level
 def test_suppressed_no_until_is_permanent():
-    assert _is_suppressed(_vuln(True, None)) is True
+    assert is_suppressed(_vuln(True, None)) is True
 
 
 # ── Headline: time-bounded suppression ────────────────────────────────────────
@@ -51,13 +51,13 @@ def test_suppressed_no_until_is_permanent():
 @pytest.mark.function_level
 def test_suppressed_with_future_until_is_active():
     future = datetime.now(timezone.utc) + timedelta(days=7)
-    assert _is_suppressed(_vuln(True, future)) is True
+    assert is_suppressed(_vuln(True, future)) is True
 
 
 @pytest.mark.function_level
 def test_suppressed_with_past_until_is_expired():
     past = datetime.now(timezone.utc) - timedelta(seconds=1)
-    assert _is_suppressed(_vuln(True, past)) is False
+    assert is_suppressed(_vuln(True, past)) is False
 
 
 @pytest.mark.function_level
@@ -67,7 +67,7 @@ def test_suppressed_with_now_boundary():
     # The helper compares datetime.now(tz=UTC) < ts.  Since 'now' captured here
     # is slightly earlier than the helper's own datetime.now() call inside,
     # the helper's now will be > our captured now → returns False (expired).
-    assert _is_suppressed(_vuln(True, now)) is False
+    assert is_suppressed(_vuln(True, now)) is False
 
 
 # ── Headline: timezone-naive datetime gets coerced to UTC ─────────────────────
@@ -77,11 +77,11 @@ def test_naive_datetime_is_coerced_to_utc():
     """Per code-principles.md §E1, naive timestamps are treated as UTC."""
     future_naive = datetime.utcnow() + timedelta(days=1)  # naive
     assert future_naive.tzinfo is None  # invariant of test setup
-    assert _is_suppressed(_vuln(True, future_naive)) is True
+    assert is_suppressed(_vuln(True, future_naive)) is True
 
 
 @pytest.mark.function_level
 def test_naive_past_datetime_is_expired():
     past_naive = datetime.utcnow() - timedelta(days=1)
     assert past_naive.tzinfo is None
-    assert _is_suppressed(_vuln(True, past_naive)) is False
+    assert is_suppressed(_vuln(True, past_naive)) is False

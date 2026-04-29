@@ -22,6 +22,9 @@ from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin, get_current_user, require_release_in_scope
 from app.core.security import csv_safe, safe_attachment_filename
+from app.domain.severity import highest_severity
+from app.domain.sla import SLA_DAYS, sla_info
+from app.domain.suppression import is_suppressed
 
 logger = logging.getLogger(__name__)
 from app.models.component import Component
@@ -58,30 +61,7 @@ _enrichment_lock = threading.Lock()
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
-_SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
-
-
-def _is_suppressed(vuln) -> bool:
-    if not vuln.suppressed:
-        return False
-    if vuln.suppressed_until is None:
-        return True
-    ts = vuln.suppressed_until
-    if ts.tzinfo is None:
-        ts = ts.replace(tzinfo=timezone.utc)
-    return datetime.now(timezone.utc) < ts
-
-
-def _sla_info(vuln) -> dict:
-    if _is_suppressed(vuln) or vuln.status in ("fixed", "not_affected") or vuln.severity not in _SLA_DAYS or not vuln.scanned_at:
-        return {"sla_days": None, "sla_status": "n/a"}
-    scanned = vuln.scanned_at
-    if scanned.tzinfo is None:
-        scanned = scanned.replace(tzinfo=timezone.utc)
-    elapsed = (datetime.now(timezone.utc) - scanned).days
-    remaining = _SLA_DAYS[vuln.severity] - elapsed
-    status = "overdue" if remaining < 0 else "warning" if remaining <= 7 else "ok"
-    return {"sla_days": remaining, "sla_status": status}
+# SLA_DAYS, is_suppressed, sla_info moved to backend/app/domain/{sla,suppression}.py in B.2 (2026-04-30).
 
 
 def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
@@ -596,7 +576,7 @@ def list_components(
             "license": c.license,
             "license_risk": classify_license(c.license) if c.license else None,
             "vuln_count": len(vulns),
-            "highest_severity": _highest_severity(vulns),
+            "highest_severity": highest_severity(vulns),
         })
     return {"total": total, "skip": skip, "limit": limit, "items": result}
 
@@ -647,8 +627,8 @@ def list_vulnerabilities(
             "cvss_v3_vector": v.cvss_v3_vector,
             "cvss_v4_score": v.cvss_v4_score,
             "cvss_v4_vector": v.cvss_v4_vector,
-            **_sla_info(v),
-            "suppressed":        _is_suppressed(v),
+            **sla_info(v),
+            "suppressed":        is_suppressed(v),
             "suppressed_until":  v.suppressed_until.isoformat() if v.suppressed_until else None,
             "suppressed_reason": v.suppressed_reason,
         }
@@ -739,7 +719,7 @@ def download_report(release_id: str, org_scope: str | None = Depends(get_org_sco
             "version": c.version,
             "license": c.license,
             "vuln_count": len(vulns),
-            "highest_severity": _highest_severity(vulns),
+            "highest_severity": highest_severity(vulns),
         })
 
     # build vuln dicts (sorted by cvss desc)
@@ -849,7 +829,7 @@ def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec
 
     components = [{"name": c.name, "version": c.version, "license": c.license,
                    "vuln_count": len(c.vulnerabilities),
-                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+                   "highest_severity": highest_severity(c.vulnerabilities)} for c in components_raw]
     vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
               "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
              for c in components_raw for v in c.vulnerabilities]
@@ -878,7 +858,7 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
 
     components = [{"name": c.name, "version": c.version, "license": c.license,
                    "vuln_count": len(c.vulnerabilities),
-                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+                   "highest_severity": highest_severity(c.vulnerabilities)} for c in components_raw]
     vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
               "status": v.status, "cwe": v.cwe, "justification": v.justification, "detail": v.detail}
              for c in components_raw for v in c.vulnerabilities]
@@ -913,7 +893,7 @@ def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_or
 
     components = [{"name": c.name, "version": c.version, "purl": c.purl, "license": c.license,
                    "vuln_count": len(c.vulnerabilities),
-                   "highest_severity": _highest_severity(c.vulnerabilities)} for c in components_raw]
+                   "highest_severity": highest_severity(c.vulnerabilities)} for c in components_raw]
     vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score,
               "status": v.status, "cwe": v.cwe, "is_kev": bool(v.is_kev)}
              for c in components_raw for v in c.vulnerabilities]
@@ -1028,7 +1008,7 @@ def download_evidence_package(release_id: str, org_scope: str | None = Depends(g
         vulns = c.vulnerabilities
         components_for_pdf.append({
             "name": c.name, "version": c.version, "license": c.license,
-            "vuln_count": len(vulns), "highest_severity": _highest_severity(vulns),
+            "vuln_count": len(vulns), "highest_severity": highest_severity(vulns),
         })
     vulns_for_pdf = [{"cve_id": v["cve_id"], "component_name": v["component"].split("@")[0],
                       "component_version": v["component"].split("@")[1] if "@" in v["component"] else "",
@@ -1575,7 +1555,7 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
                    "detail": "已上傳 SBOM 並計算 hash" if has_sbom else "尚未上傳 SBOM"})
 
     # 2. No Critical open/affected vulns (excluding suppressed)
-    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected") and not _is_suppressed(v)]
+    critical_open = [v for v in vulns if v.severity == "critical" and v.status in ("open", "in_triage", "affected") and not is_suppressed(v)]
     no_critical = len(critical_open) == 0
     checks.append({"id": "no_critical", "label": "無未處理 Critical 漏洞",
                    "passed": no_critical,
@@ -1611,7 +1591,7 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
                    "passed": good_quality, "detail": grade_str})
 
     # 5. All vulns have been triaged (no open/in_triage, suppressed ones are exempt)
-    untriaged = [v for v in vulns if v.status in ("open", "in_triage") and not _is_suppressed(v)]
+    untriaged = [v for v in vulns if v.status in ("open", "in_triage") and not is_suppressed(v)]
     all_triaged = len(untriaged) == 0
     checks.append({"id": "all_triaged", "label": "所有漏洞已完成分類",
                    "passed": all_triaged,
@@ -2094,8 +2074,4 @@ async def sbom_from_binary(
     )
     return {"filename": file.filename, **summary}
 
-
-def _highest_severity(vulns) -> str | None:
-    if not vulns:
-        return None
-    return max(vulns, key=lambda v: SEVERITY_ORDER.get(v.severity or "info", 0)).severity
+# highest_severity moved to backend/app/domain/severity.py in B.2 (2026-04-30).

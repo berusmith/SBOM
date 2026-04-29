@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import days_between, get_db
 from app.core.deps import get_org_scope
+from app.domain.sla import SLA_DAYS
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
 from app.models.organization import Organization
@@ -82,8 +83,7 @@ def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depe
     active_incidents = inc_q.filter(CRAIncident.status != "closed").count()
     total_incidents  = inc_q.count()
 
-    # Overdue SLA count
-    _SLA_DAYS = {"critical": 7, "high": 30, "medium": 90, "low": 180}
+    # Overdue SLA count — SLA_DAYS imported from app.domain.sla (single source per B.2)
     now = datetime.now(timezone.utc)
     overdue_count = 0
     active_vulns = (
@@ -96,10 +96,10 @@ def get_stats(org_scope: str | None = Depends(get_org_scope), db: Session = Depe
         .all()
     )
     for sev, scanned_at in active_vulns:
-        if sev not in _SLA_DAYS:
+        if sev not in SLA_DAYS:
             continue
         ts = scanned_at.replace(tzinfo=timezone.utc) if scanned_at.tzinfo is None else scanned_at
-        if (now - ts).days > _SLA_DAYS[sev]:
+        if (now - ts).days > SLA_DAYS[sev]:
             overdue_count += 1
 
     return {
