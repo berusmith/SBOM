@@ -1,4 +1,22 @@
+import os
+import secrets
 import urllib.request, urllib.error, json, time
+
+# Admin password is read from the environment so the test suite never carries a
+# default in source.  Match this to whatever ADMIN_PASSWORD you set in
+# backend/.env (the backend's startup guard refuses to start if .env uses a
+# known-default password, so a non-default value is required at both ends).
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError(
+        "ADMIN_PASSWORD not set, refusing to run tests with default. "
+        "Export ADMIN_PASSWORD=<...> matching backend/.env before running."
+    )
+
+# QA viewer fixture password is generated fresh per run.  The test creates the
+# viewer account, logs in, then asserts RBAC — the password value never needs
+# to leave this process, so a per-run random keeps it out of source forever.
+QA_VIEWER_PASSWORD = secrets.token_urlsafe(16)
 
 BASE = "http://localhost:9100"
 results = []
@@ -34,7 +52,7 @@ def chk(name, cond, detail=""):
 # --- Auth ---
 s, d = req("POST", "/api/auth/login", {"username": "admin", "password": "wrongpass"})
 chk("Auth: reject bad password", s == 401)
-s, d = req("POST", "/api/auth/login", {"username": "admin", "password": "sbom@2024"})
+s, d = req("POST", "/api/auth/login", {"username": "admin", "password": ADMIN_PASSWORD})
 chk("Auth: login success", s == 200 and "access_token" in d)
 token = d.get("access_token")
 s, d = req("GET", "/api/stats", tok=token)
@@ -116,11 +134,11 @@ chk("CRA: delete (204)", s == 204, "status=" + str(s))
 # --- Users + RBAC ---
 s, d = req("GET", "/api/users", tok=token)
 chk("Users: list admin (200)", s == 200 and isinstance(d, list))
-s, d = req("POST", "/api/users", {"username": "qaview" + TS, "password": "Qatest1234", "role": "viewer", "organization_id": org_id}, tok=token)
+s, d = req("POST", "/api/users", {"username": "qaview" + TS, "password": QA_VIEWER_PASSWORD, "role": "viewer", "organization_id": org_id}, tok=token)
 chk("Users: create viewer (201)", s == 201 and "id" in d, "status=" + str(s) + " " + str(d.get("detail", "")))
 uid = d.get("id")
 if uid:
-    s2, d2 = req("POST", "/api/auth/login", {"username": "qaview" + TS, "password": "Qatest1234"})
+    s2, d2 = req("POST", "/api/auth/login", {"username": "qaview" + TS, "password": QA_VIEWER_PASSWORD})
     vt = d2.get("access_token")
     chk("RBAC: viewer login (200)", s2 == 200 and bool(vt))
     s, d = req("POST", "/api/organizations", {"name": "ShouldFail"}, tok=vt)
