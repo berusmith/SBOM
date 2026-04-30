@@ -565,12 +565,25 @@ helper + a few stragglers). All routes moved.
 
 #### Pre-D.8 prerequisites (all must hold)
 - [ ] D.2..D.7 fully shipped — no `_assert_release_org` callers remain in moved modules (they all use `Depends(require_release_in_scope)` already from D.2 onward — see D.N implementation)
-- [ ] Frontend grep performed:
+- [ ] Frontend grep performed (HARD LOCK 1 added 2026-04-30 per user feedback):
   ```bash
   grep -rn "status === 403\|err\.status === 403\|response\.status === 403\|response\.status_code === 403\|err\.response\?\.status === 403\|: 403" frontend/src
   ```
-  Expected: zero matches OR matches that are about admin-only 403 (which DON'T change in this commit). If any match is about cross-org-403-handling, **STOP and update frontend in same commit**.
+  **Result of the grep MUST be reported back to user verbatim before D.8 starts**, regardless of whether it's 0 matches or N matches. The agent does NOT auto-proceed on 0 matches:
+  - **0 matches** → wait for user "go D.8" confirmation; then user runs a second-pass cross-validation grep `grep -rn "403" frontend/src` (broader; un-pattern-filtered) to catch matches that fell outside the regex above (e.g. axios interceptor numeric checks, TypeScript `as const` numeric literals, i18n string fragments containing "403")
+  - **N > 0 matches** → list each match with file:line + 3-line context + planned fix; user reviews the per-site fix plan; user reviews the D.8 commit message preview; only then "go D.8"
+  Reason: 0 matches in the regex above does NOT prove no frontend code differentiates 403 from 404; only that the regex didn't catch any. Auto-proceeding on 0 matches would be unjustified confidence.
 - [ ] Stage A.3 characterization tests' cross-org assertions are ready to flip from 403 → 404 in the same commit (one diff: `assert response.status_code == 403` → `== 404`)
+- [ ] D.8 commit message preview must be sent to user for review BEFORE the commit is created (per agent's prior commitment in Stage C end-of-stage report)
+
+#### Post-D.8 verification (HARD LOCK 2 added 2026-04-30 per user feedback)
+- [ ] **Zero `_assert_release_org` residue across the entire repo**:
+  ```bash
+  grep -rn "_assert_release_org" backend/
+  ```
+  Expected: **0 matches** (production code AND tests AND comments — all zero). The helper is DELETED in D.8, not deprecated, not aliased, not wrapper-shimmed. Per ARCH-1.003 root-cause analysis: the reason "30 sites still on legacy" was that the legacy path remained reachable. D.8 removes the path entirely so reachability is impossible. If grep returns ANY match (even in a comment or docstring), STOP, fix, re-verify; do not allow the residue to live past D.8.
+- [ ] Cross-org HTTP characterization tests assert 404 (not 403) on every release-id endpoint that previously legacy-403'd; pytest run on the test_releases_http_chars.py shows the assertion flip succeeded
+- [ ] `test_all.py` still 54/54 PASS post-D.8 — D.8 changes no test_all.py expectation (test_all.py uses admin tokens which are not affected by the cross-org check)
 
 #### D.8 commit content
 ```
@@ -768,6 +781,24 @@ Or, if function names diverge, do a manual case-by-case mapping in a comment blo
 ---
 
 ## §6 Acceptance gates per PR
+
+### Commit budget calculation (added 2026-04-30 per ledger.md D16)
+
+The estimates in §1 / §2 / §3.4 ("~19 commits", "6–10 days") count ONLY
+**production-code commits** — any commit that touches `backend/app/`,
+`backend/tests/`, `frontend/src/`, `tools/`, or any other source path.
+
+**Audit-doc commits do NOT count toward the budget.**  An audit-doc commit
+touches only `.refactor-audit/` (this directory).  Such commits are
+J1-disciplined per-finding records with zero production-behavior surface
+and zero review burden on the god-router decomposition.  Counting them
+would inflate the apparent PR review cost without inflating the actual
+review cost.
+
+Reviewer guidance: when validating PR-1's commit list against the budget,
+filter out audit-doc commits first, then count what remains.  If the
+filter produces a number > 22 (15% over the 19 estimate), invoke
+T3-soft (re-evaluate scope); if > 25, invoke T3-hard (cut scope).
 
 ### PR-1 acceptance gate (before merge)
 - [ ] All Stage A unit tests pass (≥ 30 function-level + ≥ 75 HTTP characterization)
