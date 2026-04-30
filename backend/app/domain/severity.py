@@ -9,6 +9,13 @@ severity strings against this map — the -1 default ensures unknown severities
 sort BELOW "info" (preserves the prior behavior of alerts.py:_SEV_ORDER which
 defaulted to 0 in a 1-indexed scale).
 
+⚠️  DO NOT change the .get() default to 0.  See .refactor-audit/invariants.md
+    §VII.1 INV-D1 for the full rationale.  Default 0 would equal info's rank
+    (info=0 in this scale), silently flipping the alert-rule filter behavior
+    on unknown severities from "filter out" to "pass through".  This is a
+    SUBTLE semantic-equivalence trap from the B.3 collapse — codified as an
+    invariant precisely because the bug is invisible in code review.
+
 Per code-principles.md §F (module conventions): no Repository pattern,
 no port-for-single-impl; the dict is the canonical surface.
 """

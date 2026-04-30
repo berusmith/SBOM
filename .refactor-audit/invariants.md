@@ -161,4 +161,18 @@ For every commit in Phase 8:
 3. If any box cannot be checked, stop the commit and re-plan
 4. Items deliberately changed (security-tightening, contract evolution) require an explicit ledger entry referencing the change
 
-Last updated: iter-1, 2026-04-29 (§V added: compatibility regime confirmed lenient until trigger fires)
+Last updated: iter-1, 2026-04-30 (§VII added: domain invariants — INV-D1 surfaced from B.3 _SEV_ORDER → SEVERITY_ORDER collapse)
+
+---
+
+## VII. Domain invariants (`backend/app/domain/`)
+
+> Subtle equivalences and value-object contracts that surfaced during refactor.  These bind the **caller**, not just the data — calling SEVERITY_ORDER without the documented default is a bug, not a style choice.
+
+### VII.1 Severity ordering
+
+- **INV-D1** — Unknown severity sorts BELOW info.  Any caller that uses `SEVERITY_ORDER.get(sev, default)` MUST set `default = -1`, NOT `0`.
+  - **Why**: pre-B.3, `backend/app/services/alerts.py` declared a private 1-indexed `_SEV_ORDER` mapping `{info=1, low=2, medium=3, high=4, critical=5}` and used it with `dict.get(...,  0)` — the implicit semantic was "unknown < info" because default `0 < info-rank 1`.  B.3 collapsed `_SEV_ORDER` into the canonical `SEVERITY_ORDER` (which uses the 0-indexed scale `{info=0, ..., critical=4}`).  Under the new scale, default `0` would equal info's rank, silently changing the alert-rule filter from "unknown is filtered out at min_sev=info" to "unknown passes at min_sev=info".  Default `-1` preserves the prior semantic.
+  - **Where it lives**: declared `backend/app/domain/severity.py:SEVERITY_ORDER`; consumed by `backend/app/services/alerts.py:_passes_alert_rule` (the only current caller) with the documented `-1` default.
+  - **Verification gap**: there is no automated test for `_passes_alert_rule` covering INV-D1 today.  Adding one is implicit in any future iter that touches `alerts.py`.  This gap is the reason INV-D1 must live in invariants.md, not just in code comments — the contract is enforced by reviewer discipline until a test catches up.
+  - **Trigger to revoke**: never; this invariant codifies the equivalence required to keep B.3's behavior-preserving promise.
