@@ -302,6 +302,21 @@ app.include_router(auth.router)
 app.include_router(organizations.router, dependencies=_auth)
 app.include_router(products.router, dependencies=_auth)
 app.include_router(releases.router, dependencies=_auth)
+# Stage D split: each usecase module has its own router under the same /api/releases
+# prefix.  FastAPI merges paths.  D.1 registers all 6 sub-routers (currently empty);
+# D.2..D.7 fill them by moving endpoints out of releases.router incrementally.
+from app.services.usecases.release import upload_sbom as _uc_upload_sbom
+from app.services.usecases.release import enrich as _uc_enrich
+from app.services.usecases.release import reports as _uc_reports
+from app.services.usecases.release import signature as _uc_signature
+from app.services.usecases.release import scanners as _uc_scanners
+from app.services.usecases.release import lifecycle as _uc_lifecycle
+app.include_router(_uc_upload_sbom.router, dependencies=_auth)
+app.include_router(_uc_enrich.router, dependencies=_auth)
+app.include_router(_uc_reports.router, dependencies=_auth)
+app.include_router(_uc_signature.router, dependencies=_auth)
+app.include_router(_uc_scanners.router, dependencies=_auth)
+app.include_router(_uc_lifecycle.router, dependencies=_auth)
 app.include_router(vulnerabilities.router, dependencies=_auth)
 app.include_router(stats.router, dependencies=_auth)
 app.include_router(cra.router, dependencies=_auth)
