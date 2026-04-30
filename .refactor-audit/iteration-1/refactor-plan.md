@@ -613,11 +613,17 @@ The grep result itself (with exit code) is recorded in the commit body to
 prove the verification ran.
 
 #### Post-D.8 verification (HARD LOCK 2 added 2026-04-30 per user feedback)
-- [ ] **Zero `_assert_release_org` residue across the entire repo**:
+- [ ] **Zero `_assert_release_org` residue across the entire repo (HARD LOCK 2.A)**:
   ```bash
   grep -rn "_assert_release_org" backend/
   ```
   Expected: **0 matches** (production code AND tests AND comments — all zero). The helper is DELETED in D.8, not deprecated, not aliased, not wrapper-shimmed. Per ARCH-1.003 root-cause analysis: the reason "30 sites still on legacy" was that the legacy path remained reachable. D.8 removes the path entirely so reachability is impossible. If grep returns ANY match (even in a comment or docstring), STOP, fix, re-verify; do not allow the residue to live past D.8.
+
+- [ ] **Zero `無權存取此版本` zh-TW message residue (HARD LOCK 2.B, added 2026-05-01 per user feedback)**:
+  ```bash
+  grep -rn "無權存取此版本" backend/
+  ```
+  Expected: **0 matches**. This is the zh-TW detail string that the legacy 403 raised. Catching it via a SEPARATE grep (orthogonal to the helper-name grep) detects a class of refactor anti-pattern: someone renamed the helper to escape HARD LOCK 2.A but kept the legacy message string verbatim. If 2.A returns 0 but 2.B returns matches, that is exactly the pattern to STOP on — the helper-name grep was satisfied via cosmetic rename, not real elimination of the legacy path. Both 2.A AND 2.B must be 0 for HARD LOCK 2 to pass.
 - [ ] Cross-org HTTP characterization tests assert 404 (not 403) on every release-id endpoint that previously legacy-403'd; pytest run on the test_releases_http_chars.py shows the assertion flip succeeded
 - [ ] `test_all.py` still 54/54 PASS post-D.8 — D.8 changes no test_all.py expectation (test_all.py uses admin tokens which are not affected by the cross-org check)
 
@@ -978,6 +984,24 @@ After your review, if you approve, **say "go"** and I will start with §0 Pre-fl
 - Proposed change: at write time, query `SELECT COUNT(*) FROM vulnerabilities WHERE id=:vid AND suppressed=true` and reject if > 0 BEFORE persisting the new suppression. Alternative for Postgres: partial unique index `CREATE UNIQUE INDEX ... ON vulnerabilities(id) WHERE suppressed=true`. SQLite supports partial indexes since 3.8 (sufficient for our deployment)
 - Iter-2 promotion rule: promote when monitoring observes duplicate active-suppression rows for the same vulnerability (data integrity signal). May not be a real risk if the data model already enforces 1 vulnerability row per (component_id, cve_id) tuple via uq_comp_cve
 - Cross-ref: B.4 commit `e690bb6` body; uq_comp_cve unique index in main.py:168
+
+### FU-1.010 — Audit `download_shared_sbom` (public share-token endpoint) for ARCH-1.003 root-cause completeness
+- Reason this is NOT in iter-1: D.8 closed ARCH-1.003 for the **JWT-protected** sites (releases.py + 6 usecases modules + share.py 3 admin endpoints).  share.py ALSO contains a separate **public share-token endpoint** `download_shared_sbom` (the bottom of share.py, post-line ~199) that does its own share-token resolution and ownership check — that path's oracle-prevention guarantees are NOT verified by D.8 because (a) it does not call `_assert_release_org`, (b) it has different auth (share_token, not JWT), and (c) the SDLC-001 enforcement test (`tests/test_endpoint_decorator_enforcement.py`) detects `Depends(require_release_in_scope)`-style dependencies, which the share-token resolver does not use — so SDLC-001 is silently ineffective on this code path
+- Proposed change: read `download_shared_sbom` end-to-end and any `_load_sbom` / share-token resolver helpers; for each failure mode (token not found / token expired / token's release in another org / release deleted while link still active), confirm:
+  - HTTP status code is consistent (do not differentiate "exists but expired" from "never existed" — both should 404 with same message, e.g. "Share link invalid or expired")
+  - No information about the underlying release (release_id, version, product name) leaks in error responses
+  - Audit log records access attempts uniformly regardless of failure mode
+- Iter-2 promotion rule: promote BEFORE PR-2 (perf wins).  Reason: ARCH-1.003 oracle-prevention completeness across all auth boundaries is more important than perf wins; any oracle leak on the public path is an exploitation surface.  PR-2's perf changes do not depend on this; it can be a separate small PR slotted in iter-2 ahead of PR-2
+- Cross-ref: ARCH-1.003; D.8 commit; SDLC-001 enforcement test design assumption (see FU-1.011)
+
+### FU-1.011 — Extend SDLC-001 enforcement test to cover share-token endpoints
+- Reason this is NOT in iter-1: `tests/test_endpoint_decorator_enforcement.py` (the SDLC-001 CI gate) walks FastAPI routes and detects `Depends(require_release_in_scope)` / `Depends(require_admin)` etc.  share.py's public `download_shared_sbom` endpoint does not use these dependencies (its auth is share_token resolution inline in the function body), so SDLC-001 silently does not enforce ownership on it.  This was not visible until D.8 forced an end-to-end audit of share.py
+- Proposed change: extend `test_endpoint_decorator_enforcement.py` so that any FastAPI route containing a `release_id` path parameter — REGARDLESS of auth shape — must satisfy at least one of:
+  - Has `Depends(require_release_in_scope)` or `Depends(require_admin)` or `Depends(require_admin_scope)` in its signature (current rule), OR
+  - The function body's first ~10 lines contain a known ownership-check call (whitelist: `_share_release_check(token, release_id, db)` or similar named helper)
+  Detection method: AST scan of the function body for the whitelisted call names.  The whitelist is maintained alongside the test
+- Iter-2 promotion rule: same iter as FU-1.010 (the AST-based check is the enforcement that catches future regressions on the manual share-token path)
+- Cross-ref: FU-1.010; SDLC-001 design (deps-based detection); ARCH-1.003; FU-1.002 (which tightens the legacy-detection side)
 
 ### FU-1.009 — Audit existing ORM data for Suppression invariant-1 violations
 - Reason this is NOT in iter-1: B.4 commit `e690bb6` body explicitly notes "ORM 既有資料不會觸發 ValueError 因為走預測式而非構造式" — Suppression's invariants are forward-looking only. Existing rows in `vulnerabilities` may currently be in an invariant-1-violating state (`suppressed=True` AND `suppressed_until < now()`), which the predicate `is_suppressed(vuln)` correctly interprets as "expired = not effectively suppressed" but which the value object would reject if constructed from those columns
