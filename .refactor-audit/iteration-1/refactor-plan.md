@@ -576,6 +576,42 @@ helper + a few stragglers). All routes moved.
 - [ ] Stage A.3 characterization tests' cross-org assertions are ready to flip from 403 → 404 in the same commit (one diff: `assert response.status_code == 403` → `== 404`)
 - [ ] D.8 commit message preview must be sent to user for review BEFORE the commit is created (per agent's prior commitment in Stage C end-of-stage report)
 
+#### D.8 J5 surface diff — contract-evolution extension (added 2026-04-30 per user feedback)
+
+D.8 is the only J5 carve-out commit in PR-1 that is ALSO a contract evolution.
+The standard J5-footnote requires diff disclosure for 4 surfaces (`core/security.py`,
+`core/deps.py`, authn/authz logic, input validation).  When D.8's frontend grep
+finds matches that require frontend code changes, those frontend changes land in
+the SAME commit (per HARD LOCK 1: "if any match is about cross-org-403-handling,
+STOP and update frontend in same commit").
+
+**Special extension for D.8 only**: if frontend changes are bundled, the commit
+body MUST add a `[5/5] cross-layer surface` section listing the frontend
+file:line + diff hunks.  This is NOT a standing J5 policy (J5 normally bans
+production-code surface bundling per J6's spirit) — it is a contract-evolution
+specific extension because:
+
+  - D.8 is a back-end contract change (status code map evolution)
+  - The React frontend is the first-party consumer of that contract (per D1)
+  - Splitting "back-end flips status code" + "frontend updates handler" into
+    two commits would leave master in an inconsistent state between commits
+    (frontend expecting 403, backend returning 404 → user sees confusing UX)
+  - Atomic landing is the lowest-risk approach for first-party-consumer changes
+
+**[5/5] cross-layer surface format** (when present):
+```
+  [5/5] frontend/src cross-layer (D.8-evolution-extension only)
+        → list of file:line entries with the cross-org 403/404 differentiation
+        → for each: 3-line context + the diff hunk applied
+        → rationale: "back-end status flip 403→404 requires frontend handler
+          update to keep first-party consumer behavior consistent"
+```
+
+If the frontend grep finds 0 matches (no frontend code differentiates 403),
+**the [5/5] section is omitted** and the standard 4-surface diff body applies.
+The grep result itself (with exit code) is recorded in the commit body to
+prove the verification ran.
+
 #### Post-D.8 verification (HARD LOCK 2 added 2026-04-30 per user feedback)
 - [ ] **Zero `_assert_release_org` residue across the entire repo**:
   ```bash
