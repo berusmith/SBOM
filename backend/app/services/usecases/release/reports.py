@@ -15,13 +15,16 @@ Moved from backend/app/api/releases.py in D.4 (2026-04-30).  11 endpoints:
 
 Helpers extracted (CODE-1.003 + CODE-1.019 partial — full template extraction
 deferred to followup; current scope cap is AC-A4 < 600 LOC):
-  _lookup_release_with_components — the 5-line scaffold every PDF endpoint repeated
+  _lookup_components_for_release   — fetch components + (product, org) given a release
+                                     (renamed from _lookup_release_with_components in D.8
+                                     — release lookup + ownership now lives in Depends)
   _brand_dict                      — brand config dict
   _build_csaf_doc                  — CSAF VEX construction (was duplicated in csaf + evidence_package)
   _cra_incidents_for_release       — CRA incident list (used by 3+ reports)
 
-Bundled fix: none in D.4 (CODE-1.013 CSAF namespace `https://example.com` per
-plan §3.7 stays in PR-2 F.5).
+D.8 (2026-05-01) migrated all 5 sites here from the legacy ownership-check
+pattern to Depends(require_release_in_scope) (404 oracle prevention) +
+release_context (for the (product, org) tuple the legacy helper used to return).
 """
 from __future__ import annotations
 
@@ -39,42 +42,39 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_release_in_scope
+from app.core.deps import release_context, require_release_in_scope
 from app.core.plan import require_plan
 from app.domain.severity import highest_severity
 from app.models.brand_config import BrandConfig
 from app.models.component import Component
 from app.models.cra_incident import CRAIncident
-from app.models.organization import Organization
-from app.models.product import Product
 from app.models.release import Release
 from app.services import iec62443_33_report, iec62443_42_report, iec62443_report, nis2_report, pdf_report
 from app.services.sbom_parser import score_sbom as _score_sbom
 from app.services.signature_verifier import verify_signature as _verify_sig
-
-# Transitional cross-module import — _assert_release_org legacy 403 helper;
-# D.8 (ARCH-1.003 contract evolution) replaces with require_release_in_scope.
-from app.api.releases import _assert_release_org
+# D.8 (2026-05-01): legacy ownership helper replaced by require_release_in_scope (404 oracle prevention).
+# release_context(release, db) → (product, org) used where the legacy helper's tuple was needed.
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
 
 # ── shared helpers ───────────────────────────────────────────────────────────
 
-def _lookup_release_with_components(release_id: str, org_scope, db, no_data_msg: str):
-    """Common scaffold for PDF endpoints: 404 if missing / 403 if cross-org / 400 if no SBOM.
-    Returns (release, product, org, components_raw)."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    product, org = _assert_release_org(release, org_scope, db)
-    if not product:
-        product = db.query(Product).filter(Product.id == release.product_id).first()
-    if not org and product:
-        org = db.query(Organization).filter(Organization.id == product.organization_id).first()
+def _lookup_components_for_release(release: Release, db, no_data_msg: str):
+    """Common scaffold for PDF endpoints: returns (release, product, org, components_raw).
+
+    Caller already injected `release` via Depends(require_release_in_scope) — that
+    handles the 404 (missing OR cross-org).  This helper just resolves (product, org)
+    via release_context and fetches the components, raising 400 if the release has
+    no components yet.
+
+    D.8 (2026-05-01) replaced the prior _lookup_release_with_components which
+    handled 404 + 403 + 400 inline; the 404/ownership concern now lives in Depends.
+    """
+    product, org = release_context(release, db)
     components_raw = (db.query(Component)
                       .options(selectinload(Component.vulnerabilities))
-                      .filter(Component.release_id == release_id).all())
+                      .filter(Component.release_id == release.id).all())
     if not components_raw:
         raise HTTPException(status_code=400, detail=no_data_msg)
     return release, product, org, components_raw
@@ -164,9 +164,8 @@ def _build_csaf_doc(release: Release, components_raw, namespace_suffix: str = ""
 # ── endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/{release_id}/report")
-def download_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生報告")
+def download_report(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生報告")
     components = [{"name": c.name, "version": c.version, "license": c.license,
                    "vuln_count": len(c.vulnerabilities), "highest_severity": highest_severity(c.vulnerabilities)}
                   for c in components_raw]
@@ -185,9 +184,8 @@ def download_report(release_id: str, org_scope: str | None = Depends(get_org_sco
 
 
 @router.get("/{release_id}/compliance/iec62443")
-def download_iec62443_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生合規報告")
+def download_iec62443_report(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生合規報告")
     components = [{"name": c.name, "version": c.version, "license": c.license} for c in components_raw]
     vulns = [{"cve_id": v.cve_id, "severity": v.severity, "cvss_score": v.cvss_score, "status": v.status,
               "justification": v.justification, "detail": v.detail}
@@ -202,9 +200,8 @@ def download_iec62443_report(release_id: str, org_scope: str | None = Depends(ge
 
 
 @router.get("/{release_id}/compliance/iec62443-4-2")
-def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec62443_42")), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生合規報告")
+def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec62443_42")), release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生合規報告")
     components = [{"name": c.name, "version": c.version, "license": c.license,
                    "vuln_count": len(c.vulnerabilities), "highest_severity": highest_severity(c.vulnerabilities)}
                   for c in components_raw]
@@ -220,9 +217,8 @@ def download_iec62443_42_report(release_id: str, _plan=Depends(require_plan("iec
 
 
 @router.get("/{release_id}/compliance/iec62443-3-3")
-def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec62443_33")), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生合規報告")
+def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec62443_33")), release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生合規報告")
     components = [{"name": c.name, "version": c.version, "license": c.license,
                    "vuln_count": len(c.vulnerabilities), "highest_severity": highest_severity(c.vulnerabilities)}
                   for c in components_raw]
@@ -239,10 +235,9 @@ def download_iec62443_33_report(release_id: str, _plan=Depends(require_plan("iec
 
 
 @router.get("/{release_id}/compliance/nis2")
-def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def download_nis2_report(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     """Generate NIS2 Directive Article 21 compliance PDF report."""
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生合規報告")
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生合規報告")
     components = [{"name": c.name, "version": c.version, "purl": c.purl, "license": c.license,
                    "vuln_count": len(c.vulnerabilities), "highest_severity": highest_severity(c.vulnerabilities)}
                   for c in components_raw]
@@ -259,9 +254,8 @@ def download_nis2_report(release_id: str, org_scope: str | None = Depends(get_or
 
 
 @router.get("/{release_id}/evidence-package")
-def download_evidence_package(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM，無法產生證據包")
+def download_evidence_package(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM，無法產生證據包")
     org_name = org.name if org else "Unknown"
     product_name = product.name if product else "Unknown"
     now = datetime.now(timezone.utc)
@@ -333,9 +327,8 @@ def download_evidence_package(release_id: str, org_scope: str | None = Depends(g
 
 
 @router.get("/{release_id}/csaf")
-def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release, product, org, components_raw = _lookup_release_with_components(
-        release_id, org_scope, db, "尚未上傳 SBOM")
+def export_csaf(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    release, product, org, components_raw = _lookup_components_for_release(release, db, "尚未上傳 SBOM")
     org_name = org.name if org else "Unknown"
     product_name = product.name if product else "Unknown"
     # The pre-D.4 export_csaf used a slightly different namespace pattern (org-slug suffix)
@@ -348,11 +341,8 @@ def export_csaf(release_id: str, org_scope: str | None = Depends(get_org_scope),
 
 
 @router.get("/{release_id}/export/cyclonedx-xml")
-def export_cyclonedx_xml(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    product, org = _assert_release_org(release, org_scope, db)
+def export_cyclonedx_xml(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    product, org = release_context(release, db)
     components = db.query(Component).filter(Component.release_id == release_id).all()
 
     NS = "http://cyclonedx.org/schema/bom/1.4"
@@ -387,11 +377,8 @@ def export_cyclonedx_xml(release_id: str, org_scope: str | None = Depends(get_or
 
 
 @router.get("/{release_id}/export/spdx-json")
-def export_spdx_json(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    product, org = _assert_release_org(release, org_scope, db)
+def export_spdx_json(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    product, org = release_context(release, db)
     components = db.query(Component).filter(Component.release_id == release_id).all()
 
     doc_name = f"{product.name if product else 'sbom'}-{release.version or release_id[:8]}"
@@ -444,11 +431,7 @@ def export_spdx_json(release_id: str, org_scope: str | None = Depends(get_org_sc
 
 
 @router.get("/{release_id}/sbom-quality")
-def sbom_quality(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def sbom_quality(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         raise HTTPException(status_code=404, detail="尚未上傳 SBOM 檔案")
     with open(release.sbom_file_path, "rb") as f:
@@ -457,11 +440,7 @@ def sbom_quality(release_id: str, org_scope: str | None = Depends(get_org_scope)
 
 
 @router.get("/{release_id}/integrity")
-def verify_integrity(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def verify_integrity(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         return {"status": "no_file", "message": "尚未上傳 SBOM 檔案"}
     if not release.sbom_hash:

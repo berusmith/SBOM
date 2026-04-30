@@ -65,17 +65,10 @@ router = APIRouter(prefix="/api/releases", tags=["releases"])
 #   + ARCH-1.013 (__import__ magic) bundled fixes in the move.
 
 
-def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
-    """Returns (product, org). Raises 403 if viewer tries to access another org's release.
-
-    LEGACY 403 pattern — D.8 (ARCH-1.003 contract evolution) replaces all
-    callers with Depends(require_release_in_scope) and deletes this helper.
-    """
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    org = db.query(Organization).filter(Organization.id == product.organization_id).first() if product else None
-    if org_scope and (not product or product.organization_id != org_scope):
-        raise HTTPException(status_code=403, detail="無權存取此版本")
-    return product, org
+# Legacy 403 ownership helper DELETED in D.8 (2026-05-01) — ARCH-1.003 contract
+# evolution complete.  All callers (24 sites across 6 usecases modules + 3 sites
+# in share.py admin endpoints) now use Depends(require_release_in_scope) (404
+# oracle prevention).  See ledger D11 + plan §3.9 for the full evolution record.
 
 
 # rescan + 3 enrich endpoints + 3 helpers + 2 module-state moved to enrich.py in D.3.
@@ -83,8 +76,6 @@ def _assert_release_org(release: Release, org_scope: str | None, db) -> tuple:
 
 # 13 lifecycle endpoints (get / patch / delete / list / lock / gate / graph)
 # moved to backend/app/services/usecases/release/lifecycle.py in D.7 (2026-04-30).
-# Stage D moves complete; D.8 next: ARCH-1.003 contract evolution + delete
-# _assert_release_org legacy helper.
 
 
 # 5 scanner endpoints (upload-source / scan-image / scan-iac / sbom-from-source

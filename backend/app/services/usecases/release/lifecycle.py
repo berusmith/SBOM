@@ -16,9 +16,8 @@ Moved from backend/app/api/releases.py in D.7 (2026-04-30).  13 endpoints:
   GET    /gate                      — get_gate (Policy Gate 6 checks)
   GET    /dependency-graph          — get_dependency_graph (SVG nodes/edges)
 
-This is the FINAL Stage D move.  After D.7, releases.py contains only
-_assert_release_org (D.8 deletes), the (now empty) router, and module-level
-imports/state.  D.8 then performs the ARCH-1.003 contract evolution.
+D.8 (2026-05-01) migrated all 10 sites here from the legacy ownership-check
+pattern to Depends(require_release_in_scope) (404 oracle prevention).
 """
 from __future__ import annotations
 
@@ -34,7 +33,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin, require_release_in_scope
+from app.core.deps import require_admin, require_release_in_scope
 from app.core.security import csv_safe, safe_attachment_filename
 from app.domain.severity import highest_severity
 from app.domain.sla import sla_info
@@ -46,20 +45,13 @@ from app.models.vulnerability import Vulnerability
 from app.services.license_classifier import classify_license
 from app.services.sbom_parser import check_ntia as _check_ntia_fn
 from app.services.signature_verifier import verify_signature as _verify_sig
-
-# Transitional cross-module import — _assert_release_org legacy 403 helper;
-# D.8 (ARCH-1.003 contract evolution) replaces with require_release_in_scope.
-from app.api.releases import _assert_release_org
+# D.8 (2026-05-01): legacy ownership helper replaced by require_release_in_scope (404 oracle prevention).
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
 
 @router.get("/{release_id}")
-def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def get_release(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     return {
         "id": release.id,
         "version": release.version,
@@ -73,14 +65,10 @@ def get_release(release_id: str, org_scope: str | None = Depends(get_org_scope),
 
 @router.patch("/{release_id}/version")
 def update_version(release_id: str, body: dict, _admin: dict = Depends(require_admin),
-                   org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+                   release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     """Rename a release version string (admin only)."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法修改版本號")
-    _assert_release_org(release, org_scope, db)
     new_version = (body.get("version") or "").strip()
     if not new_version:
         raise HTTPException(status_code=400, detail="版本號不可為空")
@@ -90,11 +78,7 @@ def update_version(release_id: str, body: dict, _admin: dict = Depends(require_a
 
 
 @router.delete("/{release_id}", status_code=204)
-def delete_release(release_id: str, _admin: dict = Depends(require_admin), org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def delete_release(release_id: str, _admin: dict = Depends(require_admin), release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法刪除")
     if release.sbom_file_path and os.path.exists(release.sbom_file_path):
@@ -105,14 +89,10 @@ def delete_release(release_id: str, _admin: dict = Depends(require_admin), org_s
 
 @router.patch("/{release_id}/notes")
 def update_notes(release_id: str, body: dict, _admin: dict = Depends(require_admin),
-                 org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+                 release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     """Update release notes / changelog text."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法修改備註")
-    _assert_release_org(release, org_scope, db)
     notes = str(body.get("notes", "") or "")[:5000]  # hard cap 5000 chars (silent truncation per E.2 behavior-equivalence)
     release.notes = notes or None
     db.commit()
@@ -124,15 +104,11 @@ def list_components(
     release_id: str,
     skip: int = 0,
     limit: int = 2000,
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     if limit > 5000:
         limit = 5000
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
     total = db.query(func.count(Component.id)).filter(Component.release_id == release_id).scalar()
     components = (db.query(Component)
                   .options(selectinload(Component.vulnerabilities))
@@ -154,15 +130,11 @@ def list_vulnerabilities(
     release_id: str,
     skip: int = 0,
     limit: int = 500,
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     if limit > 1000:
         limit = 1000
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
     order_expr = func.coalesce(Vulnerability.epss_score, Vulnerability.cvss_score, 0)
     rows = (
         db.query(Vulnerability, Component.name.label("comp_name"), Component.version.label("comp_version"))
@@ -190,11 +162,7 @@ def list_vulnerabilities(
 
 
 @router.get("/{release_id}/vulnerabilities/export")
-def export_vulnerabilities_csv(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def export_vulnerabilities_csv(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
 
     product = db.query(Product).filter(Product.id == release.product_id).first()
     components_raw = (db.query(Component).options(selectinload(Component.vulnerabilities))
@@ -265,11 +233,7 @@ def unlock_release(release_id: str, _admin: dict = Depends(require_admin), db: S
 
 
 @router.get("/{release_id}/patch-stats")
-def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def get_patch_stats(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
 
     components = db.query(Component).filter(Component.release_id == release_id).all()
     vulns = [v for c in components for v in c.vulnerabilities]
@@ -297,14 +261,10 @@ def get_patch_stats(release_id: str, org_scope: str | None = Depends(get_org_sco
 
 
 @router.get("/{release_id}/gate")
-def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def get_gate(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     from app.models.license_rule import LicenseRule
     from app.api.licenses import _matches as _lic_matches
 
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
 
     components = db.query(Component).filter(Component.release_id == release_id).all()
     vulns = [v for c in components for v in c.vulnerabilities]
@@ -374,11 +334,7 @@ def get_gate(release_id: str, org_scope: str | None = Depends(get_org_scope), db
 
 
 @router.get("/{release_id}/dependency-graph")
-def get_dependency_graph(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+def get_dependency_graph(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
 
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         return {"has_data": False, "nodes": [], "edges": []}

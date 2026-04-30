@@ -97,8 +97,8 @@ def get_org_scope(user: dict = Depends(get_current_user)) -> str | None:
 #      Observable Response Discrepancy / oracle prevention).
 #
 # Both adopted by SEC-001b / SEC-001d (Phase 5 #3 / #5).
-# Existing _assert_release_org in releases.py uses 403 for back-compat;
-# migration of those 30 callers is a separate cleanup, not in Phase 5 scope.
+# Legacy 403 helper migration completed in iter-1 D.8 (2026-05-01) —
+# all release-id callers now use Depends(require_release_in_scope).
 
 def assert_release_in_scope(release, org_scope: str | None) -> None:
     """Combined existence + ownership check.  Returns 404 in both failure
@@ -128,3 +128,26 @@ def require_release_in_scope(
     )
     assert_release_in_scope(release, org_scope)
     return release
+
+
+def release_context(release, db: Session) -> tuple:
+    """Return (product, org) tuple for a release that has already passed
+    require_release_in_scope.  Use when callers need both objects post-
+    ownership-check (e.g. PDF reports, evidence packages, audit labels).
+
+    Added in D.8 (ARCH-1.003 contract evolution) to replace the (product, org)
+    tuple that the now-deleted legacy ownership helper used to return.  This is
+    additive — does NOT change require_release_in_scope or any existing
+    function.  Centralised here (rather than copied into 3 caller modules)
+    to avoid the D14 class of "subtle inconsistency across copies" risk.
+
+    `release.product` is already loaded by require_release_in_scope's
+    joinedload, so no extra query for product.  Org is queried by FK once.
+    """
+    from app.models.organization import Organization
+    product = release.product
+    org = (
+        db.query(Organization).filter(Organization.id == product.organization_id).first()
+        if product else None
+    )
+    return product, org

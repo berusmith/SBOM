@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin
+from app.core.deps import require_admin, require_release_in_scope
 from app.core.plan import require_plan
 from app.models.release import Release
 from app.services.signature_verifier import (
@@ -28,10 +28,7 @@ from app.services.signature_verifier import (
     detect_algorithm,
     verify_signature as _verify_sig,
 )
-
-# Transitional cross-module import — _assert_release_org legacy 403 helper;
-# D.8 (ARCH-1.003 contract evolution) replaces with require_release_in_scope.
-from app.api.releases import _assert_release_org
+# D.8 (2026-05-01): legacy ownership helper replaced by require_release_in_scope (404 oracle prevention).
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
 
@@ -96,13 +93,9 @@ def upload_signature(release_id: str, body: dict, _plan=Depends(require_plan("si
 
 
 @router.get("/{release_id}/signature/verify")
-def verify_release_signature(release_id: str, org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
+def verify_release_signature(release_id: str, release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
     """Verify the stored signature against the current SBOM file."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
-
+    # release loaded + ownership-checked (404 oracle-safe) by Depends.
     if not release.sbom_signature or not release.signature_public_key:
         return {
             "status": "unsigned",

@@ -1,16 +1,16 @@
 """SBOM upload — POST /api/releases/{release_id}/sbom.
 
 Moved from backend/app/api/releases.py:upload_sbom in D.2 (2026-04-30).
-The original 142-LOC handler is decomposed into a thin orchestrator + 6 helpers
-per CODE-1.001.  Behavior bit-identical at the HTTP boundary.
+Decomposed into a thin orchestrator + 6 helpers per CODE-1.001.
+Behavior bit-identical at the HTTP boundary.
 
-Notes on transitional cross-module imports (clean up in D.3 / D.7 / D.8):
-  - `_assert_release_org` imported from app.api.releases — legacy 403 cross-org
-    pattern; D.8 (ARCH-1.003 contract evolution) replaces with require_release_in_scope
-  - `_enrich_epss` / `_enrich_kev` / `_enrich_ghsa` imported from app.api.releases
-    — they move to enrich.py in D.3; this import line updates then
-  - `UPLOAD_DIR` imported from app.api.releases — module-level path constant,
-    consolidated in a shared location at end of Stage D
+Cross-module imports (D.8 cleanup state, 2026-05-01):
+  - Ownership check: Depends(require_release_in_scope) from app.core.deps
+    (404 oracle-safe per ARCH-1.003 contract evolution)
+  - Enrichment: _enrich_epss / _enrich_kev / _enrich_ghsa from
+    app.services.usecases.release.enrich (moved there in D.3)
+  - UPLOAD_DIR from app.api.releases (still there post-Stage D; consolidating
+    UPLOAD_DIR into a shared location is FU-candidate, not iter-1 scope)
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_org_scope
+from app.core.deps import get_current_user, require_release_in_scope
 from app.models.component import Component
 from app.models.organization import Organization
 from app.models.product import Product
@@ -33,10 +33,8 @@ from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, vuln_scanner
 from app.services.sbom_parser import score_sbom
 
-# Transitional cross-module imports — see module docstring.
-# _enrich_* helpers moved to enrich.py in D.3 (this commit).
-# UPLOAD_DIR + _assert_release_org still come from releases.py until D.7 / D.8.
-from app.api.releases import UPLOAD_DIR, _assert_release_org
+# UPLOAD_DIR still from app.api.releases (path constant; consolidation deferred).
+from app.api.releases import UPLOAD_DIR
 from app.services.usecases.release.enrich import _enrich_epss, _enrich_ghsa, _enrich_kev
 
 logger = logging.getLogger(__name__)
@@ -193,13 +191,10 @@ def upload_sbom(
     release_id: str,
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+    # release loaded + ownership-checked (404 oracle-safe) by Depends.
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法上傳 SBOM")
 

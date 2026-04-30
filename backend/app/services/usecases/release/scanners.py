@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_org_scope
+from app.core.deps import get_current_user, require_release_in_scope
 from app.core.plan import require_plan
 from app.models.component import Component
 from app.models.release import Release
@@ -31,8 +31,7 @@ from app.models.vulnerability import Vulnerability
 from app.services import sbom_parser, syft_scanner as _syft, trivy_scanner as _trivy, vuln_scanner
 from app.services.scanners.reachability import classify_vulns as _classify_vulns, scan_zip as _scan_zip
 
-# Transitional cross-module imports — see usecases/release/upload_sbom.py docstring.
-from app.api.releases import _assert_release_org
+# D.8 (2026-05-01): legacy ownership helper replaced by require_release_in_scope (404 oracle prevention).
 from app.services.usecases.release.enrich import _enrich_epss, _enrich_kev
 
 router = APIRouter(prefix="/api/releases", tags=["releases"])
@@ -44,14 +43,10 @@ async def upload_source(
     file: UploadFile = File(...),
     _plan=Depends(require_plan("reachability")),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """上傳專案原始碼 zip，掃描 import 語句，更新所有漏洞的 reachability 欄位。"""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
 
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔（含 .py / .js / .ts 原始碼）")
@@ -104,16 +99,12 @@ def scan_container_image(
     background_tasks: BackgroundTasks,
     _plan=Depends(require_plan("trivy")),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """掃描 Container Image，結果合併進現有元件/漏洞流程。"""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法掃描")
-    _assert_release_org(release, org_scope, db)
 
     image_ref = (body.get("image") or "").strip()
     if not image_ref:
@@ -179,16 +170,12 @@ async def scan_iac_archive(
     file: UploadFile = File(...),
     _plan=Depends(require_plan("trivy")),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """上傳 zip（Terraform/K8s yaml/Dockerfile），掃描 misconfiguration + 元件漏洞。"""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法掃描")
-    _assert_release_org(release, org_scope, db)
 
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔（內含 Terraform/K8s/Dockerfile）")
@@ -306,19 +293,15 @@ async def sbom_from_source(
     file: UploadFile = File(...),
     _plan=Depends(require_plan("syft")),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """上傳原始碼 zip,讓 Syft 識別 manifest 產出 SBOM 並合併進此版本。
 
     與 /upload-source 不同:此端點**產生**元件清單(SBOM),前者是給定 SBOM 後分析 reachability。
     """
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定,無法掃描")
-    _assert_release_org(release, org_scope, db)
 
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="請上傳 .zip 壓縮檔(原始碼)")
@@ -352,7 +335,7 @@ async def sbom_from_binary(
     file: UploadFile = File(...),
     _plan=Depends(require_plan("syft")),
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """上傳單一 binary 讓 Syft 提取嵌入元件資訊。
@@ -360,12 +343,8 @@ async def sbom_from_binary(
     Syft 內建 binary cataloguers 可從 Go / .NET / Java / Python wheel /
     Rust / Linux 核心等可執行檔抽出版本資訊。
     """
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定,無法掃描")
-    _assert_release_org(release, org_scope, db)
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="請提供檔案")

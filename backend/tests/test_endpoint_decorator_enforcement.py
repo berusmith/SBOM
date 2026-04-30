@@ -6,9 +6,9 @@ product_id path parameter (i.e. release-scoped resource access), the
 endpoint MUST satisfy ONE of:
   - new pattern: include Depends(require_release_in_scope)
   - admin override: include Depends(require_admin) or Depends(require_admin_scope)
-  - legacy pattern: function body calls _assert_release_org / _assert_vuln_org
-                    (will be tightened to forbid this once releases.py
-                     migrates the 30 legacy callers)
+  - legacy pattern: function body calls _assert_vuln_org (vulnerabilities.py only;
+                    the release-side legacy helper was deleted in iter-1 D.8 —
+                    ARCH-1.003 contract evolution complete for release endpoints).
 
 Forgetting any of these = test fails, CI blocks merge.
 
@@ -50,11 +50,11 @@ _OWNERSHIP_DEPENDENCIES = {
     require_admin_scope,
 }
 
-# Legacy pattern allowed during migration window (releases.py 30 callers).
-# To remove this allowance: grep all callers of _assert_release_org /
-# _assert_vuln_org in releases.py, migrate to require_release_in_scope,
-# then delete this list.
-_LEGACY_PATTERNS = ("_assert_release_org", "_assert_vuln_org")
+# Legacy pattern allowed for vulnerabilities.py only (1 caller of _assert_vuln_org).
+# The release-side legacy helper was deleted in iter-1 D.8 (ARCH-1.003 evolution
+# complete for release endpoints).  vulnerabilities.py migration is a future
+# ARCH-1.003-style cleanup; until then, _assert_vuln_org is the only entry here.
+_LEGACY_PATTERNS = ("_assert_vuln_org",)
 
 
 def _has_ownership_dep(endpoint) -> bool:
@@ -154,8 +154,8 @@ def main() -> int:
         print("Each must use ONE of:")
         print("  release: Release = Depends(require_release_in_scope)  # new pattern")
         print("  user: dict = Depends(require_admin)                   # admin only")
-        print("  # OR legacy _assert_release_org() / _assert_vuln_org() in body")
-        print("    (allowed during migration; tighten once releases.py migrates)")
+        print("  # OR legacy _assert_vuln_org() in body (vulnerabilities.py only;")
+        print("    release-side legacy helper deleted in iter-1 D.8)")
         print()
 
     if consistency_errors:

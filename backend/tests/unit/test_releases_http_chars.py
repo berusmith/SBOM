@@ -5,10 +5,9 @@ Captures the current HTTP contract BEFORE PR-1 Stages B–E refactor.  Every
 test pins what is observable today; the same assertions must pass after each
 D.N move (releases.py code shifts; HTTP contract stays).
 
-ONE EXCEPTION carried in the contract evolution checkpoint (D.8 / ARCH-1.003):
-the cross-org test below currently asserts **403** — the legacy oracle-leaking
-behavior of `_assert_release_org`.  D.8 will FLIP this assertion to **404**
-in the same commit that flips the production behavior.  No silent change.
+D.8 (2026-05-01) — ARCH-1.003 contract evolution COMPLETE.  All cross-org
+release-id endpoints now return 404 (CWE-204 oracle prevention).  The
+prior "legacy 403 vs modern 404" split is gone; every site asserts 404.
 
 Per code-principles.md §H4 (Tidy First) + §J5 + the J5-footnote: this is a
 test-only commit (tidy:); no behavior change in backend/app/.
@@ -135,11 +134,10 @@ def test_public_endpoint_no_bearer_required(client, method, path):
     )
 
 
-# ── Set 3 — cross-org 403 baseline (D.8 EVOLUTION CHECKPOINT) ────────────────
-# These tests pin the LEGACY behavior: cross-org access returns 403 today.
-# In D.8 (ARCH-1.003 deliberate contract evolution per refactor-plan.md §3.9)
-# every assertion below FLIPS to 404 — in the same commit as the production
-# code change.  This test file is the test-side anchor for that flip.
+# ── Set 3 — cross-org 404 (post-D.8 ARCH-1.003 evolution) ───────────────────
+# These tests pin the POST-D.8 behavior: cross-org access on every release-id
+# endpoint returns 404 + "Release not found" (CWE-204 oracle prevention).
+# Pre-D.8 the legacy sites returned 403; D.8 flipped them all to 404 atomically.
 
 @pytest.fixture
 def cross_org_client(db_session):
@@ -191,47 +189,37 @@ def seeded_orga_release(db_session):
     return "rel-in-orgA"
 
 
-# 5 representative endpoints across (read / write / file-upload / report).
-# Sample chosen to cover both the legacy `_assert_release_org` (403) sites
-# AND the modern `require_release_in_scope` (404) sites — the latter is
-# already-correct behavior; D.8 only changes the former.
+# 5 representative endpoints — POST-D.8 all use Depends(require_release_in_scope)
+# and return 404 on cross-org access (uniform CWE-204 oracle behavior).
 CROSS_ORG_PIN_ENDPOINTS: list[tuple[str, str, str | None]] = [
-    ("GET",    "/api/releases/{rid}",                       None),    # legacy (403 today)
-    ("GET",    "/api/releases/{rid}/components",            None),    # legacy
-    ("GET",    "/api/releases/{rid}/vulnerabilities",       None),    # legacy
-    ("GET",    "/api/releases/{rid}/report",                None),    # legacy (PDF endpoint)
-    ("GET",    "/api/releases/{rid}/compliance",            None),    # MODERN — already 404 today (require_release_in_scope)
+    ("GET",    "/api/releases/{rid}",                       None),
+    ("GET",    "/api/releases/{rid}/components",            None),
+    ("GET",    "/api/releases/{rid}/vulnerabilities",       None),
+    ("GET",    "/api/releases/{rid}/report",                None),
+    ("GET",    "/api/releases/{rid}/compliance",            None),    # was already-correct pre-D.8; remains 404
 ]
 
 
 @pytest.mark.http
 @pytest.mark.parametrize("method, path_template, body_kind", CROSS_ORG_PIN_ENDPOINTS)
-def test_cross_org_access_baseline_pre_d8(cross_org_client, seeded_orga_release,
-                                          method, path_template, body_kind):
-    """Today's behavior:
-       - legacy `_assert_release_org` callers   → 403 "無權存取此版本"
-       - modern `require_release_in_scope` callers → 404 "Release not found"
+def test_cross_org_access_returns_404_post_d8(cross_org_client, seeded_orga_release,
+                                              method, path_template, body_kind):
+    """POST-D.8 (ARCH-1.003 contract evolution complete): every release-id endpoint
+    accessed cross-org returns 404 + 'Release not found' (CWE-204 oracle prevention).
 
-    D.8 (refactor-plan.md §3.9) flips every legacy site to 404; this test file
-    will be UPDATED in the same D.8 commit to assert 404 across the board.
+    Pre-D.8 the legacy 4 sites returned 403; D.8 flipped them all to 404 in the
+    same commit that deleted the legacy ownership helper.  This test file is the
+    test-side anchor for that flip.
     """
     url = path_template.format(rid=seeded_orga_release)
     resp = cross_org_client.request(method, url, **_request_kwargs_for(body_kind))
-    # PIN: the modern site (/compliance) is already 404; legacy sites are 403.
-    # Both are acceptable today; D.8 collapses both to 404.
-    assert resp.status_code in (403, 404), (
-        f"{method} {url} expected 403 (legacy) or 404 (modern require_release_in_scope), "
+    assert resp.status_code == 404, (
+        f"{method} {url} expected 404 (cross-org, oracle-safe), "
         f"got {resp.status_code}: {resp.text[:200]}"
     )
-    if path_template == "/api/releases/{rid}/compliance":
-        # Modern site — already 404 today.  Document the assertion explicitly.
-        assert resp.status_code == 404, (
-            "/compliance uses Depends(require_release_in_scope) which is already "
-            "the correct 404 pattern; this assertion guards against regression."
-        )
-    else:
-        # Legacy site — 403 today.  D.8 will flip this assertion to 404.
-        assert resp.status_code == 403, (
-            f"{path_template} uses _assert_release_org legacy pattern (403 today). "
-            "D.8 will flip this to 404; update the assertion in the same commit."
-        )
+    # Detail string must be the canonical 'Release not found' (uniform across all
+    # 404 paths to defeat oracle differentiation).
+    assert resp.json().get("detail") == "Release not found", (
+        f"{method} {url} expected detail='Release not found' (uniform per CWE-204), "
+        f"got {resp.json()}"
+    )

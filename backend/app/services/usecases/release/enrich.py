@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core import audit
 from app.core.config import settings as _cfg
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_org_scope, require_admin
+from app.core.deps import get_current_user, require_admin, require_release_in_scope
 from app.models.component import Component
 from app.models.organization import Organization
 from app.models.product import Product
@@ -41,10 +41,7 @@ from app.services.epss import fetch_epss
 from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
 from app.services.kev import fetch_kev_cve_ids
 from app.services.nvd import enrich_vulns_nvd
-
-# Transitional cross-module import — _assert_release_org legacy 403 helper;
-# D.8 (ARCH-1.003 contract evolution) replaces with require_release_in_scope.
-from app.api.releases import _assert_release_org
+# D.8 (2026-05-01): legacy ownership helper replaced by require_release_in_scope (404 oracle prevention).
 
 logger = logging.getLogger(__name__)
 
@@ -138,11 +135,8 @@ def _enrich_ghsa(components_raw, vulns: list, db: Session) -> None:
 
 @router.post("/{release_id}/rescan")
 def rescan_vulnerabilities(release_id: str, admin: dict = Depends(require_admin),
-                           org_scope: str | None = Depends(get_org_scope), db: Session = Depends(get_db)):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+                           release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
+    # release loaded + ownership-checked (404 oracle-safe) by Depends.
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法重新掃描")
 
@@ -243,7 +237,7 @@ def enrich_ghsa(
     release_id: str,
     background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
     """手動補充 GitHub Security Advisories (GHSA) 情資。"""
@@ -251,11 +245,11 @@ def enrich_ghsa(
         if release_id in _active_enrichments:
             raise HTTPException(status_code=409, detail="此版本的 GHSA 補充正在執行中，請稍後")
         _active_enrichments.add(release_id)
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        _active_enrichments.discard(release_id)
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+    # release loaded + ownership-checked (404 oracle-safe) by Depends — but Depends
+    # runs BEFORE this function body, so for unknown release_id the user gets 404
+    # WITHOUT _active_enrichments side-effect (cleaner; the "discard on 404" cleanup
+    # that the legacy code did becomes unnecessary because Depends short-circuits
+    # earlier).  The discard-on-no-components path below is still needed.
     all_comps = db.query(Component).filter(Component.release_id == release_id).all()
     if not all_comps:
         _active_enrichments.discard(release_id)
