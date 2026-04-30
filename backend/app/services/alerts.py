@@ -196,7 +196,7 @@ def send_email(subject: str, body: str, to: str) -> str:
         return str(e)
 
 
-_SEV_ORDER = {"info": 1, "low": 2, "medium": 3, "high": 4, "critical": 5}
+from app.domain.severity import SEVERITY_ORDER
 
 
 def _passes_alert_rule(vuln: dict, cfg) -> bool:
@@ -207,8 +207,12 @@ def _passes_alert_rule(vuln: dict, cfg) -> bool:
     # Severity threshold
     min_sev = getattr(cfg, "alert_min_severity", "") or ""
     if min_sev:
-        vuln_rank = _SEV_ORDER.get(vuln.get("severity", "info"), 0)
-        min_rank  = _SEV_ORDER.get(min_sev, 0)
+        # CODE-1.021 resolved (B.3): use canonical SEVERITY_ORDER from domain/severity.py.
+        # Default -1 (not 0!) preserves prior _SEV_ORDER behavior where unknown severities
+        # ranked BELOW "info" — _SEV_ORDER had info=1 with .get(...,0) default; the new
+        # SEVERITY_ORDER has info=0, so the default must drop to -1 to keep "unknown < info".
+        vuln_rank = SEVERITY_ORDER.get(vuln.get("severity", "info"), -1)
+        min_rank  = SEVERITY_ORDER.get(min_sev, -1)
         if vuln_rank < min_rank:
             return False
     # EPSS threshold

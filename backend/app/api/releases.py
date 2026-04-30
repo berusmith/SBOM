@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core import audit
 from app.core.config import BACKEND_DIR, resolve_under_backend, settings as _cfg
-from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
 from app.core.deps import get_org_scope, require_admin, get_current_user, require_release_in_scope
 from app.core.security import csv_safe, safe_attachment_filename

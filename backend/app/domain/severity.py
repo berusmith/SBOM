@@ -1,27 +1,35 @@
 """
 Severity ordering + reduction operations.
 
-Moved from backend/app/api/releases.py:_highest_severity in B.2 (2026-04-30).
-Behavior bit-identical to the prior helper.
+`SEVERITY_ORDER` is the single canonical mapping (collapsed in B.3 from
+backend/app/core/constants.py and backend/app/services/alerts.py:_SEV_ORDER).
+The numeric values' ABSOLUTE magnitude does not matter; only their relative
+order.  Callers MUST use the ".get(sev, -1)" pattern when comparing arbitrary
+severity strings against this map — the -1 default ensures unknown severities
+sort BELOW "info" (preserves the prior behavior of alerts.py:_SEV_ORDER which
+defaulted to 0 in a 1-indexed scale).
 
-SEVERITY_ORDER stays in backend/app/core/constants.py for B.2 (imported below);
-B.3 will collapse the constant — moving SEVERITY_ORDER here AND folding
-backend/app/services/alerts.py:_SEV_ORDER into the same canonical mapping.
+Per code-principles.md §F (module conventions): no Repository pattern,
+no port-for-single-impl; the dict is the canonical surface.
 """
 from __future__ import annotations
 
-# B.2: import the canonical mapping from its current home (core/constants).
-# B.3: this import is replaced by an in-file definition + alerts.py is updated.
-from app.core.constants import SEVERITY_ORDER
+# Canonical severity rank.  info=0; unknown defaults to -1 at call sites.
+SEVERITY_ORDER: dict[str, int] = {
+    "critical": 4,
+    "high":     3,
+    "medium":   2,
+    "low":      1,
+    "info":     0,
+}
 
 
 def highest_severity(vulns) -> str | None:
     """Return the highest-ranked severity in the iterable, or None if empty.
 
-    Unknown severities (and None) fall back to the "info" rank (0).
-    Order independence: the result depends only on the multiset of severities,
-    except that ties between equally-low-ranked severities are resolved by
-    Python's stable max (first-occurrence wins).
+    Unknown severities (and None) fall back to the "info" rank (0) for the
+    purpose of this reduce — preserves prior behavior where `v.severity or "info"`
+    was the lookup key with default 0.
     """
     if not vulns:
         return None

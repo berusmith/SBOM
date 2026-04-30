@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.core.constants import SEVERITY_ORDER
 from app.core.database import get_db
 from app.core.deps import get_org_scope
+from app.domain.severity import highest_severity
 from app.models.component import Component
 from app.models.organization import Organization
 from app.models.product import Product
@@ -41,7 +41,6 @@ def search_components(q: str = Query(..., min_length=1), org_scope: str | None =
     results = []
     for c, release, product, org in rows:
         vulns = vulns_by_comp.get(c.id, [])
-        highest = max(vulns, key=lambda v: SEVERITY_ORDER.get(v.severity or "info", 0), default=None)
         kev_count = sum(1 for v in vulns if v.is_kev)
         results.append({
             "component_id": c.id,
@@ -55,7 +54,7 @@ def search_components(q: str = Query(..., min_length=1), org_scope: str | None =
             "org_id": org.id,
             "org_name": org.name,
             "vuln_count": len(vulns),
-            "highest_severity": highest.severity if highest else None,
+            "highest_severity": highest_severity(vulns),
             "kev_count": kev_count,
         })
 
