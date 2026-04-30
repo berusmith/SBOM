@@ -24,7 +24,7 @@ ROOT     = Path(__file__).resolve().parents[1]
 REPO     = Path(__file__).resolve().parents[5]
 sys.path.insert(0, str(REPO / "backend"))
 
-from app.services.reachability import scan_zip   # noqa: E402
+from app.services.scanners.reachability import scan_zip   # noqa: E402
 
 LANG_DIRS  = ("python", "javascript", "typescript", "java")
 SUPPORTED  = {"python"}                            # what scan_zip understands today
@@ -52,7 +52,14 @@ def _label_for_import_names(import_names: list[str], scan) -> str:
     and returns the strongest verdict across them — function_reachable wins
     over reachable wins over test_only wins over not_found.
     """
-    from app.services.reachability import _normalise
+    # _normalise is private to python_analyzer (NOT in the Wave-D contract
+    # public surface — see services/scanners/reachability/__init__.py).
+    # Corpus runner reaches into the implementation deliberately to mirror
+    # classify_vulns' normalisation; this coupling is acceptable because the
+    # corpus runner IS the analyzer's acceptance harness.  If python_analyzer
+    # ever evolves _normalise, the corpus runner updates in lockstep (no
+    # external API stability promise).
+    from app.services.scanners.reachability.python_analyzer import _normalise
     best = "not_found"
     rank = {"function_reachable": 4, "reachable": 3, "test_only": 2, "not_found": 1}
     for name in import_names:

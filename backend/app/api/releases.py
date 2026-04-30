@@ -44,7 +44,7 @@ from app.services.signature_verifier import verify_signature as _verify_sig, det
 from app.services import trivy_scanner as _trivy
 from app.services import syft_scanner as _syft
 from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
-from app.services.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
+from app.services.scanners.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
 from app.core.plan import require_plan, check_starter_limit
 
 # SBOM uploads.  `_cfg.UPLOAD_DIR` may be:
