@@ -34,13 +34,10 @@ from app.services import sbom_parser, vuln_scanner
 from app.services.sbom_parser import score_sbom
 
 # Transitional cross-module imports — see module docstring.
-from app.api.releases import (
-    UPLOAD_DIR,
-    _assert_release_org,
-    _enrich_epss,
-    _enrich_ghsa,
-    _enrich_kev,
-)
+# _enrich_* helpers moved to enrich.py in D.3 (this commit).
+# UPLOAD_DIR + _assert_release_org still come from releases.py until D.7 / D.8.
+from app.api.releases import UPLOAD_DIR, _assert_release_org
+from app.services.usecases.release.enrich import _enrich_epss, _enrich_ghsa, _enrich_kev
 
 logger = logging.getLogger(__name__)
 
