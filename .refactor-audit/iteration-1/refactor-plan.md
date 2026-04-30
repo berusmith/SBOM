@@ -888,4 +888,37 @@ After your review, if you approve, **say "go"** and I will start with §0 Pre-fl
 - Reason this is NOT in iter-1: D.4 leaves these in `usecases/release/reports.py` per scope cap; full extraction is one more sub-module
 - Cross-ref: CODE-1.004
 
+### FU-1.005 — Suppression timezone enforcement (reject naive datetime in __post_init__)
+- Reason this is NOT in iter-1: per Constraint B (user iter-1 review 2026-04-30), B.4 explicitly forbids "時區強制" — naive datetimes are coerced to UTC for the past-future comparison, not rejected at construction
+- Proposed change: tighten `Suppression.__post_init__` to raise ValueError on naive `suppressed_until`; consistent with the project-wide "all timestamps are timezone-aware" convention (every other DB-write path already passes tz-aware datetimes)
+- Iter-2 promotion rule: promote when (a) a real call site is found that constructs Suppression from naive datetime (today: zero such sites; existing read paths use the predicate `is_suppressed(vuln)` which silently coerces), OR (b) audit log shows a row with suppressed_until missing tzinfo (data corruption signal)
+- Cross-ref: code-principles.md §E1; B.4 commit `e690bb6` body (out-of-scope items list); domain/suppression.py docstring
+
+### FU-1.006 — Suppression reason length / charset constraints
+- Reason this is NOT in iter-1: per Constraint B "do NOT add" list — adding constraints later is hard to remove without breaking existing rows that violate the new constraint; defer until a concrete complaint
+- Proposed change: add `max_length` (e.g. 5000 chars matching release.notes cap) + printable-ASCII-only check (or relaxed equivalent); rejection on violation
+- Iter-2 promotion rule: promote ONLY if (a) DB has 99-percentile reason-length data showing > 5000 chars regularly happens (signal of unintended large input), OR (b) a CSV-injection / log-formatting bug is observed from unbounded reason text in audit log / alerts
+- Cross-ref: B.4 commit `e690bb6` body (out-of-scope items list)
+
+### FU-1.007 — Suppression suppressed_by user_id existence check (cross-table FK)
+- Reason this is NOT in iter-1: `Suppression` is a value object, not an ORM row; FK validation requires a DB session, which `Suppression` MUST NOT carry — that would violate AC-D2 (domain importing `sqlalchemy`)
+- Proposed change: introduce a separate validator function (e.g. `services/usecases/release/suppress.py:validate_suppressor(suppression, db_session, user_id)`) that verifies the user exists, is_active, and has suppress permission. Suppression itself stays DB-agnostic
+- Iter-2 promotion rule: promote when audit log entries for suppress operations show non-existent user_ids (data corruption signal)
+- Cross-ref: B.4 commit `e690bb6` body; calibration.md §3.3 AC-D2
+
+### FU-1.008 — Suppression cross-row uniqueness (no two active suppressions on same vuln_id)
+- Reason this is NOT in iter-1: requires DB query at construction time — same AC-D2 violation risk as FU-1.007
+- Proposed change: at write time, query `SELECT COUNT(*) FROM vulnerabilities WHERE id=:vid AND suppressed=true` and reject if > 0 BEFORE persisting the new suppression. Alternative for Postgres: partial unique index `CREATE UNIQUE INDEX ... ON vulnerabilities(id) WHERE suppressed=true`. SQLite supports partial indexes since 3.8 (sufficient for our deployment)
+- Iter-2 promotion rule: promote when monitoring observes duplicate active-suppression rows for the same vulnerability (data integrity signal). May not be a real risk if the data model already enforces 1 vulnerability row per (component_id, cve_id) tuple via uq_comp_cve
+- Cross-ref: B.4 commit `e690bb6` body; uq_comp_cve unique index in main.py:168
+
+### FU-1.009 — Audit existing ORM data for Suppression invariant-1 violations
+- Reason this is NOT in iter-1: B.4 commit `e690bb6` body explicitly notes "ORM 既有資料不會觸發 ValueError 因為走預測式而非構造式" — Suppression's invariants are forward-looking only. Existing rows in `vulnerabilities` may currently be in an invariant-1-violating state (`suppressed=True` AND `suppressed_until < now()`), which the predicate `is_suppressed(vuln)` correctly interprets as "expired = not effectively suppressed" but which the value object would reject if constructed from those columns
+- Proposed change: write a one-shot script `backend/tools/audit_suppression_state.py` that queries `SELECT COUNT(*) FROM vulnerabilities WHERE suppressed=1 AND suppressed_until IS NOT NULL AND suppressed_until < CURRENT_TIMESTAMP` and reports the count. Decide remediation:
+  - **Option A**: bulk-UPDATE those rows to `suppressed=False, suppressed_until=NULL` (matches `monitor.py` expired-suppression cleanup intent — see `services/monitor.py:130-154`)
+  - **Option B**: leave the rows as-is and document "the `is_suppressed` predicate already handles this correctly via the expired-treated-as-not-suppressed semantic; the value object's invariant-1 only applies to NEW writes"
+- **Wider observation (already a debt signal)**: the Suppression value object exists in iter-1 but NO production write path constructs it. The suppress endpoint in `vulnerabilities.py` still mutates ORM columns directly. A natural follow-on refactor: rewrite the suppress endpoint to (a) construct `Suppression(...)` first (triggering invariant validation at the boundary), then (b) persist to ORM. That makes the value object load-bearing instead of decorative
+- Iter-2 promotion rule: promote at the same time as the suppress-endpoint rewrite (whoever wires Suppression onto the write path) — both naturally land in the same iter
+- Cross-ref: B.4 commit `e690bb6` body; `services/monitor.py:130-154` expired-cleanup loop; `backend/app/api/vulnerabilities.py` (the future write-path call site)
+
 End of refactor-plan.md
