@@ -193,11 +193,11 @@ js_analyzer.py / java_analyzer.py added by Wave D sprint #3).
 #      contract evolution per the spirit of D.8 / ARCH-1.003.
 # =============================================================================
 
+from .integration import scan_zip
 from .python_analyzer import (
     PackagePresence,
     ScanResult,
     classify_vulns,
-    scan_zip,
 )
 
 __all__ = [
