@@ -129,6 +129,87 @@ These principles are **observed in the codebase** or **written in CLAUDE.md / .k
 
 ## Principles surfaced in iteration N — appended below
 
+## K. Phase-8 STOP-on-factual-disagreement discipline
+
+(added 2026-05-01 per iter-1 D.8 retrospective — first observed during share.py
+scope-expansion discovery + the user-instructions-vs-code-fact disagreement
+that led to (α) path)
+
+In Phase 8 execution, BEFORE any commit, if any of the following triggers fires,
+the agent MUST STOP and disclose — the agent does NOT execute the original
+instruction:
+
+- **K1.** **User instruction has a factual premise error** about file contents,
+  authentication shape, data flow, function signatures, or any other observable
+  state of the codebase. Examples: user says "share.py uses share_token" when
+  the relevant 3 endpoints actually use JWT; user says "this returns a tuple"
+  when grep shows it returns None.
+- **K2.** **Plan-external related items discovered**: same-root-cause sites
+  outside the planned scope (e.g. ARCH-1.003 finding's release-side helper was
+  also defined locally in share.py — same root cause, plan didn't mention),
+  OR same-commit surfaces missed by the plan (e.g. residual literal-string
+  references that need scrubbing for HARD LOCK to truly hold).
+- **K3.** **Grep / verification result outside expected range**: 0 matches
+  when user's reasoning assumes N>0 (sanity check should follow), OR N matches
+  when expected 0, OR specific values that contradict the reasoning premise.
+
+When triggered, the agent's required actions:
+
+1. **Show evidence**: file:line references, grep verbatim output, or other
+   concrete artifact that proves the premise discrepancy
+2. **Propose 2-4 options**: NOT just "follow original instruction"; include the
+   alternative the evidence suggests
+3. **State agent's recommendation** with reasoning (per-option pros/cons)
+4. **Wait for explicit user reply** before any production-code commit
+
+**Why this exists**: in single-reviewer mode (per `refactor-plan.md` §3.4),
+the user is the only review pre-merge. If the user gives an instruction based
+on incorrect premise and the agent executes it, the error is fixed in a
+production commit — future audits will see it as deliberate design, not error.
+The cost of STOP is one extra round of dialog; the cost of fixed-in-commit
+error is high (review/revert/audit overhead).
+
+**Relationship to other principles**:
+- §J5 (security commit per-commit review) is the SECURITY-specific application
+  of K. The 4-surface diff body discipline ensures security changes get
+  reviewed with full evidence, which is K's "show evidence" applied at commit
+  time.
+- §J6 (incidental fix policy) is the SCOPE-DRIFT-specific application of K.
+  When an incidental fix would expand the surface beyond J6's caps (§F7
+  conditions), J6 forces a separate commit — same spirit as K's "STOP and
+  disclose before scope-creep into the current commit".
+- §K is the GENERAL principle that J5 + J6 are specific applications of.
+
+**Standing**: permanent discipline.
+
+**Exceptions** (where K does NOT apply — agent best-effort proceeds):
+- Obvious typos (user types "_assert_relese_org" instead of "_assert_release_org")
+- Obvious quote-mark or punctuation errors that don't change the semantic
+- Section-number references that are off by 1 (e.g. user says "§3.7" when the
+  content lives in §3.10) — agent places content in correct section + notes
+  the reference adjustment in commit body
+
+**Iter-1 evidence** of K being load-bearing (each instance avoided one
+production-commit error fixation):
+- D.8 pre-flight: agent discovered share.py's local `_assert_release_org`
+  beyond the plan's 6-module scope. STOP + disclosed share.py findings + 3
+  options — user chose (i) include in D.8 atomically. Without K, agent would
+  have either silently expanded scope OR shipped HARD LOCK 2 with an obvious
+  hole.
+- D.8 instruction phase: user gave detailed instruction about how to migrate
+  share.py based on premise "share.py uses share_token (not JWT)". Agent
+  read the actual share.py code, found the 3 admin endpoints DO use JWT,
+  STOP + disclosed the factual disagreement + 3 options (α/β/γ). User
+  chose (α) — confirmed agent's read, said "you caught it right". Without
+  K, agent would have built a "share_token resolver wrapper" that
+  over-engineered for a non-existent constraint.
+
+The cumulative count of K invocations per iter is itself a useful signal
+(frequent = plan precision needs improvement; rare = plan + reviewer
+discipline are well-calibrated).
+
+---
+
 ### Iter-1 additions (2026-04-29, post user Q1–Q10 answers)
 - **F7** — backend dev-only deps allowlist (`pytest`, `pytest-cov`, `hypothesis`)
 - **J1–J5** — Phase-8 commit discipline (default + structural exception + security carve-out)

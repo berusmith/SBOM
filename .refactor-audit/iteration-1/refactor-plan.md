@@ -695,6 +695,36 @@ scope: ONLY the schemas in moved modules (~12 schemas total).
 out of scope: 60+ inline schemas in 17 untouched routers (deferred to a future iter).
 ```
 
+### Stage E scope lock (added 2026-05-01 per iter-1 user feedback)
+
+PR-1 production-code count is at 18 (post-D.8) against plan estimate of ~19.
+Stage E adds 2 commits → 20 production commits.  D16 budget rule:
+`> 22 invoke T3-soft, > 25 invoke T3-hard`.  Margin is tight.
+
+To preserve the budget, Stage E scope is HARD-LOCKED:
+
+**E.1 — limited to D-touched modules ONLY**
+Inline `BaseModel` extraction applies to schemas declared in the 7 D-touched
+modules (upload_sbom.py / enrich.py / reports.py / signature.py / scanners.py /
+lifecycle.py / share.py — the latter only its admin endpoints touched in D.8).
+Inline schemas in the OTHER 17 router files (auth, organizations, products,
+vulnerabilities, cra, search, settings, policies, users, admin, tisax,
+licenses, firmware, tokens, convert, notice, plus share.py's public download
+endpoint) are EXPLICITLY OUT OF E.1 scope — they remain as-is.  Future
+follow-up `FU-1.012` slot reserved for the broader sweep.
+
+**E.2 — limited to two endpoints ONLY**
+`update_version` + `update_notes` only.  Other untyped `body: dict` endpoints
+in the codebase (anywhere — including non-D-touched routers) are OUT OF E.2
+scope.  Per Q-P7-3 the typed-body conversion is BEHAVIOR-EQUIVALENT
+(silent truncation preserved); 4-boundary-input verification per §6 acceptance
+gate.
+
+**STOP-on-scope-creep enforcement**: if E.1 or E.2 surfaces additional
+related items that look "obvious to clean up", §K discipline applies — STOP,
+disclose, do NOT silently expand scope.  Recovery via FU- entries in §10,
+not commit bloat.
+
 #### E.2 — `refactor:` typed bodies for update_version + update_notes (CODE-1.012, BEHAVIOR-EQUIVALENT)
 ```
 REVERSED per user Q-P7-3 iter-1 (2026-04-29):
