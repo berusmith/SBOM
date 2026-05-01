@@ -108,7 +108,7 @@ jobs:
           upload-artifact-retention: 30
 
       - name: Scan SBOM with grype
-        uses: anchore/scan-action@v3.6.4
+        uses: anchore/scan-action@v7.4.0
         with:
           sbom: sbom-self.cdx.json
           severity-cutoff: high
