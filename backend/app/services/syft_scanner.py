@@ -45,7 +45,7 @@ def is_syft_available() -> bool:
     try:
         r = subprocess.run(["syft", "--version"], capture_output=True, timeout=5)
         return r.returncode == 0
-    except Exception:
+    except Exception:  # Deliberate broad-except: library-boundary availability check — any failure means "not available"
         return False
 
 

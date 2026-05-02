@@ -262,7 +262,7 @@ def enrich_ghsa(
             _comps = _db.query(Component).filter(Component.release_id == release_id).all()
             _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
             _enrich_ghsa(_comps, _vulns, _db)
-        except Exception as exc:
+        except Exception as exc:  # Deliberate broad-except: background GHSA enrichment task — must not crash background thread
             logger.error("GHSA 補充失敗 release_id=%s: %s", release_id, exc)
         finally:
             _active_enrichments.discard(release_id)
@@ -303,7 +303,7 @@ def enrich_nvd(release_id: str, background_tasks: BackgroundTasks, _admin: dict 
         try:
             _vulns = _db.query(Vulnerability).join(Component).filter(Component.release_id == release_id).all()
             enrich_vulns_nvd(_vulns, _db)
-        except Exception as exc:
+        except Exception as exc:  # Deliberate broad-except: background NVD enrichment task — must not crash background thread
             logger.error("NVD 補充失敗 release_id=%s: %s", release_id, exc)
         finally:
             _active_enrichments.discard(release_id)

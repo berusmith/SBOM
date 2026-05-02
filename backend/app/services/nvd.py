@@ -36,7 +36,7 @@ def fetch_cve(cve_id: str) -> dict:
         if not vulns:
             return {}
         cve = vulns[0]["cve"]
-    except Exception:
+    except Exception:  # Deliberate broad-except: NVD per-CVE lookup — one CVE failure must not abort batch enrichment
         return {}
 
     # Description (English preferred)

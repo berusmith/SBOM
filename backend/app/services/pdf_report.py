@@ -104,7 +104,7 @@ def generate(
         try:
             pdf.image(logo_path, x=15, y=pdf.get_y(), h=18)
             pdf.ln(22)
-        except Exception:
+        except Exception:  # Deliberate broad-except: brand logo load — fpdf2 raises diverse types; PDF must render without logo
             pass  # logo load failed — continue without it
 
     company = brand.get("company_name") or ""

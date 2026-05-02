@@ -59,7 +59,7 @@ def _validate_and_parse(content: bytes, filename: str | None) -> list[dict]:
         return sbom_parser.parse(content, filename)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: SBOM parser library-boundary — diverse parser failures translated to user-facing 400
         raise HTTPException(status_code=400, detail=f"SBOM 解析失敗：{e}")
 
 
@@ -81,7 +81,7 @@ def _save_and_score(release: Release, content: bytes, filename: str | None) -> N
         quality = score_sbom(json.loads(content))
         release.sbom_quality_score = quality["score"]
         release.sbom_quality_grade = quality["grade"]
-    except Exception:
+    except Exception:  # Deliberate broad-except (b-fix CODE-1.011 PR-1 D.3 historical): SBOM scoring failures diverse — log + continue without grade
         logger.exception("SBOM quality grading failed for release %s; upload continues without grade", release.id)
 
 

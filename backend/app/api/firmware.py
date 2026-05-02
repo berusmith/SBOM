@@ -11,8 +11,11 @@ from app.models.release import Release
 from app.models.component import Component
 from app.models.product import Product
 from app.services.firmware_service import FirmwareService
+import logging
 import uuid
 import json
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from datetime import datetime
 
@@ -78,7 +81,7 @@ async def upload_firmware(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: top-level firmware-upload handler — translate any unexpected error to user-facing 400
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         db.close()
@@ -129,7 +132,7 @@ async def get_scan_status(scan_id: str, _admin: dict = Depends(require_admin)):
                 emba_output = json.loads(scan.emba_output_json)
                 components = firmware_service.parse_emba_components(emba_output)
                 result["components"] = components
-            except Exception:
+            except Exception:  # Deliberate broad-except: GET status fallback — empty component list is fine if EMBA parse fails
                 result["components"] = []
         else:
             result["components"] = []
@@ -189,8 +192,14 @@ async def import_scan_as_release(
                     )
                     db.add(component)
                     components_list.append(component)
-            except Exception:
-                pass
+            except (json.JSONDecodeError, KeyError, ValueError, TypeError) as e:
+                # PR-3 N.2 (CODE-1.014 partial): silent swallow → log + continue.
+                # EMBA component import is best-effort; release row is created
+                # regardless so the user has something to inspect.
+                logger.warning(
+                    "EMBA component import failed for scan %s release %s: %s",
+                    scan.id, release.id, e,
+                )
 
         db.commit()
         db.refresh(release)
@@ -204,6 +213,6 @@ async def import_scan_as_release(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: top-level convert-to-release handler — db rollback + translate to user-facing 400
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))

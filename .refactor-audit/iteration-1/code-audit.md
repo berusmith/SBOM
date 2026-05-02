@@ -224,6 +224,7 @@ finding_id_prefix: CODE-1.NNN
 - **Effort**: S
 - **Risk of Fix**: nil (logging only)
 - **Confidence**: High
+- **Status (PR-3 Stage R, 2026-05-02)**: **CLOSED** historically.  This finding was actually fixed inside the larger PR-1 D.3 commit `cb89e7d` (god-router decomposition) when `upload_sbom` was extracted into `usecases/release/upload_sbom.py`.  The pre-PR-1 site at `releases.py:215-221` no longer exists; post-PR-1 site at `usecases/release/upload_sbom.py:80-85` carries `logger.exception(...)` per the original recommendation here.  PR-3 N.6 added the canonical `(b-fix CODE-1.011 PR-1 D.3 historical)` annotation at that site (commit `7b6c164`).  **Trigger / Location lines above refer to pre-PR-1 paths** — the fix was bundled silently into D.3's broader file split rather than landing as a standalone commit; this status entry surfaces the historical closure for grep-from-finding-id audit trail clarity.  Recorded as ledger D31 (PR-3 R).
 
 ### [CODE-1.012] `update_version` and `update_notes` accept `body: dict` (untyped)
 - **Severity**: P2(中等)
@@ -284,6 +285,18 @@ finding_id_prefix: CODE-1.NNN
   - Per-site triage table goes into `known-debt.md` DEBT-009 with action labels (fine / fix-this-iter / followup)
 - **Effort**: M (triage all sites; fix only silent ones)
 - **Confidence**: Medium (need full site enumeration before triage is complete)
+- **Status (PR-3 Stage N, 2026-05-02)**: **PARTIAL CLOSURE** per pr3-plan.md §K#10 (α) resolution.  PR-3 Stage N executed the full triage + 4 silent-swallow fixes + 35 deliberate-keep annotations + 6 translate-and-raise sites annotated as deferred-to-iter-2 typed-exception infrastructure.  Concretely:
+  - **N.1** (`77f9a3c`) — `pr3-broad-except-triage.md` lists all 46 sites with (a)/(b)/(c) classification + per-site rationale.  AC-EXC-1 satisfied.
+  - **N.2** (`f4bcc97`) — `firmware.py:192` EMBA component-import silent swallow → narrowed to `(json.JSONDecodeError, KeyError, ValueError, TypeError)` + `logger.warning`.
+  - **N.3** (`67f1e51`) — `main.py:173` CREATE INDEX silent swallow → broad-keep + `logger.warning` (DDL errors are diverse; preserve broad clause but log).
+  - **N.4** (`8f81945`) — `signature_verifier.py:192` X.509 SAN silent swallow → split into `except ExtensionNotFound` (silent fall-through) + `except (ImportError, AttributeError) as _san_err` (debug log).
+  - **N.5** (`ff7dc0a`) — `lifecycle.py:313` `sbom_quality_grade` silent swallow → broad-keep + `logger.warning` (gate continues without grade — preserves invariant).
+  - **N.6** (`7b6c164`) — 44 inline annotations (35 (a) deliberate keeps + 6 (c) deferred-iter-2 + 3 (b-fix) historical references) using canonical `# Deliberate broad-except: {reason}` prefix per Q-PR3-1 (i).  Single grep prefix matches all classes.
+  - **AC-EXC-2** ✓ — silent-swallow subset = 0 (verified: `grep -A 1 "except Exception:" backend/app/ | grep "pass$"` = 0 unannotated).
+  - **AC-EXC-3** ✓ — all (a) sites annotated (verified: `grep -rn "Deliberate broad-except" backend/app/ | wc -l` = 44).
+  - **AC-EXC-4** ✓ — 6 (c) deferred sites listed in triage doc §4 with iter-2 typed-exc target names (`OIDCDiscoveryError` / `OIDCTokenExchangeError` / `OIDCUserinfoError` / `SignatureVerificationError`).
+  - **Remaining open work (DEFERRED to iter-2)**: convert the 6 (c) translate-and-raise sites to typed-exception infrastructure once `domain/exceptions.py` is introduced.  Tracked as iter-2 work, NOT a new FU because the (c) sites are annotated in-place with the target exception type name — no separate followup record needed beyond the triage doc.
+  - Recorded as ledger D30 (PR-3 R).  **Trigger / Location lines above refer to pre-PR-1 paths** — post-PR-1 site equivalents documented in triage doc.
 
 ### [CODE-1.015] OIDC `_exchange_code` does not validate `id_token` — silently uses access_token
 - **Severity**: P3(優化) — flagged for future security audit

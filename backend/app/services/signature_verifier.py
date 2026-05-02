@@ -50,7 +50,7 @@ def detect_algorithm(public_key_pem: str) -> Optional[str]:
         if isinstance(key, rsa.RSAPublicKey):
             return "rsa-pss-sha256"
         return None
-    except Exception:
+    except Exception:  # Deliberate broad-except: public-key parse fallback — multiple format candidates (PEM/DER); None signals "unrecognized"
         return None
 
 
@@ -81,7 +81,7 @@ def verify_signature(
     # Decode signature
     try:
         signature_bytes = base64.b64decode(signature_b64)
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): base64 decode failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm or "unknown",
             message="簽章格式錯誤：無法解碼 Base64",
@@ -91,7 +91,7 @@ def verify_signature(
     # Load public key
     try:
         public_key = _load_public_key(public_key_pem)
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): cryptography lib parse failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm or "unknown",
             message="公鑰格式錯誤：無法載入 PEM 公鑰或憑證",
@@ -150,7 +150,7 @@ def verify_signature(
             message="簽章驗證失敗：簽章與 SBOM 內容不符",
             detail="簽章可能已過期、SBOM 可能已被竄改、或使用了錯誤的公鑰",
         )
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): cryptography verify failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm,
             message=f"驗證過程發生錯誤",
@@ -183,21 +183,30 @@ def _extract_signer_identity(pem: str) -> Optional[str]:
         if b"BEGIN CERTIFICATE" not in pem_bytes:
             return None
         cert = load_pem_x509_certificate(pem_bytes)
-        # Try to get email from SAN
+        # Try to get email from SAN (best-effort; many certs have no SAN).
         try:
             from cryptography.x509 import ExtensionNotFound
             from cryptography.x509.oid import ExtensionOID
             san = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
             emails = san.value.get_values_for_type(type(None))  # placeholder
-        except Exception:
+        except ExtensionNotFound:
+            # PR-3 N.4 (CODE-1.014 partial): narrowed from broad-except + bare pass.
+            # ExtensionNotFound is the expected case for certs without SAN;
+            # fall through silently to CN lookup below (no log needed — common case).
             pass
+        except (ImportError, AttributeError) as _san_err:
+            # Unexpected: cryptography lib version mismatch or API change.
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "SAN email extract failed (lib version?): %s — falling back to CN", _san_err,
+            )
         # Fallback: get CN from subject
         from cryptography.x509.oid import NameOID
         cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
         if cn_attrs:
             return cn_attrs[0].value
         return str(cert.subject)
-    except Exception:
+    except Exception:  # Deliberate broad-except: X.509 signer-identity outer fallback — best-effort metadata extraction; None signals "no identity"
         return None
 
 
