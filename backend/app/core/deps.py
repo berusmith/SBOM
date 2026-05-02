@@ -84,21 +84,28 @@ def get_org_scope(user: dict = Depends(get_current_user)) -> str | None:
     return org_id
 
 
-# ── SDLC-001: mandatory release-ownership middleware ──────────────────────────
-# Introduced 2026-04-26 by Phase 5 #1.  Two patterns:
+# ── SDLC-001: mandatory ownership middleware (release + vuln scopes) ──────────
+# Release helpers introduced 2026-04-26 by Phase 5 #1; vuln helpers added
+# 2026-05-02 by iter-1 PR-3 O.1 (ARCH-1.003 evolution complete).  Two patterns
+# per scope:
 #
-#   1. require_release_in_scope — FastAPI dependency that loads + checks.
-#      Use as: `release: Release = Depends(require_release_in_scope)`.
-#      Forgetting it on a /releases/{release_id}/* endpoint = enforcement
-#      test (tests/test_endpoint_decorator_enforcement.py) flags it in CI.
+#   1. require_*_in_scope — FastAPI dependency that loads + checks.
+#      Use as: `release: Release = Depends(require_release_in_scope)` /
+#              `vuln: Vulnerability = Depends(require_vuln_in_scope)`.
+#      Forgetting it on a /releases/{release_id}/* or
+#      /vulnerabilities/{vuln_id}/* endpoint = enforcement test
+#      (tests/test_endpoint_decorator_enforcement.py) flags it in CI.
 #
-#   2. assert_release_in_scope — for callers that already loaded Release.
+#   2. assert_*_in_scope — for callers that already loaded the object.
 #      Returns 404 in BOTH "not found" and "cross-org" cases (CWE-204
 #      Observable Response Discrepancy / oracle prevention).
 #
-# Both adopted by SEC-001b / SEC-001d (Phase 5 #3 / #5).
-# Legacy 403 helper migration completed in iter-1 D.8 (2026-05-01) —
-# all release-id callers now use Depends(require_release_in_scope).
+# Release-side: adopted by SEC-001b / SEC-001d (Phase 5 #3 / #5); legacy 403
+# helper migration completed in iter-1 D.8 (2026-05-01) — all release-id
+# callers now use Depends(require_release_in_scope).
+# Vuln-side: legacy `_assert_vuln_org` (403 oracle-leaking) deleted in
+# iter-1 PR-3 O.1 (2026-05-02); get_vuln_history is the only viewer-
+# accessible vuln-id endpoint and now uses Depends(require_vuln_in_scope).
 
 def assert_release_in_scope(release, org_scope: str | None) -> None:
     """Combined existence + ownership check.  Returns 404 in both failure
@@ -128,6 +135,48 @@ def require_release_in_scope(
     )
     assert_release_in_scope(release, org_scope)
     return release
+
+
+def assert_vuln_in_scope(vuln, org_scope: str | None, db: Session) -> None:
+    """Combined existence + ownership check for a Vulnerability.  Returns 404
+    in both failure modes (CWE-204 Observable Response Discrepancy / oracle
+    prevention).  Mirrors assert_release_in_scope (D.8) — uniform semantics
+    across release-id and vuln-id scopes.
+
+    Walks Vulnerability → Component → Release → Product → organization_id.
+    Three sequential queries (matches legacy _assert_vuln_org behavior;
+    intentionally not joinedload-optimized — get_vuln_history is the only
+    caller and is not on a hot path)."""
+    from app.models.component import Component
+    from app.models.product import Product
+    from app.models.release import Release
+    if vuln is None:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    if not org_scope:
+        return
+    comp = db.query(Component).filter(Component.id == vuln.component_id).first()
+    if not comp:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    rel = db.query(Release).filter(Release.id == comp.release_id).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    product = db.query(Product).filter(Product.id == rel.product_id).first()
+    if not product or product.organization_id != org_scope:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+
+
+def require_vuln_in_scope(
+    vuln_id: str,
+    org_scope: str | None = Depends(get_org_scope),
+    db: Session = Depends(get_db),
+):
+    """FastAPI dependency: load Vulnerability by path param, assert ownership,
+    return vuln.  Use as `vuln: Vulnerability = Depends(require_vuln_in_scope)`.
+    Forgetting becomes a CI failure (enforcement test), not silent leak."""
+    from app.models.vulnerability import Vulnerability
+    vuln = db.query(Vulnerability).filter(Vulnerability.id == vuln_id).first()
+    assert_vuln_in_scope(vuln, org_scope, db)
+    return vuln
 
 
 def release_context(release, db: Session) -> tuple:
