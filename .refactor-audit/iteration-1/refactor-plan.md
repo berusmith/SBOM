@@ -1063,4 +1063,10 @@ After your review, if you approve, **say "go"** and I will start with §0 Pre-fl
 - Iter-2 promotion rule: opportunistic — promote when next iter's first audit lint-pass runs.  If `code-principles.md` §J6.5's promotion threshold (`> 3 invocations per PR signals lint baseline drift`) trips at any point in iter-2 PR-1, this FU is bundled into the resulting planned audit-time lint sweep stage; otherwise it is a stand-alone tidy commit
 - Cross-ref: F-stage final pyflakes sweep output (D18 verification line); `code-principles.md` §J6.5 condition (a); ledger D18 (F-stage scope) + D19 (§K STOP that prevented F-stage cross-file expansion)
 
+### FU-1.013 — 為 future iter PR 估算加入 expected LOC delta 分項表
+- Reason this is NOT in iter-1: Plan §3 沒設 LOC budget, iter-1 sanity sweep 用的 ±5% heuristic 是 reviewer 口頭值不是契約; 在 iter-1 中追加會是「事後加 KPI」反 pattern
+- Proposed change: Phase 7 plan template 加入 "LOC delta forecast" 子段, 要求列出 (a) test additions / (b) module split overhead / (c) schema centralization or other intentional growth / (d) expected shrink from refactor — 加總給出 expected net delta, 並說明 ±X% 容忍度
+- Iter-2 promotion rule: plan 階段必做 (template change), 非 followup-as-task
+- Cross-ref: ledger D20 (原始 trigger event) + plan §3 / Phase 7 future template change
+
 End of refactor-plan.md
