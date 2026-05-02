@@ -256,6 +256,13 @@ finding_id_prefix: CODE-1.NNN
 - **Effort**: S
 - **Risk of Fix**: low — output namespace string changes; downstream consumers are zero per D1
 - **Confidence**: High
+- **Status (PR-2 Stage K.2b, 2026-05-02)**: **CLOSED**.  Implemented in commit `1054a38`.
+  - `Settings.CSAF_NAMESPACE` field added to `core/config.py` (Stage K.1 commit `9893d37`).
+  - `reports.py:147` substitution: env-var-driven via `settings.CSAF_NAMESPACE.strip()`; falls back to `f"https://sbom-platform.local/{org_slug}{namespace_suffix}"` when unset (per Q-PR2-1 (b)).
+  - Stale `# CODE-1.013 — fix in PR-2 F.5` comment removed in same commit (§J6.5 broken-window).
+  - 3 unit tests added (`test_reports_csaf.py`) — fallback / env-set / env-with-whitespace paths.
+  - **Note on Trigger / Location lines above**: pre-PR-1 paths (`releases.py:1013` / `:1171`) no longer apply; CSAF code lives at `usecases/release/reports.py:147` post-D.4 move.
+  - Recorded as ledger D28.
 
 ---
 
