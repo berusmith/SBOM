@@ -872,6 +872,21 @@ filter out audit-doc commits first, then count what remains.  If the
 filter produces a number > 22 (15% over the 19 estimate), invoke
 T3-soft (re-evaluate scope); if > 25, invoke T3-hard (cut scope).
 
+**PR-1 actual landing (post-F.3, 2026-05-02)**: 22 production commits —
+**exactly at the T3-soft warning line** per §3.4 trigger thresholds
+(`> 22` invokes T3-soft; strict greater-than).  Margin to T3-soft = 0;
+not exceeded.  Stage breakdown: A.1-A.3 (3) + B.1-B.4 (4) + C.0-C.2 (3)
++ D.1-D.8 (8) + E.1-E.2 (2) + F.1-F.2 (2) = 22.  Audit-doc commits at
+PR-1 close: 12 (Phase 1-7 baseline + 11 mid-iter audit-doc commits
+through F.4-audit), NOT counted.  **Implication for future J2 PRs**:
+this PR-1 review-fix sweep (F-stage, 2 production commits) consumed all
+remaining margin to T3-soft.  Future PRs of comparable scope should
+reserve **≥ 2 production commits of headroom in the plan estimate**
+specifically for review-fix sweeps; otherwise a review fix can trip
+T3-soft on the first invocation.  Cross-ref: ledger D16 (budget rule) +
+D18 (F-stage triggered review-fix) + D19 (§K STOP that prevented an
+F.4-production fix-forward from crossing the line).
+
 ### PR-1 acceptance gate (before merge)
 - [ ] All Stage A unit tests pass (≥ 30 function-level + ≥ 75 HTTP characterization)
 - [ ] `test_all.py` 54/54 green (existing CI gate)
@@ -1041,5 +1056,11 @@ After your review, if you approve, **say "go"** and I will start with §0 Pre-fl
 - **Wider observation (already a debt signal)**: the Suppression value object exists in iter-1 but NO production write path constructs it. The suppress endpoint in `vulnerabilities.py` still mutates ORM columns directly. A natural follow-on refactor: rewrite the suppress endpoint to (a) construct `Suppression(...)` first (triggering invariant validation at the boundary), then (b) persist to ORM. That makes the value object load-bearing instead of decorative
 - Iter-2 promotion rule: promote at the same time as the suppress-endpoint rewrite (whoever wires Suppression onto the write path) — both naturally land in the same iter
 - Cross-ref: B.4 commit `e690bb6` body; `services/monitor.py:130-154` expired-cleanup loop; `backend/app/api/vulnerabilities.py` (the future write-path call site)
+
+### FU-1.012 — `stats.py:169` pre-existing dead local `inc_counts = {}` cleanup
+- Reason this is NOT in iter-1: `stats.py` is not a F-stage touched file (F.1 only touched `releases.py` + `main.py`; F.2 only touched `share.py`).  Per `code-principles.md` §J6.5 condition (a) "same-file boundary", a J6.5 review-time bundling requires the dead code to live in the same file the parent commit is already modifying — cross-file pickup is explicitly forbidden by J6.5 to prevent uncontrolled scope creep.  Pyflakes flagged this finding during the F-stage final sweep (`stats.py:169:5: local variable 'inc_counts' is assigned to but never used`); blame `a72590e2` 2026-04-22 confirms it predates PR-1.  An adjacent finding `stats.py:16:1: 'app.models.vex_history.VexHistory' imported but unused` is a `# noqa: F401` annotated model side-effect import (false positive — pyflakes does not honor noqa) and does NOT belong in this followup
+- Proposed change: a single-line tidy commit deleting line 169 (`inc_counts = {}  # per-org breakdown not needed (shown in totals)`) plus a verification step (Grep `inc_counts` across `stats.py` to confirm no later read site — comment already says "not needed", but the grep is the contract).  Expected diff: 1 line deleted, 0 added
+- Iter-2 promotion rule: opportunistic — promote when next iter's first audit lint-pass runs.  If `code-principles.md` §J6.5's promotion threshold (`> 3 invocations per PR signals lint baseline drift`) trips at any point in iter-2 PR-1, this FU is bundled into the resulting planned audit-time lint sweep stage; otherwise it is a stand-alone tidy commit
+- Cross-ref: F-stage final pyflakes sweep output (D18 verification line); `code-principles.md` §J6.5 condition (a); ledger D18 (F-stage scope) + D19 (§K STOP that prevented F-stage cross-file expansion)
 
 End of refactor-plan.md

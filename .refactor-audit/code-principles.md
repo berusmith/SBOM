@@ -227,6 +227,26 @@ The cumulative count of K invocations per iter is itself a useful signal
 (frequent = plan precision needs improvement; rare = plan + reviewer
 discipline are well-calibrated).
 
+**K.6 — §K applies to all observable facts, not only code contents**
+(added 2026-05-02 per iter-1 D19): K1/K2/K3 above use file contents,
+authentication shape, data flow, function signatures, and grep results
+as the canonical examples.  This wording is illustrative, not
+exhaustive.  Iter-1's third §K invocation (F-stage post-execution,
+ledger D19) was triggered by a `git log` / `git status` fact mismatch
+rather than a code-content fact: user issued "go F.1" while F.1/F.2/F.3
+were already on HEAD.  §K applies equally there — and to every other
+class of observable fact: file mtimes, process state, network state,
+HTTP responses from external services, environment-variable values,
+clock time, etc.  **Boundary clarification**: any premise embedded in
+or implied by a user instruction, that the agent can verify with a
+tool call (read / grep / shell / API) and find to disagree with, is a
+§K trigger.  **Counter-example (NOT a §K trigger)**: user's value
+judgements ("this design is ugly", "this commit body is too long",
+"this name should be different") are not factual claims — they are
+preference statements; route them through normal design discussion,
+NOT §K STOP.  **First invocation under K.6 framing**: F-stage 2026-05-02
+(D19); recorded in §K invocation count.
+
 ---
 
 ### Iter-1 additions (2026-04-29, post user Q1–Q10 answers)
