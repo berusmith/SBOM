@@ -170,8 +170,17 @@ with engine.connect() as conn:
     ]:
         try:
             conn.execute(text(_idx))
-        except Exception:
-            pass
+        except Exception as _idx_err:
+            # PR-3 N.3 (CODE-1.014 partial): silent swallow → log + continue.
+            # CREATE INDEX is best-effort during startup migration; missing
+            # column / pre-migration table state is expected on first boot.
+            # Broad catch retained because DDL errors are diverse (SQLite
+            # vs Postgres syntax differences, race with another worker, etc.).
+            import logging as _logging
+            _logging.getLogger("sbom.migration").warning(
+                "CREATE INDEX failed (migration ordering / pre-existing schema?): %s — sql: %s",
+                _idx_err, _idx,
+            )
     conn.commit()
 
 # Create any missing tables (new tables like audit_events)
