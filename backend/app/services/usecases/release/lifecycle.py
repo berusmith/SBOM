@@ -42,6 +42,7 @@ from app.models.component import Component
 from app.models.product import Product
 from app.models.release import Release
 from app.models.vulnerability import Vulnerability
+from app.schemas.release_lifecycle import ReleaseNotesUpdate, ReleaseVersionUpdate
 from app.services.license_classifier import classify_license
 from app.services.sbom_parser import check_ntia as _check_ntia_fn
 from app.services.signature_verifier import verify_signature as _verify_sig
@@ -64,15 +65,19 @@ def get_release(release_id: str, release: Release = Depends(require_release_in_s
 
 
 @router.patch("/{release_id}/version")
-def update_version(release_id: str, body: dict, _admin: dict = Depends(require_admin),
+def update_version(release_id: str, body: ReleaseVersionUpdate, _admin: dict = Depends(require_admin),
                    release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
-    """Rename a release version string (admin only)."""
+    """Rename a release version string (admin only).
+
+    Per Q-P7-3 + E.2 scope lock: typed body, BEHAVIOR-EQUIVALENT.  The schema's
+    field validator does the strip; the handler still raises 400 on empty-after-strip
+    (preserves zh-TW message; Pydantic min_length=1 would emit 422 instead).
+    """
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法修改版本號")
-    new_version = (body.get("version") or "").strip()
-    if not new_version:
+    if not body.version:
         raise HTTPException(status_code=400, detail="版本號不可為空")
-    release.version = new_version
+    release.version = body.version
     db.commit()
     return {"id": release_id, "version": release.version}
 
@@ -88,13 +93,17 @@ def delete_release(release_id: str, _admin: dict = Depends(require_admin), relea
 
 
 @router.patch("/{release_id}/notes")
-def update_notes(release_id: str, body: dict, _admin: dict = Depends(require_admin),
+def update_notes(release_id: str, body: ReleaseNotesUpdate, _admin: dict = Depends(require_admin),
                  release: Release = Depends(require_release_in_scope), db: Session = Depends(get_db)):
-    """Update release notes / changelog text."""
+    """Update release notes / changelog text.
+
+    Per Q-P7-3 + E.2 scope lock: typed body, BEHAVIOR-EQUIVALENT.  The schema's
+    field validator does the silent truncation at 5000 chars (NO 422 on overflow);
+    the handler still converts empty string to None for storage.
+    """
     if release.locked:
         raise HTTPException(status_code=409, detail="版本已鎖定，無法修改備註")
-    notes = str(body.get("notes", "") or "")[:5000]  # hard cap 5000 chars (silent truncation per E.2 behavior-equivalence)
-    release.notes = notes or None
+    release.notes = body.notes or None
     db.commit()
     return {"notes": release.notes}
 

@@ -223,3 +223,74 @@ def test_cross_org_access_returns_404_post_d8(cross_org_client, seeded_orga_rele
         f"{method} {url} expected detail='Release not found' (uniform per CWE-204), "
         f"got {resp.json()}"
     )
+
+
+# ── Set 4 — E.2 byte-equality verification (typed body behavior-equivalence) ──
+# Per Q-P7-3 + Stage E scope lock: PATCH /version + PATCH /notes accepted typed
+# Pydantic bodies in E.2 but MUST behave identically to the prior dict-shape
+# handlers.  These 4 boundary inputs lock the equivalence:
+#   (1) version=""               → 400 "版本號不可為空" (NOT 422; preserves zh-TW + status)
+#   (2) version="   " (ws-only)  → 400 (after strip)
+#   (3) notes=4999 chars         → 200, stored as-is
+#   (4) notes=5001 chars         → 200, silently truncated to 5000 (NOT 422)
+
+@pytest.fixture
+def admin_client(db_session):
+    """TestClient configured as an admin (no org_scope; require_admin passes)."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.core.database import get_db
+    from app.core.deps import get_current_user
+
+    def _override_get_db():
+        try:
+            yield db_session
+        finally:
+            pass
+
+    def _override_get_current_user():
+        return {"username": "admin-test", "role": "admin", "org_id": None, "user_id": "u-admin"}
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.http
+def test_e2_update_version_empty_string_rejects_with_zh_400(admin_client, seeded_orga_release):
+    """Boundary 1: version='' → 400 + zh-TW '版本號不可為空' (NOT 422)."""
+    resp = admin_client.patch(f"/api/releases/{seeded_orga_release}/version", json={"version": ""})
+    assert resp.status_code == 400, f"expected 400, got {resp.status_code}: {resp.text[:200]}"
+    assert resp.json()["detail"] == "版本號不可為空"
+
+
+@pytest.mark.http
+def test_e2_update_version_whitespace_only_rejects_with_zh_400(admin_client, seeded_orga_release):
+    """Boundary 2: version='   ' → strip → '' → 400 + zh-TW (NOT 422)."""
+    resp = admin_client.patch(f"/api/releases/{seeded_orga_release}/version", json={"version": "   "})
+    assert resp.status_code == 400, f"expected 400, got {resp.status_code}: {resp.text[:200]}"
+    assert resp.json()["detail"] == "版本號不可為空"
+
+
+@pytest.mark.http
+def test_e2_update_notes_below_cap_stored_as_is(admin_client, seeded_orga_release):
+    """Boundary 3: notes=4999 chars → 200, stored verbatim (no truncation)."""
+    payload = "x" * 4999
+    resp = admin_client.patch(f"/api/releases/{seeded_orga_release}/notes", json={"notes": payload})
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    assert resp.json()["notes"] == payload
+    assert len(resp.json()["notes"]) == 4999
+
+
+@pytest.mark.http
+def test_e2_update_notes_over_cap_silently_truncated_to_5000(admin_client, seeded_orga_release):
+    """Boundary 4: notes=5001 chars → 200, truncated to 5000 (NO 422)."""
+    payload = "x" * 5001
+    resp = admin_client.patch(f"/api/releases/{seeded_orga_release}/notes", json={"notes": payload})
+    assert resp.status_code == 200, f"expected 200 (silent truncation, NOT 422), got {resp.status_code}: {resp.text[:200]}"
+    assert len(resp.json()["notes"]) == 5000
+    assert resp.json()["notes"] == "x" * 5000
