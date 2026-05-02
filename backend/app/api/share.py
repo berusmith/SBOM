@@ -12,34 +12,30 @@ import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import audit
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_org_scope
+from app.core.deps import get_current_user, require_release_in_scope
 from app.core.plan import require_plan
 from app.core.security import safe_attachment_filename
-from app.models.component import Component
-from app.models.organization import Organization
-from app.models.product import Product
 from app.models.release import Release
 from app.models.share_link import SbomShareLink
+from app.schemas.share_link import ShareLinkCreate
 
 router = APIRouter(tags=["share"])
 
-
-def _assert_release_org(release: Release, org_scope: str | None, db: Session) -> None:
-    """Raise 403 if a viewer is touching another org's release."""
-    if not org_scope:
-        return  # admin
-    product = db.query(Product).filter(Product.id == release.product_id).first()
-    if not product or product.organization_id != org_scope:
-        raise HTTPException(status_code=403, detail="無權存取此版本")
+# Local legacy 403 ownership helper DELETED in D.8 (2026-05-01) per ARCH-1.003
+# contract evolution.  The 3 admin endpoints below now use the canonical
+# Depends(require_release_in_scope) pattern (404 + "Release not found" CWE-204
+# oracle prevention).
+#
+# NOTE: share.py also contains a public share-token endpoint (download_shared_sbom,
+# below) that does its own share-token resolution; that auth path is a separate
+# concern covered by FU-1.010 / FU-1.011 followups, not D.8 scope.
 
 _INTERNAL_PREFIXES = ("internal://", "private://", "pkg:internal/", "pkg:private/")
 
@@ -81,10 +77,7 @@ def _apply_mask(sbom: dict, mask_internal: bool) -> dict:
 
 
 # ── Create link ───────────────────────────────────────────────────────────────
-
-class ShareLinkCreate(BaseModel):
-    expires_hours: Optional[int] = 72   # None = never
-    mask_internal: bool = False
+# ShareLinkCreate moved to backend/app/schemas/share_link.py in E.1 (2026-05-01).
 
 
 @router.post("/api/releases/{release_id}/share-link")
@@ -93,13 +86,10 @@ def create_share_link(
     body: ShareLinkCreate,
     _plan=Depends(require_plan("signature")),   # Professional only
     user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+    # release was loaded + ownership-checked (CWE-204 oracle-safe 404) by Depends.
     if not release.sbom_file_path or not os.path.exists(release.sbom_file_path):
         raise HTTPException(status_code=400, detail="此版本尚未上傳 SBOM，無法建立分享連結")
 
@@ -143,13 +133,10 @@ def list_share_links(
     release_id: str,
     _plan=Depends(require_plan("signature")),
     _user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    _release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+    # _release loaded + ownership-checked (CWE-204 oracle-safe 404) by Depends.
     links = db.query(SbomShareLink).filter(SbomShareLink.release_id == release_id).all()
     now = datetime.now(timezone.utc)
     return [
@@ -175,13 +162,10 @@ def revoke_share_link(
     link_id: str,
     _plan=Depends(require_plan("signature")),
     _user: dict = Depends(get_current_user),
-    org_scope: str | None = Depends(get_org_scope),
+    _release: Release = Depends(require_release_in_scope),
     db: Session = Depends(get_db),
 ):
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    _assert_release_org(release, org_scope, db)
+    # _release loaded + ownership-checked (CWE-204 oracle-safe 404) by Depends.
     lk = db.query(SbomShareLink).filter(
         SbomShareLink.id == link_id,
         SbomShareLink.release_id == release_id,

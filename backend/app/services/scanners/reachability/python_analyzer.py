@@ -299,7 +299,9 @@ def scan_zip(zip_bytes: bytes) -> ScanResult:
     zf.close()
 
     # Phase 3: AST analysis — only for packages found in main code
-    main_pkgs = {pkg for pkg, info in presence.items() if info["main"]}
+    # Use .get(key, default) per the Wave-D contract: additive inner keys
+    # (production_runtime, build_only, etc.) must be read-side compatible.
+    main_pkgs = {pkg for pkg, info in presence.items() if info.get("main", False)}
     ast_reachable: set[str] = set()
     if main_pkgs:
         for filepath, content in main_py_files:
@@ -327,9 +329,9 @@ def classify_vulns(
         info = result.presence.get(pkg)
         if info is None:
             out[v.id] = "not_found"
-        elif info["main"]:
+        elif info.get("main", False):
             out[v.id] = "function_reachable" if pkg in result.ast_reachable else "reachable"
-        elif info["test"]:
+        elif info.get("test", False):
             out[v.id] = "test_only"
         else:
             out[v.id] = "not_found"
