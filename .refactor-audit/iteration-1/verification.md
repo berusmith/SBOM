@@ -30,7 +30,7 @@ Conservative scoring is preferred over optimistic per the user-stated rule
 
 **Method**: `pytest --cov=app/services/usecases --cov=app/domain --cov-report=term`
 
-**Evidence (full term report)**:
+**Evidence (full term report, post-G.1 commit `b9dbf19`)**:
 ```
 app/domain/__init__.py                             0      0   100%
 app/domain/severity.py                             6      0   100%
@@ -40,21 +40,19 @@ app/domain/vex.py                                  0      0   100%
 app/services/usecases/__init__.py                  0      0   100%
 app/services/usecases/release/__init__.py          0      0   100%
 app/services/usecases/release/enrich.py          179    144    20%
-app/services/usecases/release/lifecycle.py       211    153    27%
-app/services/usecases/release/reports.py         222    171    23%
+app/services/usecases/release/lifecycle.py       211     81    62%
+app/services/usecases/release/reports.py         222    143    36%
 app/services/usecases/release/scanners.py        181    154    15%
 app/services/usecases/release/signature.py        72     54    25%
 app/services/usecases/release/upload_sbom.py     123     91    26%
-TOTAL                                           1037    767    26%
+TOTAL                                           1037    667    36%
 ```
 
-**Result**: **FAIL** — 26% vs ≥ 30% required (4 percentage points short).
+**Result**: **PASS** — 36% exceeds 30% threshold by 6 percentage points.
 
-**Decomposition of the miss**:
-- Domain layer: 100% across 4 modules (49 statements) — fully covered by function-level tests.
-- Usecases layer: ~24% aggregate (988 statements / ~242 covered) — covered only by 48 HTTP characterization tests against 7 endpoints in `test_releases_http_chars.py`. The other ~30 endpoints across the 6 usecase modules are uncovered by characterization tests. Adding ~5–10 more characterization tests would push above 30%.
+**G.1 remediation (post-Phase-9 fix)**: 10 characterization tests added in commit `b9dbf19` (Set 5 of `test_releases_http_chars.py`) targeting the highest-yield uncovered endpoints in `lifecycle.py` + `reports.py`. Each test exercises a real handler body via authenticated admin + same-org seeded release, asserting both status code and response shape. Module gains: `lifecycle.py` 27% → 62% (+35 points); `reports.py` 23% → 36% (+13 points). Other modules unchanged. Total: 26% → 36% (+10 points). Pre-G.1 history of this AC failure preserved in ledger D21.
 
-**Standing**: This is a **hard merge blocker** per `refactor-plan.md` §6 acceptance gate. Recommendation in §5.3 below addresses the resolution path.
+**Standing**: PASS — no longer a merge blocker.
 
 ### AC-T3 — deterministic + < 5s wall-clock
 
@@ -160,9 +158,8 @@ lifecycle.py:   """Lifecycle endpoints — get / patch / delete / list / lock / 
 
 ### §1 summary
 
-**12 of 13 hard checks PASS, 1 FAILS:**
-- ✅ AC-T1, AC-T3, AC-T4
-- ❌ **AC-T2 FAIL (26% vs ≥ 30%)**
+**13 of 13 hard checks PASS** (post-G.1 commit `b9dbf19`):
+- ✅ AC-T1, **AC-T2 (PASS — 36% post-G.1, was FAIL @ 26% pre-G.1)**, AC-T3, AC-T4
 - ✅ AC-D1, AC-D2, AC-D3, AC-D4
 - ✅ AC-A1, AC-A2, AC-A3, AC-A4
 - ✅ SDLC-001 enforcement, Frontend 403 grep, Frontend 無權 grep, E.2 byte-equality, D.8 sole-evolution
@@ -180,7 +177,7 @@ Calibration rubric: `calibration.md` §3 (12 dimensions, each scored 0–10, wei
 | 3 | Abstraction discipline | 7 | 7 | **7** | 0 | Hold (per calibration). AR-1/2/3 red lines not violated; no over-abstraction (no `BaseRepository`, no factory pattern proliferation, no premature DI container). 6 usecase modules are thin endpoint shells with shared `domain/` + `services/`. Verified by inspection of usecases module structure. |
 | 4 | Readability density | 7 | 8 | **8** | +1 | Smaller files (largest = 469 LOC vs 2101 god-router); each usecase module has named single-responsibility docstring (per AC-A3); domain modules are 9–96 LOC each. Function names visible to grep no longer require navigating 2102 LOC. Judgment call (no hard AC for dim 4 per calibration §3.3). |
 | 5 | Error handling | 5 | 6 | **5** | 0 | **Target missed**. Broad-except count in PR-1-touched files: master baseline 10 (releases.py 5 + main.py 2 + alerts.py 3) → current HEAD 12 (main.py 2 + alerts.py 3 + python_analyzer.py 1 + enrich.py 2 + lifecycle.py 1 + upload_sbom.py 3). Net **+2 broad excepts** (slight regression in absolute count). CODE-1.011 (silent except triage from code-audit) was NOT addressed in PR-1. No typed domain exceptions introduced in `domain/` (would have required SuppressionViolation, SLAViolation classes — not done). Score holds at 5; target +1 missed. |
-| 6 | Test quality | 3 | 6 | **5** | +2 | **Target missed by 1**. AC-T1 PASS (97/145 = 66.9%); AC-T3 PASS (1.27s); AC-T4 PASS (fixtures + parametrize); **AC-T2 FAIL (26% vs ≥ 30%)**. Per calibration §3.3 failure-mode wording ("if AC-T1 fails, Test quality scores 5 not 6"), an AC failure caps the score at 5. Score = 5 (delta +2 actual vs +3 target). Real progress: pytest infra from 0 → 145 tests; 75 function-level tests genuinely test extracted helpers. |
+| 6 | Test quality | 3 | 6 | **6** | +3 | **Target hit (post-G.1 commit `b9dbf19`)**. AC-T1 PASS (97/155 = 62.6% — ratio shifted slightly with 10 new HTTP tests added; still 1.9× the 33.3% floor); AC-T2 PASS (36% post-G.1, was 26% pre-G.1); AC-T3 PASS (1.44s); AC-T4 PASS (fixtures + parametrize). All four ACs pass; per calibration §3.3 the score reaches the +3 target. Real progress: pytest infra from 0 → 155 tests; 97 function-level + 58 HTTP characterization tests; coverage on usecases + domain layer 0 → 36%. |
 | 7 | Observability | 4 | 4 | **4** | 0 | Hold per Q7 (out of scope this iter). No structured logging / Prometheus / OpenTelemetry added. Verified: no `logging.getLogger(__name__).info(...)` density change in touched files (logger emit count roughly preserved from master). |
 | 8 | Performance awareness | 5 | 6 | **5** | 0 | **Target missed**. Calibration target was "4 hot-spot benchmarks committed as runnable scripts". Verified: `find backend/tests -name 'bench_*.py'` = 0 matches. `performance-audit.md` (Phase 5) cited the existing OSV optimization in `CHANGELOG.md` per D6.3-correction but the proposed reproducer script `backend/tests/bench/bench_osv.py` was NOT committed in PR-1. Score holds at 5; target +1 missed. |
 | 9 | API design | 6 | 7 | **7** | +1 | Schema centralization: `schemas/release_lifecycle.py` (50 LOC, ReleaseVersionUpdate + ReleaseNotesUpdate, E.2 commit `9d14294`) + `schemas/share_link.py` (19 LOC, ShareLinkCreate, E.1 commit `e1b017a`). ARCH-1.003 contract evolution: 27 release-id endpoints flipped from 403 oracle leak to canonical 404 (D.8 commit `c3ac0a1`, ledger D11). HARD LOCK 2.A/2.B both 0. |
@@ -188,30 +185,33 @@ Calibration rubric: `calibration.md` §3 (12 dimensions, each scored 0–10, wei
 | 11 | Build & tooling | 7 | 7 | **7** | 0 | Hold. Only `pytest.ini` (9 lines) added; no other tooling refactor. |
 | 12 | Doc density | 9 | 9 | **9** | 0 | Hold. Massive audit-doc additions (`.refactor-audit/` ~3,800 LOC across 13 files including 1,066-LOC plan and 100+-LOC ledger). New module docstrings present in all 6 usecase modules + 4 domain modules + scanners/reachability. **Honesty caveat**: calibration §3 noted "2-3 new ADRs in `.knowledge/decisions/`" as the target action — **0 ADRs added in `.knowledge/decisions/`** (the audit-doc lives in `.refactor-audit/` which is a separate track). ADR backlog is a Phase 10 candidate. Score holds at 9 (very high, doc additions sustain it; ADR miss noted). |
 
-### §2 weighted Δ calculation
+### §2 weighted Δ calculation (post-G.1)
 
 ```
-Sum (post):  6+6+7+8+5+5+4+5+7+8+7+9 = 77
+Sum (post):  6+6+7+8+5+6+4+5+7+8+7+9 = 78   (was 77 pre-G.1; dim 6 +1)
 Sum (pre):   5+3+7+7+5+3+4+5+6+8+7+9 = 69
-Δ (sum):     +8
-Weighted Δ:  8 / 12 = +0.667
+Δ (sum):     +9                              (was +8 pre-G.1)
+Weighted Δ:  9 / 12 = +0.75                  (was +0.667 pre-G.1)
 ```
 
 **Target: +1.0 weighted**
-**Actual: +0.667 weighted**
+**Actual: +0.75 weighted (post-G.1; pre-G.1 was +0.667)**
 
 Per calibration §3.4 composite outcome rules:
 - ≥ +0.8 = success
 - **[+0.5, +0.8) = partial success** ← actual lands here
 - < +0.5 = fail (re-evaluate work)
 
-**Result**: **PARTIAL SUCCESS** (weighted Δ = +0.667).
+**Result**: **PARTIAL SUCCESS** (weighted Δ = +0.75).
 
-**Misses**:
+Even with AC-T2 remediation lifting dim 6 to target, weighted Δ remains in the partial-success band because three other dims missed their target individually. Partial success is honest record per calibration §3.4 — does NOT block merge (which is gated on hard blockers in §5.1, all PASS post-G.1).
+
+**Misses (3 of 12, post-G.1)**:
 - Dim 1 Architecture: target +2, actual +1 (conservative score; AC pass but grokkability mid)
 - Dim 5 Error handling: target +1, actual 0 (broad-except slightly increased; CODE-1.011 not addressed)
-- Dim 6 Test quality: target +3, actual +2 (AC-T2 fails — coverage 26% vs ≥ 30%)
 - Dim 8 Performance: target +1, actual 0 (no benchmark scripts committed)
+
+**Pre-G.1 had 4 misses; G.1 removed dim 6 from this list by adding 10 characterization tests pushing AC-T2 to PASS.**
 
 **Hits**:
 - Dim 2 Domain purity: +3 ✓
@@ -301,16 +301,19 @@ Re-running F-stage final sweep on the 26 PR-1-touched production files (constant
 
 Listed below are all gaps, deferred items, retroactive rule changes, and judgment calls that PR-1 carries. None are concealed; each has a ledger or followup record.
 
-### §4.1 — Acceptance criteria miss (1 hard fail)
+### §4.1 — Acceptance criteria miss (post-G.1: ZERO)
 
-- **AC-T2 FAIL (26% vs ≥ 30%)** — characterization tests cover only 7 of ~37 endpoints in usecases modules. To reach 30%, ~5–10 more characterization tests need to be added (estimated < 200 LOC). Not addressed in PR-1; recommendation in §5.3 below.
+**Pre-G.1**: AC-T2 FAIL (26% vs ≥ 30%) — sole hard-AC miss.
+**Post-G.1 commit `b9dbf19`**: AC-T2 PASS (36%, 6-pt margin). All 13 hard ACs PASS.
 
-### §4.2 — Dimension target misses (4 of 12)
+The pre-G.1 failure history is preserved in ledger D21 (the §K invocation that surfaced it) and D22 (the T3-soft trigger acceptance + remediation strategy). This section is retained as historical record of how the gate self-corrected via the verification process.
+
+### §4.2 — Dimension target misses (3 of 12, post-G.1; was 4 of 12 pre-G.1)
 
 - **Dim 1 Architecture** target +2, actual +1: conservative scoring per user directive — `lifecycle.py` 13 endpoints / `reports.py` 469 LOC are not grokkable in 30s. Module sizes are within cap but module-internal density is mid.
 - **Dim 5 Error handling** target +1, actual 0: broad-except count grew 10 → 12 net (slight regression in absolute count, no typed domain exceptions introduced). CODE-1.011 (silent except triage) was not addressed in PR-1.
-- **Dim 6 Test quality** target +3, actual +2: AC-T2 fails by 4 percentage points; calibration §3.3 failure mode caps the score at 5.
 - **Dim 8 Performance awareness** target +1, actual 0: no benchmark scripts committed (`bench_osv.py` reproducer cited in `performance-audit.md` was not committed in PR-1).
+- ~~**Dim 6 Test quality** target +3, actual +2~~ — **moved to hits post-G.1** (AC-T2 PASS @ 36%; calibration §3.3 cap removed; full +3 achieved).
 
 ### §4.3 — Retroactive rule changes (1)
 
@@ -328,10 +331,10 @@ FU-1.001 through FU-1.013 recorded in `refactor-plan.md` §10. Material items:
 
 ### §4.5 — Discipline invocations (signal of plan precision)
 
-- **§K STOP-on-factual-disagreement: 4 invocations** — all four correctly blocked an instruction that, if executed naively, would have fixed an error in production-commit form. Per §K closing paragraph, 4-per-iter signals plan precision is calibrated correctly (not 0 = K is dead letter; not 10+ = plan too imprecise to follow). **Plus this Phase-9 verification triggered §K invocation #5** — see §6 D21 entry; AC-T2 fail surfaced as K3 ("verification result outside expected range").
+- **§K STOP-on-factual-disagreement: 5 invocations** — all five correctly blocked an instruction that, if executed naively, would have fixed an error in production-commit form. Per §K closing paragraph, 5-per-iter signals plan precision is calibrated correctly. Invocations: #1 D.8 share.py scope discovery; #2 D.8 share-token premise; #3 F-stage post-execution git-history mismatch (D19); #4 F.5-audit pre-commit sanity sweep partition (D20); #5 Phase 9 verification AC-T2 fail (D21).
 - **§J6 fallback-to-separate-commit: 1 invocation** (C.0 commit `c2f0335`).
 - **§J6.5 first invocation: F.2** (3 pre-existing dead imports bundled with 3 PR-1-caused).
-- **T-trigger invocations: 0** (T1 / T2 / T3-soft / T3-hard / T4 all clear).
+- **T-trigger invocations: 1 (post-G.1) — D22 T3-soft acceptance** for AC-T2 remediation commit pushing production count 22 → 23. Pre-G.1 was 0; G.1 commit `b9dbf19` is the first to trip a T-threshold in iter-1. D22 records the explicit acceptance + future budget hygiene rule (one-time only, scoped to AC-T2 remediation).
 
 ### §4.6 — Carried forward at PR-1 close
 
@@ -348,7 +351,7 @@ FU-1.001 through FU-1.013 recorded in `refactor-plan.md` §10. Material items:
 | Blocker | PASS / FAIL | Evidence ref |
 |---|---|---|
 | AC-T1 (function-level test ratio ≥ 1/3) | PASS | §1 AC-T1 |
-| **AC-T2 (pytest-cov ≥ 30% on usecases + domain)** | **FAIL** | §1 AC-T2 — 26% < 30% |
+| AC-T2 (pytest-cov ≥ 30% on usecases + domain) | PASS (post-G.1) | §1 AC-T2 — 36% ≥ 30% (was FAIL @ 26% pre-G.1; remediated by commit `b9dbf19`) |
 | AC-T3 (deterministic + < 5s) | PASS | §1 AC-T3 |
 | AC-T4 (fixtures + parametrize) | PASS | §1 AC-T4 |
 | AC-D1/D2/D3/D4 (domain layer) | PASS | §1 AC-D* |
@@ -363,38 +366,43 @@ FU-1.001 through FU-1.013 recorded in `refactor-plan.md` §10. Material items:
 | git fsck clean | PASS | 0 errors / 0 warnings / 13 dangling blobs + 1 dangling tree (harmless per fsck semantics) |
 | no production-code change since F.5-audit | PASS | `git diff e0c3008..HEAD -- backend/ frontend/ tools/` empty (only `.refactor-audit/` modified) |
 
-**Result**: **1 of 15 hard blockers FAILS** (AC-T2).
+**Result (post-G.1)**: **all 15 hard blockers PASS**. (Pre-G.1 had 1 fail at AC-T2; remediated by commit `b9dbf19` per ledger D22.)
 
 ### §5.2 — Soft signals (disclose, do not block)
 
 | Signal | Value | Standing |
 |---|---|---|
-| Maturity weighted Δ | +0.667 (target +1.0) | Partial success per calibration §3.4 |
-| §K STOP cumulative | 5 (D.8 ×2 + F-stage post-exec + F.5-audit sanity sweep + this Phase-9) | Healthy signal — discipline is doing real work |
-| LOC growth | +1,549 backend (+11.5%) | Decomposed in D20; +1,097 tests + ~452 module overhead + balance schemas |
+| Maturity weighted Δ | +0.75 (target +1.0; was +0.667 pre-G.1) | Partial success per calibration §3.4 — does NOT block merge |
+| §K STOP cumulative | 5 (D.8 ×2 + F-stage post-exec + F.5-audit sanity sweep + Phase-9 AC-T2) | Healthy signal — discipline is doing real work |
+| T-trigger invocations | 1 (D22 T3-soft acceptance for G.1) | First T-trigger trip in iter-1; explicit acceptance recorded |
+| LOC growth | +1,765 backend (+13.1%) post-G.1 | +216 LOC of new tests added by G.1 to the +1,549 pre-G.1 baseline; all tests, no production code |
 | Followup count | 13 (FU-1.001..013) | Recorded in plan §10 |
-| Production commits | 22 | Below T3-soft warning line (`> 22`) by 1 — at the line; not exceeded |
-| Audit-doc commits | 14 (was 13 + this Phase-9 commit projected) | Not counted against budget per D16 |
+| Production commits | **23** (post-G.1) | Crossed T3-soft warning line (`> 22`) by 1; trip explicitly accepted per D22 |
+| Audit-doc commits | 15 (post-G.2 projected) | Not counted against budget per D16 |
 | ARCH-1.003 partial closure | 1 caller remains in `vulnerabilities.py` | FU-1.002; D11 standing accepts |
 | VEX state placeholder | `domain/vex.py` 9-LOC placeholder | Iter-2 candidate; AC-D1 satisfied by literal count |
 | 0 ADRs added | dim 12 target action missed | Phase 10 / iter-2 |
 
-### §5.3 — Recommendation
+### §5.3 — Recommendation (post-G.1)
 
-**(b) — merge after addressing AC-T2.**
+**(a) — ready to merge.**
 
-**Rationale**:
-1. **AC-T2 is listed in `refactor-plan.md` §6 PR-1 acceptance gate as a hard blocker** ("`pytest --cov=backend/app/services/usecases backend/app/domain` reports ≥ 30% on the new packages (AC-T2)"). Treating it as non-blocking would amount to retroactively softening the gate after the gate is missed — the same anti-pattern §K is designed to prevent.
-2. **The miss is small and fixable**: 26% vs ≥ 30% is a 4-percentage-point gap. ~5–10 additional characterization tests against currently-uncovered usecase endpoints (likely targeting `scanners.py` 15%, `enrich.py` 20%, `reports.py` 23% — the three lowest-coverage modules) should push above 30%. Estimated effort: < 200 LOC of new test code, no production-code change.
-3. **All other 14 of 15 hard blockers PASS**; the branch is otherwise merge-ready.
-4. **The maturity Δ shortfall (+0.667 vs +1.0)** is a partial-success signal per calibration §3.4, not a merge blocker. Honest record in this verification + ledger is the correct response, NOT scope-expansion within PR-1.
+**Rationale (post-G.1 commit `b9dbf19`)**:
+1. **All 15 hard blockers PASS** (§5.1 above) — including the previously-failing AC-T2, now at 36% with 6-percentage-point margin above the 30% threshold.
+2. **Maturity weighted Δ = +0.75** (target +1.0) is partial-success per calibration §3.4. Partial success is an honest record, NOT a merge blocker — the merge gate is hard blockers in §5.1, all PASS. The remaining gap (3 dims short of individual targets: dim 1 conservative architecture, dim 5 error handling, dim 8 performance) is explicitly recorded in §4.2 and inherits to iter-2 / PR-2.
+3. **§K discipline complete cycle demonstrated**:
+   - §K invocation #5 (Phase 9 self-discovery): AC-T2 fail surfaced via K3 ("verification result outside expected range").
+   - §K-driven remediation: G.1 commit `b9dbf19` adds 10 characterization tests, no production code change.
+   - §K-blocked alternative (silent acceptance of partial success) was rejected because it would retroactively soften a hard gate.
+   - Post-remediation: hard gate restored, AC-T2 PASS, recommendation upgrades from (b) to (a).
+4. **0 production behavior change since F.5-audit**: G.1 only adds test code (`backend/tests/unit/test_releases_http_chars.py` Set 5) + 1 new fixture. `git diff e0c3008..HEAD -- backend/app/ frontend/ tools/` is empty. No new endpoints, no schema changes, no behavior tweaks.
+5. **D22 T3-soft acceptance is explicit and bounded**: the `> 22` production-commit threshold was crossed by G.1 (count 22 → 23). Per D22, this trip is one-time, scoped to AC-T2 remediation, and any further commit pushing production count above 23 must invoke §K STOP. The audit trail makes the trade-off visible to future reviewers.
 
-**Path to (a) ready-to-merge**:
-- Add a small batch of HTTP characterization tests targeting `enrich.py`, `scanners.py`, `reports.py` low-coverage endpoints (estimated ~5–10 tests).
-- Re-run `pytest --cov=app/services/usecases --cov=app/domain` and confirm ≥ 30%.
-- Either: (i) bundle as a new commit in PR-1 (would push production count to 23, **crossing T3-soft**); OR (ii) accept that the test additions are "test infra growth" not "new feature" and add a §J6-style ledger note documenting the budget exception. (i) is the cleaner audit signal but tripping T3-soft is a real cost; (ii) is rule-tweaking and warrants user adjudication.
-
-**Decision deferred to user**. This verification commit does NOT itself address AC-T2 (per "verification 不執行 merge / 不擴張 scope" discipline).
+**What "ready to merge" means here**:
+- Branch passes all hard acceptance criteria.
+- Partial-success weighted Δ is documented and accepted (not a blocker).
+- Outstanding gaps are recorded in §4.2 + §4.6 + plan §10 followups for iter-2.
+- Merge action itself remains a separate user decision (push target: `origin` / `audit-mirror` / both; GitHub PR creation; merge strategy).
 
 ---
 
@@ -424,4 +432,26 @@ Tracked in `iteration-1/refactor-plan.md` §10; promotion rules per-FU.
 
 ---
 
-**End of verification.md.** No production code touched by this report; no merge action taken.
+### Phase 9 final update (post-G.1, 2026-05-02)
+
+AC-T2 remediation complete via G.1 commit `b9dbf19` adding 10 characterization tests targeting `lifecycle.py` + `reports.py` highest-yield uncovered endpoints. Coverage: 26% → 36% (+10 percentage points). AC-T2: FAIL → PASS.
+
+Maturity recalibrated:
+- Dim 6 Test quality: 5 → 6 (target hit; was capped at 5 by calibration §3.3 failure mode pre-G.1).
+- Sum (post): 77 → 78. Weighted Δ: +0.667 → **+0.75**. Still partial success (band [+0.5, +0.8)).
+- Misses: 4 → 3 (dim 6 moved to hits).
+
+Recommendation: (b) → **(a) ready-to-merge**.
+
+T-trigger record: G.1 production commit count 22 → 23 → **T3-soft tripped** (`> 22`). Explicit acceptance recorded as ledger D22 with one-time-only standing + future budget hygiene rule.
+
+§K invocation cumulative: 5 (unchanged from pre-G.1 — Phase-9 self-discovery was #5; G.1 remediation did NOT trigger any new §K).
+
+**Next concrete steps (user-gated)**:
+1. **Phase 10** — final ledger update (capture post-G.1 Phase-8-closure state + final maturity scores) + ADR drafting in `.knowledge/decisions/` (candidates: `0003-osv-batch-strategy.md`, `0004-releases-split-decision.md`).
+2. **PR-1 merge** — user decides push target (`origin` / `audit-mirror` / both) + GitHub PR creation + merge strategy (squash / rebase / merge commit).
+3. **PR-2 entry** — performance wins + CSAF namespace fix (separate plan stage, see calibration §3 dim 8 + plan §10 FU items).
+
+---
+
+**End of verification.md.** No production code touched by this report (G.1's test additions are in a separate production commit `b9dbf19`); no merge action taken.
