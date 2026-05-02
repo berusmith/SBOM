@@ -24,7 +24,10 @@ from __future__ import annotations
 import csv
 import io
 import json
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
@@ -311,7 +314,16 @@ def get_gate(release_id: str, release: Release = Depends(require_release_in_scop
             quality_passed = sum(1 for c in q_checks if c["passed"])
             quality_grade = "A" if quality_passed >= 6 else "B" if quality_passed >= 4 else "C" if quality_passed >= 2 else "D"
         except Exception:
-            pass
+            # PR-3 N.5 (CODE-1.014 partial): silent swallow → log + continue.
+            # Same pattern as PR-1 D.3's CODE-1.011 fix at upload_sbom.py:84
+            # (logger.exception preserves gate behavior — quality_grade stays
+            # None and the sbom_quality check below shows "無 SBOM 可評分").
+            # Broad catch retained: SBOM parse/score failure modes are diverse
+            # (JSON malformed / NTIA helper internal / PDF render race / etc.).
+            logger.warning(
+                "SBOM quality grade computation failed for release %s; gate continues with no grade",
+                release_id,
+            )
     good_quality = quality_grade in ("A", "B")
     grade_str = f"等級 {quality_grade}（{quality_passed}/7）" if quality_grade else "無 SBOM 可評分"
     checks.append({"id": "sbom_quality", "label": "SBOM 品質 ≥ B 級",
