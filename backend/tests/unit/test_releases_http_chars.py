@@ -294,3 +294,219 @@ def test_e2_update_notes_over_cap_silently_truncated_to_5000(admin_client, seede
     assert resp.status_code == 200, f"expected 200 (silent truncation, NOT 422), got {resp.status_code}: {resp.text[:200]}"
     assert len(resp.json()["notes"]) == 5000
     assert resp.json()["notes"] == "x" * 5000
+
+
+# ── Set 5 — function-body characterization (AC-T2 remediation, post-Phase-9) ──
+# Phase 9 verification surfaced AC-T2 fail (pytest-cov 26% < 30% on usecases +
+# domain).  These tests target the highest-yield uncovered endpoints in
+# usecases/release/ to push coverage above the 30% threshold while exercising
+# real handler bodies (not just bearer/auth gates).  Each test:
+#   - uses the existing admin_client + seeded_orga_release fixtures (E.2 era),
+#     reused unchanged so Set 3 cross-org tests remain unaffected;
+#   - asserts at minimum (a) HTTP status code, (b) response shape / key field
+#     presence — never just status_code alone;
+#   - exercises the function body via authenticated admin + same-org release,
+#     so Depends(require_release_in_scope) passes and the handler runs to return.
+
+
+@pytest.mark.http
+def test_get_release_returns_200_with_seed(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid} — basic info dict for a release that exists in admin's scope."""
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    assert body["id"] == seeded_orga_release
+    assert body["version"] == "1.0.0"
+    assert body["locked"] is False
+    assert body["has_sbom"] is False  # seeded release has no SBOM file
+    assert "created_at" in body
+
+
+@pytest.mark.http
+def test_get_release_components_returns_list(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/components — returns paginated dict {total, skip, limit, items}."""
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/components")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    assert body["total"] == 0  # seeded release has no components
+    assert body["skip"] == 0
+    assert body["limit"] == 2000  # default per handler
+    assert body["items"] == []
+
+
+@pytest.mark.http
+def test_get_release_vulnerabilities_returns_list_with_severity(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/vulnerabilities — returns list (NOT dict) of vuln rows."""
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/vulnerabilities")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    assert isinstance(body, list), f"expected list, got {type(body).__name__}: {body!r}"
+    assert body == []  # no components → no vulnerabilities
+
+
+@pytest.mark.http
+def test_get_release_gate_returns_pass_or_fail_state(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/gate — returns {overall, passed, total, checks: [...]} with 6 named checks."""
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/gate")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # Shape contract:
+    assert "overall" in body and body["overall"] in ("pass", "fail")
+    assert "passed" in body and isinstance(body["passed"], int)
+    assert "total" in body and isinstance(body["total"], int)
+    assert "checks" in body and isinstance(body["checks"], list)
+    # Each check has id + label + passed + detail (per lifecycle.py:283-336):
+    for c in body["checks"]:
+        assert {"id", "label", "passed", "detail"}.issubset(c.keys())
+    # Without SBOM uploaded, sbom_uploaded check must be False (sets overall=fail):
+    by_id = {c["id"]: c for c in body["checks"]}
+    assert by_id["sbom_uploaded"]["passed"] is False
+    assert body["overall"] == "fail"  # at least sbom_uploaded fails → overall fail
+
+
+@pytest.mark.http
+def test_get_release_patch_stats_returns_zeroed_struct(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/patch-stats — empty release returns zeroed counts + patch_rate 0.0."""
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/patch-stats")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # Required fields per lifecycle.py:265-269:
+    for key in ("total", "fixed", "open", "in_triage", "affected", "not_affected", "patch_rate", "avg_days_to_fix"):
+        assert key in body, f"missing field: {key}"
+    assert body["total"] == 0
+    assert body["fixed"] == 0
+    assert body["patch_rate"] == 0.0
+    assert body["avg_days_to_fix"] is None  # no fixed-vulns → cannot compute average
+
+
+@pytest.mark.http
+def test_post_lock_then_unlock_release_round_trip(admin_client, seeded_orga_release):
+    """POST /lock then POST /unlock — toggles release.locked through both states."""
+    # Initial: seeded release is unlocked (Release default).
+    lock_resp = admin_client.post(f"/api/releases/{seeded_orga_release}/lock")
+    assert lock_resp.status_code == 200, f"lock expected 200, got {lock_resp.status_code}: {lock_resp.text[:200]}"
+    assert lock_resp.json() == {"locked": True}
+
+    # Locking already-locked release returns 409 (lifecycle.py:223-224):
+    relock_resp = admin_client.post(f"/api/releases/{seeded_orga_release}/lock")
+    assert relock_resp.status_code == 409, f"re-lock expected 409, got {relock_resp.status_code}"
+
+    unlock_resp = admin_client.post(f"/api/releases/{seeded_orga_release}/unlock")
+    assert unlock_resp.status_code == 200, f"unlock expected 200, got {unlock_resp.status_code}: {unlock_resp.text[:200]}"
+    assert unlock_resp.json() == {"locked": False}
+
+
+@pytest.fixture
+def seeded_release_with_sbom_and_component(db_session, tmp_path):
+    """Seed orgA + prodA + Release with sbom_file_path + 1 Component.
+
+    Used by tests targeting endpoints that require BOTH a real SBOM file on disk
+    AND at least one component row (e.g. sbom-quality, csaf — both raise 400 if
+    no components found via _lookup_components_for_release).
+
+    Distinct from seeded_orga_release fixture (no SBOM, no components — used by
+    Set 3 cross-org tests + Set 5 tests that don't require SBOM data).
+    """
+    import hashlib
+    import json as _json
+
+    from app.models.component import Component
+    from app.models.organization import Organization
+    from app.models.product import Product
+    from app.models.release import Release
+
+    sbom_data = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
+        "metadata": {"component": {"name": "test-app", "version": "1.0.0"}},
+        "components": [
+            {"name": "lodash", "version": "4.17.20", "purl": "pkg:npm/lodash@4.17.20"},
+        ],
+    }
+    sbom_bytes = _json.dumps(sbom_data).encode("utf-8")
+    sbom_path = tmp_path / "test_sbom.json"
+    sbom_path.write_bytes(sbom_bytes)
+
+    orgA = Organization(id="orgA", name="OrgA")
+    prodA = Product(id="prodA", organization_id="orgA", name="ProdA")
+    rel = Release(
+        id="rel-with-sbom",
+        product_id="prodA",
+        version="1.0.0",
+        sbom_file_path=str(sbom_path),
+        sbom_hash=hashlib.sha256(sbom_bytes).hexdigest(),
+    )
+    comp = Component(
+        id="comp-1",
+        release_id="rel-with-sbom",
+        name="lodash",
+        version="4.17.20",
+        purl="pkg:npm/lodash@4.17.20",
+    )
+    db_session.add_all([orgA, prodA, rel, comp])
+    db_session.commit()
+    return "rel-with-sbom"
+
+
+@pytest.mark.http
+def test_get_release_sbom_quality_returns_score(admin_client, seeded_release_with_sbom_and_component):
+    """GET /api/releases/{rid}/sbom-quality — returns NTIA score dict {score, grade, passed, total, checks}."""
+    rid = seeded_release_with_sbom_and_component
+    resp = admin_client.get(f"/api/releases/{rid}/sbom-quality")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # Per services/sbom_parser.py:174 score_sbom contract:
+    for key in ("score", "grade", "passed", "total", "checks"):
+        assert key in body, f"missing field: {key}"
+    assert isinstance(body["score"], int)
+    assert body["grade"] in ("A", "B", "C", "D")
+    assert isinstance(body["checks"], list)
+    assert body["total"] == len(body["checks"])
+
+
+@pytest.mark.http
+def test_get_release_integrity_returns_status(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/integrity — returns 'no_file' status when SBOM not uploaded.
+
+    Tests the no-file branch (reports.py:444-445); covers the early-return path
+    without needing a real file on disk.
+    """
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/integrity")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # Per reports.py:445 early-return shape:
+    assert body["status"] == "no_file"
+    assert body["message"] == "尚未上傳 SBOM 檔案"
+
+
+@pytest.mark.http
+def test_get_release_csaf_returns_csaf_doc(admin_client, seeded_release_with_sbom_and_component):
+    """GET /api/releases/{rid}/csaf — returns CSAF VEX 2.0 document.
+
+    Requires both SBOM file AND ≥ 1 component (else _lookup_components_for_release
+    raises 400).  Uses seeded_release_with_sbom_and_component fixture.
+    """
+    rid = seeded_release_with_sbom_and_component
+    resp = admin_client.get(f"/api/releases/{rid}/csaf")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # CSAF VEX 2.0 contract — every doc has "document" envelope per CSAF spec:
+    assert "document" in body
+    assert body["document"].get("category") == "csaf_vex"
+    # Content-Disposition attachment header per reports.py:339:
+    assert "attachment" in resp.headers.get("content-disposition", "")
+
+
+@pytest.mark.http
+def test_get_release_dependency_graph_returns_nodes_edges(admin_client, seeded_orga_release):
+    """GET /api/releases/{rid}/dependency-graph — returns {has_data, nodes, edges, total_nodes, total_edges}.
+
+    Without SBOM file, returns the empty-shape early-return per lifecycle.py:348-349.
+    """
+    resp = admin_client.get(f"/api/releases/{seeded_orga_release}/dependency-graph")
+    assert resp.status_code == 200, f"expected 200, got {resp.status_code}: {resp.text[:200]}"
+    body = resp.json()
+    # Early-return shape from lifecycle.py:349 (no SBOM file → empty graph):
+    assert body["has_data"] is False
+    assert body["nodes"] == []
+    assert body["edges"] == []
