@@ -183,14 +183,23 @@ def _extract_signer_identity(pem: str) -> Optional[str]:
         if b"BEGIN CERTIFICATE" not in pem_bytes:
             return None
         cert = load_pem_x509_certificate(pem_bytes)
-        # Try to get email from SAN
+        # Try to get email from SAN (best-effort; many certs have no SAN).
         try:
             from cryptography.x509 import ExtensionNotFound
             from cryptography.x509.oid import ExtensionOID
             san = cert.extensions.get_extension_for_oid(ExtensionOID.SUBJECT_ALTERNATIVE_NAME)
             emails = san.value.get_values_for_type(type(None))  # placeholder
-        except Exception:
+        except ExtensionNotFound:
+            # PR-3 N.4 (CODE-1.014 partial): narrowed from broad-except + bare pass.
+            # ExtensionNotFound is the expected case for certs without SAN;
+            # fall through silently to CN lookup below (no log needed — common case).
             pass
+        except (ImportError, AttributeError) as _san_err:
+            # Unexpected: cryptography lib version mismatch or API change.
+            import logging as _logging
+            _logging.getLogger(__name__).debug(
+                "SAN email extract failed (lib version?): %s — falling back to CN", _san_err,
+            )
         # Fallback: get CN from subject
         from cryptography.x509.oid import NameOID
         cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
