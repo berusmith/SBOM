@@ -29,6 +29,7 @@ from app.models.organization import Organization
 from app.models.product import Product
 from app.models.release import Release
 from app.models.share_link import SbomShareLink
+from app.schemas.share_link import ShareLinkCreate
 
 router = APIRouter(tags=["share"])
 
@@ -81,10 +82,7 @@ def _apply_mask(sbom: dict, mask_internal: bool) -> dict:
 
 
 # ── Create link ───────────────────────────────────────────────────────────────
-
-class ShareLinkCreate(BaseModel):
-    expires_hours: Optional[int] = 72   # None = never
-    mask_internal: bool = False
+# ShareLinkCreate moved to backend/app/schemas/share_link.py in E.1 (2026-05-01).
 
 
 @router.post("/api/releases/{release_id}/share-link")
