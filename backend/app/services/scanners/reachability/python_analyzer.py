@@ -281,7 +281,7 @@ def scan_zip(zip_bytes: bytes) -> ScanResult:
         file_count += 1
         try:
             content = zf.read(name).decode("utf-8", errors="ignore")
-        except Exception:
+        except Exception:  # Deliberate broad-except: per-file read in zip — corrupt file must not abort whole-zip scan
             continue
 
         is_test = _is_test_path(name)

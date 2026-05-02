@@ -313,7 +313,7 @@ def get_gate(release_id: str, release: Release = Depends(require_release_in_scop
             q_checks = _check_ntia_fn(sbom_data, is_spdx)
             quality_passed = sum(1 for c in q_checks if c["passed"])
             quality_grade = "A" if quality_passed >= 6 else "B" if quality_passed >= 4 else "C" if quality_passed >= 2 else "D"
-        except Exception:
+        except Exception:  # Deliberate broad-except (b-fix N.5): SBOM parse/score failures diverse — silent swallow upgraded to log + continue
             # PR-3 N.5 (CODE-1.014 partial): silent swallow → log + continue.
             # Same pattern as PR-1 D.3's CODE-1.011 fix at upload_sbom.py:84
             # (logger.exception preserves gate behavior — quality_grade stays

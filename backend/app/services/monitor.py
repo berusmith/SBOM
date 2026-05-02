@@ -122,7 +122,7 @@ def _do_scan_all() -> int:
                                 product.name if product else "?", release.version)
                     total_new += new_count
 
-            except Exception:
+            except Exception:  # Deliberate broad-except: per-release scan in batch — one release error must not stop other releases
                 logger.exception("Monitor: error scanning release %s", release.id)
                 db.rollback()
 
@@ -150,7 +150,7 @@ def _do_scan_all() -> int:
                     "release_id": "",
                 }, expired_details)
                 logger.info("Monitor: %d suppression(s) expired and re-activated", len(expired))
-        except Exception:
+        except Exception:  # Deliberate broad-except: expired-suppression cleanup — must not crash overall scan job
             logger.exception("Monitor: error checking expired suppressions")
 
         now = datetime.now(timezone.utc)
@@ -164,7 +164,7 @@ def _do_scan_all() -> int:
 
         logger.info("Monitor: scan complete — %d new vulns", total_new)
 
-    except Exception:
+    except Exception:  # Deliberate broad-except: top-level _do_scan_all wrapper — must not crash scheduler thread
         logger.exception("Monitor: scan failed")
     finally:
         db.close()
@@ -196,7 +196,7 @@ def _scheduler_loop() -> None:
                     elapsed_h = (datetime.now(timezone.utc) - _last_run_dt).total_seconds() / 3600
                     if elapsed_h >= interval_h:
                         _do_scan_all()
-        except Exception:
+        except Exception:  # Deliberate broad-except: scheduler loop tick — must not crash scheduler thread; keep ticking
             logger.exception("Monitor: scheduler loop error")
 
         for _ in range(60):
@@ -222,7 +222,7 @@ def start() -> None:
                 _last_run_dt = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
         finally:
             db.close()
-    except Exception:
+    except Exception:  # Deliberate broad-except: restore-last-run-from-DB during startup — fall back to None timestamp
         logger.exception("Monitor: failed to restore last_run from DB")
 
     _stop_event.clear()

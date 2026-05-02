@@ -226,7 +226,7 @@ class FPDF:
         font_name = _ensure_builtin(self._font_family, self._font_style)
         try:
             self._canvas.setFont(font_name, self._font_size)
-        except Exception:
+        except Exception:  # Deliberate broad-except: reportlab font fallback — Helvetica is the universal safe default
             self._canvas.setFont("Helvetica", self._font_size)
 
     def add_font(self, family: str, style: str = "", fname: str = "", uni: bool = True) -> None:
@@ -246,11 +246,11 @@ class FPDF:
             subfont = 1 if (ext == ".ttc" and "B" in style.upper()) else 0
             try:
                 pdfmetrics.registerFont(TTFont(rl_name, fname, subfontIndex=subfont))
-            except Exception:
+            except Exception:  # Deliberate broad-except: TTC subfontIndex fallback — non-TTC files reject the kwarg, retry without
                 # Fall back without subfontIndex (most TTF/OTF)
                 pdfmetrics.registerFont(TTFont(rl_name, fname))
             _REGISTERED_FONTS[key] = rl_name
-        except Exception:
+        except Exception:  # Deliberate broad-except: outer font registration — Helvetica fallback path already exists in caller
             # Silently ignore — caller already has a Helvetica fallback path
             pass
 
@@ -337,7 +337,7 @@ class FPDF:
                 preserveAspectRatio=True,
                 mask="auto",
             )
-        except Exception:
+        except Exception:  # Deliberate broad-except: image embed — fpdf2 lenient parity (PIL+IO failures diverse; no logo is OK)
             pass   # silently swallow — same as fpdf2's lenient image handling
 
     # ── Text ──────────────────────────────────────────────────────────────
@@ -347,7 +347,7 @@ class FPDF:
         font_name = _ensure_builtin(self._font_family, self._font_style)
         try:
             return self._canvas.stringWidth(str(txt), font_name, self._font_size) / mm
-        except Exception:
+        except Exception:  # Deliberate broad-except: stringWidth fallback — Helvetica is the universal safe default
             return self._canvas.stringWidth(str(txt), "Helvetica", self._font_size) / mm
 
     def cell(self, w: float = 0, h: float = 0, txt: str = "", border: int | str = 0,
@@ -400,7 +400,7 @@ class FPDF:
             try:
                 self._canvas.setFont(font_name, self._font_size)
                 self._canvas.drawString(tx * mm, self._y_to_rl(baseline_y_mm), text)
-            except Exception:
+            except Exception:  # Deliberate broad-except: drawString fallback — Helvetica draw path is the universal safe default
                 self._canvas.setFont("Helvetica", self._font_size)
                 self._canvas.drawString(tx * mm, self._y_to_rl(baseline_y_mm), text)
 

@@ -25,7 +25,7 @@ def _validate_webhook_url(url: str) -> str:
         return "Webhook URL is empty"
     try:
         parsed = urlparse(url)
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: URL parse — diverse failure modes; user-facing validation message
         return f"Invalid URL: {e}"
 
     if parsed.scheme not in ("http", "https"):
@@ -164,7 +164,7 @@ def send_webhook(url: str, payload: dict, max_retries: int = 3) -> str:
             resp = httpx.post(url, json=body, timeout=10, follow_redirects=False)
             resp.raise_for_status()
             return ""
-        except Exception as e:
+        except Exception as e:  # Deliberate broad-except: webhook send retry — any error triggers retry (httpx + network errors are diverse)
             last_err = str(e)
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
@@ -192,7 +192,7 @@ def send_email(subject: str, body: str, to: str) -> str:
         server.sendmail(msg["From"], recipients, msg.as_bytes())
         server.quit()
         return ""
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: SMTP send — diverse smtplib + socket failure modes; caller treats non-empty as error
         return str(e)
 
 

@@ -15,7 +15,7 @@ class FirmwareService:
         try:
             result = subprocess.run(["emba", "-h"], capture_output=True, timeout=5)
             return result.returncode == 0
-        except:
+        except:  # Deliberate broad-except: library-boundary check (emba binary availability) — bare except OK for catch-everything probe
             return False
 
     def run_scan(self, scan_id: str, file_path: str):
@@ -101,7 +101,7 @@ class FirmwareService:
 
             db.commit()
 
-        except Exception as e:
+        except Exception as e:  # Deliberate broad-except: background scan worker — must not crash worker thread; record failure to DB
             db.execute(
                 update(FirmwareScan)
                 .where(FirmwareScan.id == scan_id)
@@ -126,5 +126,5 @@ class FirmwareService:
                 return emba_output["software"]
             # Add more parsing logic based on actual EMBA output format
             return []
-        except:
+        except:  # Deliberate broad-except: EMBA result extraction — bare except for diverse JSON shapes; empty list is safe fallback
             return []

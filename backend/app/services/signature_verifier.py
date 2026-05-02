@@ -50,7 +50,7 @@ def detect_algorithm(public_key_pem: str) -> Optional[str]:
         if isinstance(key, rsa.RSAPublicKey):
             return "rsa-pss-sha256"
         return None
-    except Exception:
+    except Exception:  # Deliberate broad-except: public-key parse fallback — multiple format candidates (PEM/DER); None signals "unrecognized"
         return None
 
 
@@ -81,7 +81,7 @@ def verify_signature(
     # Decode signature
     try:
         signature_bytes = base64.b64decode(signature_b64)
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): base64 decode failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm or "unknown",
             message="簽章格式錯誤：無法解碼 Base64",
@@ -91,7 +91,7 @@ def verify_signature(
     # Load public key
     try:
         public_key = _load_public_key(public_key_pem)
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): cryptography lib parse failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm or "unknown",
             message="公鑰格式錯誤：無法載入 PEM 公鑰或憑證",
@@ -150,7 +150,7 @@ def verify_signature(
             message="簽章驗證失敗：簽章與 SBOM 內容不符",
             detail="簽章可能已過期、SBOM 可能已被竄改、或使用了錯誤的公鑰",
         )
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except (DEFERRED iter-2 typed-exc target: SignatureVerificationError): cryptography verify failures → user-facing zh-TW result
         return VerifyResult(
             valid=False, algorithm=algorithm,
             message=f"驗證過程發生錯誤",
@@ -206,7 +206,7 @@ def _extract_signer_identity(pem: str) -> Optional[str]:
         if cn_attrs:
             return cn_attrs[0].value
         return str(cert.subject)
-    except Exception:
+    except Exception:  # Deliberate broad-except: X.509 signer-identity outer fallback — best-effort metadata extraction; None signals "no identity"
         return None
 
 

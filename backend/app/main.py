@@ -170,7 +170,7 @@ with engine.connect() as conn:
     ]:
         try:
             conn.execute(text(_idx))
-        except Exception as _idx_err:
+        except Exception as _idx_err:  # Deliberate broad-except (b-fix N.3): DDL errors diverse — silent swallow upgraded to log + continue
             # PR-3 N.3 (CODE-1.014 partial): silent swallow → log + continue.
             # CREATE INDEX is best-effort during startup migration; missing
             # column / pre-migration table state is expected on first boot.
@@ -360,7 +360,7 @@ def health_check():
     try:
         with engine.connect() as _c:
             _c.execute(_text("SELECT 1"))
-    except Exception:
+    except Exception:  # Deliberate broad-except: /health probe — DB unreachable should report "error", not crash health check
         db_status = "error"
 
     from app.services import monitor as _mon

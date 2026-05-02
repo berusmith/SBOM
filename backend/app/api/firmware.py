@@ -81,7 +81,7 @@ async def upload_firmware(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: top-level firmware-upload handler — translate any unexpected error to user-facing 400
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         db.close()
@@ -132,7 +132,7 @@ async def get_scan_status(scan_id: str, _admin: dict = Depends(require_admin)):
                 emba_output = json.loads(scan.emba_output_json)
                 components = firmware_service.parse_emba_components(emba_output)
                 result["components"] = components
-            except Exception:
+            except Exception:  # Deliberate broad-except: GET status fallback — empty component list is fine if EMBA parse fails
                 result["components"] = []
         else:
             result["components"] = []
@@ -213,6 +213,6 @@ async def import_scan_as_release(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: top-level convert-to-release handler — db rollback + translate to user-facing 400
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))

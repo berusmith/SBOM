@@ -120,7 +120,7 @@ def _download_font(style: str) -> Path | None:
             dest.write_bytes(data)
             logger.info("CJK font downloaded: %s (%d KB)", dest.name, len(data) // 1024)
             return dest
-        except Exception as e:
+        except Exception as e:  # Deliberate broad-except: font download — diverse network/IO failures; logged + try next mirror URL
             logger.warning("Download failed (%s): %s", url[:50], e)
     return None
 
@@ -193,7 +193,7 @@ def setup_cjk_fonts(pdf) -> bool:
         pdf.add_font("NotoSansSC", style="B", fname=str(bold))
         _CJK_REGISTERED.add(obj_id)
         return True
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: fpdf2 font register — diverse failure modes (file IO, lib version); fallback to default font
         logger.warning("Failed to register CJK fonts: %s", e)
         return False
 

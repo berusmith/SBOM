@@ -65,7 +65,7 @@ def _purl_to_ecosystem_package(purl: str) -> tuple[str, str] | None:
             # For npm scoped packages: @scope/name → keep as-is
             package = name_ver
         return ecosystem, package
-    except Exception:
+    except Exception:  # Deliberate broad-except: PURL parse — malformed input returns None for caller to skip
         return None
 
 
@@ -84,7 +84,7 @@ def _get(url: str) -> list:
         # plus PURL components that go through urllib.parse.quote (see callers).
         with urllib.request.urlopen(req, timeout=15) as resp:  # nosec B310
             return json.loads(resp.read())
-    except Exception as e:
+    except Exception as e:  # Deliberate broad-except: GHSA HTTP fetch — diverse urllib/JSON failures; logged, returns empty for caller resilience
         logger.warning("GHSA fetch failed %s: %s", url, e)
         return []
 
