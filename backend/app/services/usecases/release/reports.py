@@ -41,6 +41,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import release_context, require_release_in_scope
 from app.core.plan import require_plan
@@ -144,7 +145,15 @@ def _build_csaf_doc(release: Release, components_raw, namespace_suffix: str = ""
             entry["notes"] = [{"category": "general", "text": v.detail}]
         csaf_vulns.append(entry)
 
-    namespace = f"https://example.com{namespace_suffix}"  # CODE-1.013 — fix in PR-2 F.5
+    # CODE-1.013 closed in PR-2 Stage K.2b (2026-05-02): env-var-driven publisher.namespace
+    # per Q-PR2-1 (b).  Falls back to "https://sbom-platform.local/{org_slug}" when
+    # CSAF_NAMESPACE env var is unset (D1 lenient regime tolerates output-string change).
+    configured = settings.CSAF_NAMESPACE.strip()
+    if configured:
+        namespace = f"{configured}{namespace_suffix}"
+    else:
+        org_slug = org_name.lower().replace(" ", "-")
+        namespace = f"https://sbom-platform.local/{org_slug}{namespace_suffix}"
     return {
         "document": {
             "category": "csaf_vex", "csaf_version": "2.0",

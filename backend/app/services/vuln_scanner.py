@@ -132,12 +132,18 @@ def _query_batch(client: httpx.Client, purls: list[str]) -> list[list[str]]:
     return out
 
 
-def _fetch_vuln(vuln_id: str) -> tuple[str, dict | None]:
-    """GET /v1/vulns/{id} for a single vuln.  Returns (id, parsed) or (id, None) on failure."""
+def _fetch_vuln(client: httpx.Client, vuln_id: str) -> tuple[str, dict | None]:
+    """GET /v1/vulns/{id} for a single vuln.  Returns (id, parsed) or (id, None) on failure.
+
+    PERF-1.008 (PR-2 Stage J.1, 2026-05-02): client is now passed in by the
+    caller (scan_components Phase 2) so that all ThreadPool workers reuse
+    one HTTP/1.1 connection pool.  Per httpx docs, httpx.Client is
+    thread-safe (https://www.python-httpx.org/async/), so no caller-level
+    locking is required.
+    """
     try:
-        with httpx.Client(timeout=30) as client:
-            resp = client.get(OSV_VULN_URL.format(vuln_id=vuln_id))
-            resp.raise_for_status()
+        resp = client.get(OSV_VULN_URL.format(vuln_id=vuln_id))
+        resp.raise_for_status()
         return vuln_id, _parse_vuln(resp.json())
     except httpx.HTTPError:
         return vuln_id, None
@@ -172,13 +178,17 @@ def scan_components(components: list) -> dict:
 
     # Phase 2 — fetch each unique vuln in parallel.  One vuln id maps to
     # one parsed record regardless of how many PURLs reference it.
+    # PERF-1.008 (PR-2 Stage J.1): single outer httpx.Client shared across
+    # all ThreadPool workers — connection pool reused, no per-worker
+    # TLS handshake.
     detail_cache: dict[str, dict] = {}
-    with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
-        futures = {pool.submit(_fetch_vuln, vid): vid for vid in unique_ids}
-        for future in as_completed(futures):
-            vid, parsed = future.result()
-            if parsed is not None:
-                detail_cache[vid] = parsed
+    with httpx.Client(timeout=30) as detail_client:
+        with ThreadPoolExecutor(max_workers=_MAX_WORKERS) as pool:
+            futures = {pool.submit(_fetch_vuln, detail_client, vid): vid for vid in unique_ids}
+            for future in as_completed(futures):
+                vid, parsed = future.result()
+                if parsed is not None:
+                    detail_cache[vid] = parsed
 
     # Stitch back: for each PURL, look up parsed record for each matched id.
     results: dict[str, list[dict]] = {}

@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     # Frontend base URL — used for password-reset email links
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # CSAF VEX document publisher.namespace URI (CSAF 2.0 §3.1.6).
+    # If unset (empty string), reports.py falls back to
+    # f"https://sbom-platform.local/{org_slug}" per Q-PR2-1 (b) decision.
+    # Recommended: set to your organization's controlled domain for
+    # spec-compliant CSAF VEX exports (CODE-1.013 closure).
+    CSAF_NAMESPACE: str = ""
+
     class Config:
         env_file = ".env"
 

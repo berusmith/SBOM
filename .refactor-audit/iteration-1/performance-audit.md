@@ -201,6 +201,15 @@ scope: 4 hot-spots per D6 — list endpoints with N+1 risk, PDF cold start, OSV 
   - After: estimated 3.0–4.0s (~30–50% reduction)
   - Per-PURL improvement scales linearly with vuln count
 - **Confidence**: Medium (need measurement)
+- **Status (PR-2 Stage J.1, 2026-05-02)**: **CLOSED — fix landed, gain exceeded prediction**.
+  - Implementation: `vuln_scanner.py` `_fetch_vuln` signature changed to accept `httpx.Client` parameter; `scan_components` Phase 2 opens one outer client and shares it across all ThreadPool workers (commit `ff13943`).
+  - **Measured gain (10 PURLs, 9 unique vulns, 105 vuln rows, online run via `bench_osv.py`)**:
+    - Pre-J.1 (baseline, fresh client per worker): **7.08s** total wall-clock
+    - Post-J.1 (shared client across workers):    **2.39s** total wall-clock
+    - **66.2% wall-clock reduction** — exceeds the 30-50% prediction
+  - Why the gain exceeded: prediction was conservative on TLS-only; actual savings include TCP setup + HTTP/1.1 keep-alive pipelining within the shared connection pool.
+  - Determinism check: identical vuln counts on both runs (9 unique / 105 rows) ✓
+  - bench reproducer at `backend/tests/bench/bench_osv.py` (Stage I.1, commit see PR-2 history) — future iters can rerun for regression detection.
 
 ---
 

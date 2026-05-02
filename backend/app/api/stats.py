@@ -166,7 +166,6 @@ def get_risk_overview(org_scope: str | None = Depends(get_org_scope), db: Sessio
     if org_scope:
         inc_q = inc_q.filter(CRAIncident.org_id == org_scope)
     total_active_incidents = inc_q.scalar() or 0
-    inc_counts = {}  # per-org breakdown not needed (shown in totals)
 
     # Aggregate vuln data per org in Python
     _blank = lambda: {"total": 0, "critical": 0, "high": 0,
