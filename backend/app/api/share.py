@@ -12,11 +12,9 @@ import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.core import audit
@@ -24,9 +22,6 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_release_in_scope
 from app.core.plan import require_plan
 from app.core.security import safe_attachment_filename
-from app.models.component import Component
-from app.models.organization import Organization
-from app.models.product import Product
 from app.models.release import Release
 from app.models.share_link import SbomShareLink
 from app.schemas.share_link import ShareLinkCreate
