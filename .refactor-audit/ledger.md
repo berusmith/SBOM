@@ -549,3 +549,151 @@ The promotion rule was **correct** in principle (oracle leak should not wait), b
 | **FU-1.015** | Comprehensive share-link endpoint test suite beyond P.2's 4-test regression pin (mask_internal toggle paths, download_count increments, multiple links per release, plan-gating on admin endpoints, 20-link cap edge cases) | Opportunistic — no urgency; P.2 regression pin covers security-relevant behavior |
 
 (FU-1.013 was created in PR-1 / closed in PR-2 K validation; FU-1.014 + FU-1.015 are the only PR-3 spawns.)
+
+---
+
+## PR-3 Final Ledger Consolidation Index (Phase 10 closure, 2026-05-02)
+
+PR-3 (`refactor/iter-1-pr3-error-handling`) closes here at HEAD = the Phase-10.1 audit-doc commit landing this index.  Branch state: 15 commits ahead of post-PR-2 master `d92e679`; working tree clean; all 14 hard blockers + 3 sticky FU closures PASS; recommendation **(a) ready-to-merge** confirmed unchanged from `pr3-verification.md` §5.
+
+### Decisions during PR-3 (D30 - D33)
+
+| Entry | Stage | Topic | Production commit ref | Cross-ref |
+|-------|-------|-------|----------------------|-----------|
+| D30 | PR-3 entry | §K invocation #10 — CODE-1.011 vs CODE-1.014 finding-category misdiagnosis (single-site vs umbrella) | (audit-doc Phase-7-record `edf9561`, on PR-3 branch) | `code-audit.md` CODE-1.011 + CODE-1.014 status updates (Stage R `66abc5c`) + `pr3-plan.md` §1 |
+| D31 | PR-3 R | Process observation: FU-1.010 promotion-rule slippage (PR-2 character mismatch) | — | future K.8 / §F8 codification candidate (deferred to iter-2 entry) |
+| D32 | PR-3 R | Stage P audit findings + share-token oracle uniformity fix landed | P.1 `6aa5269` (audit doc) + P.2 `584e064` (production + test) + P.3 `4e6f0f2` (SDLC-001 token-scope ext) | `pr3-share-token-audit.md` §4 + `share.py:188-204` + `tests/unit/test_share_token.py` + `test_endpoint_decorator_enforcement.py` token-scope checks + spawned FU-1.014/FU-1.015 |
+| D33 | Phase 10 | PR-3 closure index | (this commit) | this section |
+
+### PR-3 §K invocation log
+
+| # | Trigger | Resolution | Ledger ref |
+|---|---------|------------|------------|
+| 10 | PR-3 entry — CODE-1.011 vs CODE-1.014 finding-category misdiagnosis (single-site vs umbrella) | (α) reclassify scope as CODE-1.014 partial closure, surface CODE-1.011 historical PR-1 D.3 closure in Stage R | D30 |
+| (none) | — | Stage N + O + P execution: **0 §K invocations** | (PR-3 plan target ≤ 3 met with 2 to spare; D30 is entry-phase only) |
+
+PR-3 plan precision validation: §K STOP execution count = 0 (target ≤ 3); D30 entry-phase invocation = 1 (within budget); K.7 codification + Phase 0 grep validation worked as designed.
+
+### PR-3 followup closures
+
+- ✓ FU-1.002 (vulnerabilities.py legacy `_assert_vuln_org` SDLC-001 extension) — Stage O.2
+- ✓ FU-1.010 (`download_shared_sbom` ARCH-1.003 audit) — Stage P.1 (audit-recording closes the audit FU; P.2 fix landed surgically per spec wording)
+- ✓ FU-1.011 (SDLC-001 share-token endpoint coverage) — Stage P.3
+- ✓ CODE-1.011 (Quality grade silent swallow) — historically closed in PR-1 D.3; status surfaced in Stage R `code-audit.md` update
+- ✓ CODE-1.014 partial (broad-except triage) — Stage N.1-N.6 (silent swallows fixed + deliberate keeps annotated; 6 (c) translate-and-raise sites annotated as iter-2 typed-exc target)
+- ✓ ARCH-1.003 fully closed (last auth surface — vuln-id endpoints + share-token endpoint) — Stage O.1 + Stage P.2 jointly
+
+### PR-3 followup spawns (FU-1.014 + FU-1.015)
+
+| FU | Topic | Iter-2 promotion rule |
+|----|-------|----------------------|
+| FU-1.014 | Audit logging integration for `download_shared_sbom` (5 event types incl. failure-mode-specific names; token-prefix-only for credential safety; nullable-org_id schema decision) | Bundle with iter-2 PR that adds new audit-event types for any reason; estimated 30-50 LOC + audit taxonomy decision |
+| FU-1.015 | Comprehensive share-link endpoint test suite beyond P.2's 4-test regression pin | Opportunistic — no urgency; P.2 regression pin covers security-relevant behavior |
+| (FU-1.016 candidate) | AST-based scan for share-token resolver pattern (replaces P.3's source-substring fallback if it proves insufficient) | Opportunistic — promote if substring-based check produces false negatives in future iterations |
+
+### PR-3 commit chain (15 commits at Phase 10 close)
+
+| # | SHA | Stage | Type | Title |
+|--:|-----|-------|------|-------|
+| 1 | `edf9561` | Phase-7-record | audit-doc | pr3-plan.md ratified — Q-PR3 1/2/3 answered |
+| 2 | `77f9a3c` | N.1 | audit-doc | pr3-broad-except-triage.md — 46 sites classified |
+| 3 | `f4bcc97` | N.2 | production | firmware.py:192 silent swallow → log + continue |
+| 4 | `67f1e51` | N.3 | production | main.py:173 CREATE INDEX silent swallow → log |
+| 5 | `8f81945` | N.4 | production | signature_verifier.py:192 X.509 SAN silent swallow → narrow |
+| 6 | `ff7dc0a` | N.5 | production | lifecycle.py:313 sbom_quality_grade silent swallow → log |
+| 7 | `7b6c164` | N.6 | production | annotate 44 broad-except sites with canonical inline marker |
+| 8 | `0241793` | O.1 | production | vulnerabilities.py legacy ownership helper → require_vuln_in_scope Depends |
+| 9 | `e9f81eb` | O.2 | test (J5) | extend SDLC-001 enforcement to vuln_id scope; remove legacy whitelist |
+| 10 | `6aa5269` | P.1 | audit-doc | pr3-share-token-audit.md — FU-1.010 audit findings + verdict |
+| 11 | `584e064` | P.2 | production | share-token unified 404 response across all 4 negative branches |
+| 12 | `4e6f0f2` | P.3 | test (J5) | extend SDLC-001 enforcement to {token} scope (FU-1.011 close) |
+| 13 | `66abc5c` | R | audit-doc | D30/D31/D32 ledger entries + CODE-1.011/1.014 status updates + FU-1.014/1.015 |
+| 14 | `cf76bd0` | Phase-9 | audit-doc | pr3-verification.md — 14 hard blockers + 3 sticky FUs PASS |
+| 15 | (this) | Phase-10.1 | audit-doc | ledger PR-3 final consolidation index + D33 |
+
+**D16 budget partition**:
+  - Production (incl. J5 test): 9 (N.2-N.6 + O.1 + O.2 + P.2 + P.3)
+  - Audit-doc: 6 (Phase-7-record + N.1 + P.1 + R + Phase-9 + Phase-10.1)
+  - Total: 15
+
+**T-trigger thresholds vs actual**:
+  - T1 (informational, ~12-14 target): 9 production = under target by 3-5
+  - T2 (planning warning, > 14): not tripped (9 < 14)
+  - T3-soft (> 16): not tripped (9 << 16)
+  - T3-hard (> 19): not tripped (9 << 19)
+
+Excellent budget compliance.  PR-3 stayed well under all T-trigger thresholds; the conservative scope discipline (no Q stage; surgical P.2 fix) kept the production count at 9 vs the plan §8 14-15 estimate.
+
+### PR-3 maturity score change
+
+| Dim | PR-2 close | PR-3 close | Δ from PR-3 |
+|-----|-----------:|----------:|------------:|
+| 5 Error handling | 5 | **6** | **+1** (silent swallows fixed; deliberate keeps annotated; CODE-1.014 partial closure) |
+| All other 11 dims | unchanged | unchanged | 0 (hold per plan §7 conservative baseline) |
+
+Sum: 80 → 81.  Δ +1.  Weighted Δ +0.083.
+
+**Cumulative iter-1 weighted Δ: PR-1 (+0.75) + PR-2 (+0.167) + PR-3 (+0.083) = +1.000 → SUCCESS** (calibration §3.4 ≥ +0.8 threshold; iter-1 reaches the +1.0 weighted-delta target exactly at PR-3 close, validating the 3-PR sequential plan from `refactor-plan.md` §3).
+
+### LOC delta forecast vs actual (FU-1.013 second validation)
+
+Per pr3-plan.md §4 forecast vs `pr3-verification.md` §4 actual:
+  - Production-side total: forecast +450 LOC vs actual +688 LOC = **+53% overage**
+  - Major variances: P.1 audit-doc +70%, P.3 SDLC ext +200% (designed-for-future-resolver-migration extra structure), O.2 -127% (refactor saved more than added)
+
+**FU-1.013 verdict v2**: template directionally useful; recommend iter-2 add a "+50% audit-doc richness contingency" to forecast template.  P.1-style audit-docs consistently exceed plan estimates by 30-70% as discovery happens during writing.
+
+### iter-1 cumulative §K invocation log (PR-1 + PR-2 + PR-3)
+
+10 §K invocations across iter-1; per-PR distribution validates plan-precision improvement:
+  - PR-1: 8 invocations (D11 ×2 share.py + D19 F-stage + D20 sanity + D21 Phase 9 + D23 ADR + D24 audit-mirror + D25 sync semantics) — exploratory, baseline
+  - PR-2: 1 invocation (D26 entry only) — K.7 codification + Phase 0 grep validation reduced execution-phase §K to 0
+  - PR-3: 1 invocation (D30 entry only) — K.7.3 sub-pattern caught the misdiagnosis at entry
+
+iter-1 closes at upper edge of "10+" healthy band per §K closing meta-rule, but per-PR plan precision improved monotonically (8 → 1 → 1).  iter-2 plan-stage target: ≤ 5 cumulative §K invocations across all iter-2 PRs; Phase 0 K.7 grep validation as standard practice.
+
+### iter-1 cumulative T-trigger log
+
+| # | Trigger | Outcome | PR | Ledger ref |
+|---|---------|---------|----|----|
+| 1 | G.1 commit pushing PR-1 production count 22 → 23 (T3-soft `> 22`) | One-time acceptance, AC-T2 remediation scope only | PR-1 | D22 |
+
+PR-2 + PR-3 both stayed well under T-trigger thresholds (PR-2: 6 production; PR-3: 9 production).  Total iter-1 T-trigger invocations: 1 (PR-1 G.1 only).
+
+### Phase 10 closure conditions
+
+- [x] All 14 hard blockers + 3 sticky FU closures PASS (`pr3-verification.md` §1)
+- [x] Maturity weighted Δ recorded (+0.083 PR-3; cumulative +1.000 SUCCESS)
+- [x] All Stages N/O/P/R complete (12 commits in PR-3 + Phase-9 + Phase-10.1 = 14 sub-stage commits + Phase-7-record = 15 total)
+- [x] Followups closed (FU-1.002 + FU-1.010 + FU-1.011 + CODE-1.011 historical + CODE-1.014 partial + ARCH-1.003 fully)
+- [x] Followups spawned (FU-1.014 audit logging + FU-1.015 comprehensive share-link tests; FU-1.016 AST-scan candidate)
+- [x] §K invocation log complete (1 entry: D30 in entry phase; 0 in execution)
+- [x] No production behavior regression (only deliberate ARCH-1.003 vuln-id evolution + FU-1.010 share-token uniformity, both within carved-out scope)
+- [x] Coverage held at 36% (no PR-2 regression; AC-T2-stable PASS)
+- [x] FU-1.013 LOC forecast template second-use validated (template useful; recommend +50% audit-doc richness contingency for iter-2)
+- [x] ARCH-1.003 fully closed at iter-1 boundary (release-id D.8 + vuln-id O.1 + share-token P.2 — all auth surfaces uniform under CWE-204 oracle prevention)
+
+### Phase 10 close
+
+PR-3 closes here.  Branch state: 15 commits ahead of post-PR-2 master `d92e679`.  Recommendation **(a) ready-to-merge** confirmed unchanged from `pr3-verification.md` §5.
+
+Merge action plan (Phase 11):
+- Push branch to origin + audit-mirror (both gh accounts authenticated per M001/M002)
+- Open GitHub PR on origin (next PR# after #18 = #19)
+- Merge with `--merge` strategy (preserve full SHA chain — 15 commits with audit-doc cross-refs; squash would destroy)
+- Sync master to origin only (audit-mirror master untouched per D25 design)
+- Branch retained on both remotes (per D11/D17/D25/D32 audit-trail policy)
+
+**iter-1 cumulative status post-PR-3 (closure)**:
+- ledger D-entries: D1 - D33 (33 total)
+- ADRs: 0001 + 0002 (pre-PR-1) + 0003 + 0004 (PR-1) — no new in PR-2/PR-3 per Q-PR2-4 (b) / Q-PR3 plan §6
+- Codified principles: K.6 + K.7 (3 sub-patterns: existence / purpose / category)
+- §K invocations cumulative: 10 (PR-1: 8 + PR-2: 1 + PR-3: 1)
+- T-trigger cumulative: 1 (D22 from PR-1)
+- Open code-audit findings closed in iter-1: CODE-1.013 (PR-2 K) + CODE-1.011 historical (PR-1 D.3, surfaced PR-3 R) + CODE-1.014 partial (PR-3 N), plus PR-1 closures
+- pytest unit tests: 162 collected (161 passed + 1 skipped) at PR-3 close
+- Coverage on usecases + domain: 36% (held throughout PR-3)
+- test_all.py: 54/54 PASS (held throughout iter-1)
+- ARCH-1.003 status: **fully closed** at iter-1 boundary (all 3 auth surfaces uniform)
+
+iter-1 ready for iter-2 entry per user direction.  iter-2 plan-stage target: ≤ 5 cumulative §K invocations; FU-1.013 LOC forecast template promoted to standard Phase 7 template; FU-1.014/1.015 promotion rules attached.
