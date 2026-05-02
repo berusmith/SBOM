@@ -1,51 +1,10 @@
-import asyncio
-import csv
-import hashlib
-import io
-import json
 import logging
-import os
-import threading
-import uuid
-import zipfile
-from datetime import datetime, timezone
-from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
-from fastapi.responses import JSONResponse, Response
-from sqlalchemy import func
-from sqlalchemy.orm import Session, selectinload
+from fastapi import APIRouter
 
-from app.core import audit
 from app.core.config import BACKEND_DIR, resolve_under_backend, settings as _cfg
-from app.core.database import get_db
-from app.core.deps import get_org_scope, require_admin, get_current_user, require_release_in_scope
-from app.core.security import csv_safe, safe_attachment_filename
-from app.domain.severity import highest_severity
-from app.domain.sla import SLA_DAYS, sla_info
-from app.domain.suppression import is_suppressed
 
 logger = logging.getLogger(__name__)
-from app.models.component import Component
-from app.models.cra_incident import CRAIncident
-from app.models.product import Product
-from app.models.organization import Organization
-from app.models.release import Release
-from app.models.vulnerability import Vulnerability
-from app.models.brand_config import BrandConfig
-from app.services import sbom_parser, vuln_scanner, pdf_report, iec62443_report, iec62443_42_report, iec62443_33_report, nis2_report
-from app.services.sbom_parser import check_ntia as _check_ntia_fn, score_sbom as _score_sbom
-from app.services.alerts import notify_new_vulns
-from app.services.nvd import enrich_vulns_nvd
-from app.services.epss import fetch_epss
-from app.services.kev import fetch_kev_cve_ids
-from app.services.license_classifier import classify_license
-from app.services.signature_verifier import verify_signature as _verify_sig, detect_algorithm, SUPPORTED_ALGORITHMS
-from app.services import trivy_scanner as _trivy
-from app.services import syft_scanner as _syft
-from app.services.ghsa import fetch_ghsa_for_components as _fetch_ghsa
-from app.services.scanners.reachability import scan_zip as _scan_zip, classify_vulns as _classify_vulns
-from app.core.plan import require_plan, check_starter_limit
 
 # SBOM uploads.  `_cfg.UPLOAD_DIR` may be:
 #   - absolute  → used as-is
