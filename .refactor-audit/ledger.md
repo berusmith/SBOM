@@ -366,6 +366,9 @@ PR-2 (`refactor/iter-1-pr2-perf-tidy`) closes here at HEAD = the Phase-10.1 audi
 | D27 | Stage J | PERF-1.008 fix landed (vuln_scanner shared httpx.Client; 66.2% measured gain) | J.1 `ff13943` (production) + J.3 `89b6334` (audit-doc) | `bench_osv.py` (Stage I.1 `8820c60`) + ADR-0003 (now actionable) + dim 8 hit |
 | D28 | Stage K | CODE-1.013 CSAF namespace closed, env-var driven | K.2b `1054a38` + K.1 `9893d37` + K.2a `7ff76e5` + K.3 `72d24a2` | `code-audit.md` CODE-1.013 status update + 3 new tests + Q-PR2-1 (b) fallback |
 | D29 | Phase 10 | PR-2 closure index | (this commit) | this section |
+| D30 | PR-3 entry | §K invocation #10 — CODE-1.011 vs CODE-1.014 spec finding-category misdiagnosis (existing finding vs new umbrella) | (audit-doc Phase-7-record `edf9561`, on PR-3 branch) | `code-audit.md` CODE-1.011 + CODE-1.014 status updates (PR-3 Stage R) + this entry |
+| D31 | PR-3 R | Process observation: FU-1.010 promotion-rule slippage (rule said "promote BEFORE PR-2", PR-2 closed without picking up due to character mismatch perf+tidy vs share-token audit) | — | this entry + future K.8 / §F8 codification candidate (deferred to iter-2 entry) |
+| D32 | PR-3 R | Stage P audit findings + share-token oracle uniformity fix landed | P.1 `6aa5269` (audit doc) + P.2 `584e064` (production fix + test) + P.3 `4e6f0f2` (SDLC-001 token-scope extension) | `pr3-share-token-audit.md` §4 verdict + `share.py:188/196/200/204` + `tests/unit/test_share_token.py` + `test_endpoint_decorator_enforcement.py` token-scope checks + spawned FU-1.014 + FU-1.015 |
 
 ### PR-2 §K invocation log
 
@@ -442,3 +445,107 @@ Merge action plan:
 - test_all.py: 54/54 PASS (held throughout iter-1)
 
 iter-1 ready for next phase (PR-3 broad-except triage / iter-2 frontend / other) per user direction.
+
+---
+
+## PR-3 Stage R — full ledger entries (2026-05-02)
+
+PR-3 (`refactor/iter-1-pr3-error-handling`) Stage R audit-doc consolidation lands here.  Phase 9 verification + Phase 10 closure index follow as separate commits.
+
+### D30 — §K invocation #10 (PR-3 entry — CODE-1.011 vs CODE-1.014 finding-category misdiagnosis)
+
+**Trigger**: PR-3 entry Phase 0 grep validation per user spec.  User's PR-3 scope spec referenced "CODE-1.011 broad-except triage" as the headline target, implicitly conflating a single-site silent swallow finding (CODE-1.011 — quality grade `except Exception: pass` in `releases.py:215-221` pre-PR-1) with the umbrella triage of all broad-except clauses (CODE-1.014 — 46 sites across the backend).  Pre-execution grep evidence: `grep -n "CODE-1.011\|CODE-1.014" .refactor-audit/iteration-1/code-audit.md` returned both findings as distinct entries — CODE-1.011 at line 200 (single site, P2, S effort) and CODE-1.014 at line 271 (46-site umbrella, P2, M effort).  Further evidence: CODE-1.014 §Observation explicitly cites "CODE-1.011 covers one" of the ~5 silent swallows — they are intentionally separate findings with a stated relationship.
+
+**Invocation classification**: §K K.7.3 (third sub-pattern from the K.7 family: **category misdiagnosis** — agent's mental model conflated a member finding (CODE-1.011) with its enclosing umbrella (CODE-1.014)).  Identical structure to D26 (PR-2 entry CSAF perf-vs-bug misdiagnosis) but in a different specific axis.  PR-2 D26 was "finding-category" misdiagnosis at the perf-vs-bug axis; PR-3 D30 is "finding-scope" misdiagnosis at the single-site-vs-umbrella axis.  Both are legitimately K.7.3 — the unifying pattern is "is the target's category/classification what's believed?".
+
+**Decomposition**: user's mental model carried "PR-3 = error-handling stage = the canonical silent-swallow finding everyone remembers".  Reality: that single finding (CODE-1.011) was already silently closed inside PR-1 D.3 god-router decomposition (the `releases.py:215-221` site no longer exists post-D.3; quality scoring lives at `usecases/release/upload_sbom.py:80-85` with `logger.exception(...)` already in place).  The remaining work is the umbrella triage CODE-1.014 (46 sites total, ~4 silent swallows + 35 deliberate keeps + 6 translate-and-raise candidates).  PR-3's stated scope therefore correctly maps to CODE-1.014, not CODE-1.011.
+
+**Resolution adopted**: option (α) — proceed with PR-3 explicitly framed as CODE-1.014 partial closure (Stage N triage + silent-swallow fixes + deliberate-keep annotations), with CODE-1.011 status surfaced in PR-3 Stage R as historically-closed-in-PR-1-D.3 (this commit's `code-audit.md` edit codifies that historical closure for grep-from-finding-id audit trail clarity).  Options (β) defer PR-3 to re-scope and (γ) bundle CODE-1.011 as a fresh closure both rejected — (β) wastes the Phase 0 readiness work; (γ) creates a fake closure event for a finding that closed 2 days earlier in a different commit.
+
+**Significance**: §K invocation #10 is the **fourth** iter-1 invocation in the misdiagnosis-pattern family (after D24 existence + D25 purpose + D26 category-perf-vs-bug + D30 category-single-vs-umbrella).  Together D26+D30 demonstrate that K.7.3 (category) has internal sub-axes — perf-vs-bug, single-vs-umbrella, status-open-vs-closed, etc.  K.7's existing 3-sub-pattern formulation (i / ii / iii) covers this without further codification — K.7.3 just gets richer worked examples.  No new K.7.4 needed.
+
+**Cumulative §K invocations in iter-1**: **10**.  Per §K closing meta-rule "10+ = plan too imprecise to follow", this crosses the upper-edge threshold for the first time.  However: (a) D30 fired at PR-3 ENTRY phase, before any commits landed — caught by the K.7-mandated pre-execution grep validation, demonstrating the codified discipline working as designed.  (b) PR-3 plan target was ≤ 3 §K execution invocations; D30 counts as 1 entry-phase invocation against the budget.  Stage N+O+P all executed with **0 in-execution §K invocations** — plan precision was high after D30 resolution.  Final PR-3 §K count: **1 entry + 0 execution = 1 invocation**, under target.  The signal "10+ = plan imprecise" is therefore a cumulative iter-1 metric, not a per-PR metric — iter-1 closes at upper-edge but each PR's plan precision improved monotonically (PR-1 = 8 / PR-2 = 1 / PR-3 = 1).
+
+**Standing**: permanent.  **Trigger to revoke**: never.
+
+**Cross-ref**: `code-audit.md` CODE-1.011 + CODE-1.014 status updates landed in same Stage R commit (this commit) + `pr3-plan.md` §1 (where the misdiagnosis was resolved into the correct CODE-1.014 partial-closure framing) + ledger D24 + D25 + D26 (preceding misdiagnosis-pattern §K invocations) + `code-principles.md` §K K.7 (codified in PR-2 M.1 — receives D30 as a worked example for K.7.3, no formula change needed).
+
+### D31 — Process observation: FU-1.010 promotion-rule slippage
+
+**Trigger**: PR-3 entry Phase 0 — discovered while building pr3-plan.md §3 Stage P scope.  FU-1.010's iter-2 promotion rule at `refactor-plan.md:1039` reads: "promote BEFORE PR-2 (perf wins).  Reason: ARCH-1.003 oracle-prevention completeness across all auth boundaries is more important than perf wins; any oracle leak on the public path is an exploitation surface".  PR-2 closed (commit `d92e679`, merged 2026-05-02 morning) WITHOUT picking up FU-1.010 — the share-token audit was deferred to PR-3 instead.
+
+**Decomposition**: PR-2's character was **perf+tidy** (PERF-1.008 fix + CSAF spec-compliance + small cleanups).  FU-1.010's character was **share-token security audit** (oracle-prevention completeness on public auth surface).  These do not naturally bundle — adding share-token audit to PR-2 would have:
+  - Crossed the J5 security carve-out boundary (PR-2 had 0 J5 commits; share-token audit forces 1+);
+  - Expanded PR-2 from 6 production commits to 8-10, risking T3-soft (>16 total at the time);
+  - Diluted PR-2's reviewable narrative ("perf wins" + "share-token security"  is two concerns one PR);
+  - Required share-token expertise across the same review session as perf benchmarking.
+
+The promotion rule was **correct** in principle (oracle leak should not wait), but **wrong** in PR-2-specific scoping (PR-2's character mismatch made the rule operationally infeasible without scope expansion).  The slip was caught at PR-3 entry (one PR late, ~1 day of latency on a theoretical-not-practical leak — acceptable risk).
+
+**Significance**: FU promotion rules in `refactor-plan.md` §10 are written at iter-1 plan-stage based on then-current PR-N character predictions.  When the actual PR-N character drifts from the predicted character (perf+tidy was a PR-2-time decision, not a PR-1-time prediction), promotion rules pinned to the predicted character go silent.  No mechanism currently re-checks promotion rules at PR-N entry against the actual PR-N character.
+
+**Codification candidate (deferred)**: `code-principles.md` §F8 or §K K.8 — "FU promotion rules MUST be re-checked at every PR-N entry checklist; if the FU's promotion-rule character mismatches the PR-N actual character, either (i) promote anyway with explicit J5 / scope-expansion justification, or (ii) defer with explicit ledger entry citing the mismatch — silent skip is forbidden".  Default decision: **defer codification to iter-2 entry**.  iter-1 closure is not the right time to add a new principle; PR-3 records this as observation and iter-2 plan-stage will decide codification fate based on whether this slippage pattern recurs.
+
+**Standing**: PERMANENT observation.  **Trigger to revoke**: never (this is a historical record of why FU-1.010 landed in PR-3 not PR-2).  **Trigger to codify** (separate from revoke): if iter-2 PR-1 entry reveals a second instance of "FU promotion rule pinned to predicted PR character mismatched actual PR character", promote D31 + the iter-2 instance jointly to §F8 or §K K.8 in iter-2.
+
+**Cross-ref**: `pr3-plan.md` §1 + §3 Stage P framing + `refactor-plan.md` §10 FU-1.010 promotion-rule text (the rule that slipped) + `pr2-plan.md` (PR-2 plan that did not include FU-1.010 due to character mismatch) + this entry.
+
+### D32 — Stage P audit findings + share-token oracle uniformity fix
+
+**Trigger**: PR-3 Stage P execution per pr3-plan.md §3 + Q-PR3-3 conditional-fix decision rule.
+
+**Stage P decomposition**:
+
+**P.1** (`6aa5269`, audit doc) — Read-only end-to-end audit of `share.py:184` `download_shared_sbom`.  Audit covers all 4 FU-1.010 failure modes:
+  - **Token not found** [A]: 404 + "連結不存在或已被撤銷" — generic, no oracle leak ✓
+  - **Token expired** [B]: **410 + "此分享連結已過期"** — distinguishable from [A], theoretical oracle leak (practically negligible due to 256-bit token entropy)
+  - **Token's release in another org**: N/A by design (public endpoint, share-token = bearer capability, no caller "org" identity)
+  - **Release deleted while link active** [C]: 404 + "版本不存在" — distinguishable from [A], unreachable in normal ops via cascade chain (verified at `release.py:37` ORM cascade + `share_link.py:16` DB-level FK ondelete CASCADE)
+
+  Bonus finding [D]: SBOM file missing on disk → 404 + "SBOM 檔案不存在" — distinguishable from [A]/[C], also unreachable in normal ops.
+
+  Two out-of-FU-1.010-scope concerns surfaced:
+  - **§3.2 Audit logging gap**: `download_shared_sbom` calls `audit.record(...)` ZERO times (success + all 4 failure paths); failed share-link attempts leave no forensic trace.  Fix estimated 30-50 LOC + audit category taxonomy + schema decision — crosses (a)-surgical threshold → spawned **FU-1.014**.
+  - **§3.3 Test coverage gap**: zero existing unit tests for any of the 5 response paths.  P.2 ships a 4-test minimal regression suite pinning the unified-404 behavior; comprehensive suite → spawned **FU-1.015**.
+
+  **Verdict**: **gap-and-fix-in-PR-3** for the 4-branch message+status-code uniformity items per FU-1.010 spec recommendation.
+
+**P.2** (`584e064`, production fix + test) — Surgical 3-line uniformity fix in `share.py`:
+  - Added module-level `_INVALID_LINK_MSG = "連結無效、已過期或已被撤銷"` constant.
+  - All 4 negative branches in `download_shared_sbom` return `404 + _INVALID_LINK_MSG`.  The 410 → 404 status change for expired tokens is the headline fix per FU-1.010 spec wording at `refactor-plan.md:1036` ("HTTP status code is consistent (do not differentiate 'exists but expired' from 'never existed')").
+  - 4 new pytest cases in `tests/unit/test_share_token.py` — token-not-found / expired-token / release-deleted / valid-token-success.  Test #2 is the regression-pin that explicitly asserts "expected 404 (post-P.2 unified), got X" — a future change that re-introduces 410 will fail CI with a self-explanatory error message.
+  - UX trade-off: combined-cause message ("invalid / expired / revoked") preserves user mental model that "the link might have expired" without confirming any specific cause on the wire — small UX cost, oracle-uniformity is the spec.
+
+**P.3** (`4e6f0f2`, SDLC-001 share-token coverage extension) — Extended `tests/test_endpoint_decorator_enforcement.py`:
+  - New `_TOKEN_PARAMS = {"token"}` config alongside existing `_TENANT_SCOPED_PARAMS = {"release_id", "vuln_id"}`.
+  - New `_TOKEN_RESOLVER_DEPS: set` (Depends-helper whitelist, currently empty placeholder for future centralized `_resolve_share_token` resolver) + `_TOKEN_RESOLVER_SOURCE_PATTERNS = ("SbomShareLink.token",)` (substring fallback for current inline pattern).
+  - New `_has_token_resolver(endpoint)` helper: checks Depends() against `_TOKEN_RESOLVER_DEPS` first, falls back to source-substring scan against `_TOKEN_RESOLVER_SOURCE_PATTERNS`.
+  - New test function `test_all_token_scoped_endpoints_have_resolver()` — walks routes, requires resolver pattern for every `{token}`-templated route.
+  - `test_decorator_argument_consistency()` extended to consider both tenant + token scope + their respective helper sets.
+  - `main()` now reports BOTH counts on success: "[PASS] all 45 tenant-scoped endpoints..." + "[PASS] all 1 token-scoped endpoint(s)...".
+
+  **Why source-substring instead of AST whitelist** (deviation from FU-1.011 spec at `refactor-plan.md:1047`): single use case today doesn't justify AST machinery; substring `"SbomShareLink.token"` only false-positives if a comment/docstring claims-but-doesn't-do validation; future migration to centralized resolver moves check into `_TOKEN_RESOLVER_DEPS` set comparison (no source scan needed).  AST scan is FU-1.016 placeholder if substring proves insufficient.
+
+**Verification (P.1 + P.2 + P.3 cumulative)**:
+  - `pytest tests/unit --cache-clear`: 161 passed (was 157 + 4 new) / 1 skipped — no regression
+  - `python tests/test_endpoint_decorator_enforcement.py`: [PASS] 45 tenant-scoped + [PASS] 1 token-scoped
+  - All AC-SHARE-AUDIT + AC-SDLC-SHARE acceptance criteria satisfied
+
+**FU spawns**:
+  - **FU-1.014** — Audit logging integration for `download_shared_sbom` (5 event types: `share_link_resolve_success` + 4 failure modes with token-prefix-only logging for credential safety; ~30-50 LOC + audit category enumeration + nullable-org_id schema decision).  Iter-2 promotion rule: bundle with iter-2 audit-event taxonomy expansion (likely PR that adds new event types for any reason).
+  - **FU-1.015** — Comprehensive share-link endpoint test suite (the public download endpoint has only the 4-test minimal regression now from P.2; full suite would cover mask_internal toggle, download_count increments, multiple-link-per-release scenarios, plan-gating on create/list/revoke admin endpoints, edge cases on 20-link cap).  Iter-2 promotion rule: opportunistic; no urgency (P.2 regression pin covers the security-relevant bit).
+
+**Significance**: D32 closes ARCH-1.003 oracle-prevention discipline for the **last** auth surface in iter-1 — the public unauthenticated share-token endpoint.  Combined with D11 (PR-1 D.8 release-id 27-site evolution) and D30/O.1 (PR-3 vuln-id endpoint evolution), every auth surface in the codebase now follows the CWE-204 uniform-404-on-cross-tenant pattern.  ARCH-1.003 is **fully closed** at iter-1 boundary.
+
+**Cumulative §K invocations in iter-1**: 10 (no new §K during Stage P execution — plan precision held).  **Standing**: permanent.  **Trigger to revoke**: never.
+
+**Cross-ref**: `pr3-share-token-audit.md` (full P.1 audit doc) + `share.py:184-216` post-fix + `tests/unit/test_share_token.py` + `tests/test_endpoint_decorator_enforcement.py` token-scope checks + spawned FU-1.014 / FU-1.015 / future FU-1.016 (AST scan promotion candidate).
+
+### Followups added in PR-3 (FU-1.014 + FU-1.015)
+
+| FU | Topic | Iter-2 promotion rule |
+|----|-------|----------------------|
+| **FU-1.014** | Audit logging integration for `download_shared_sbom` (5 event types incl. failure-mode-specific names; token-prefix-only for credential safety; nullable-org_id schema decision) | Bundle with iter-2 PR that adds new audit-event types for any reason; estimated 30-50 LOC + audit taxonomy decision |
+| **FU-1.015** | Comprehensive share-link endpoint test suite beyond P.2's 4-test regression pin (mask_internal toggle paths, download_count increments, multiple links per release, plan-gating on admin endpoints, 20-link cap edge cases) | Opportunistic — no urgency; P.2 regression pin covers security-relevant behavior |
+
+(FU-1.013 was created in PR-1 / closed in PR-2 K validation; FU-1.014 + FU-1.015 are the only PR-3 spawns.)
