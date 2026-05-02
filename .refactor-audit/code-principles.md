@@ -117,6 +117,25 @@ These principles are **observed in the codebase** or **written in CLAUDE.md / .k
   
   **Trigger for promotion to a separate commit**: if the same incidental-fix class repeats (e.g. another `< 20 LOC` test-infra fix in Stage B/C/D), promote it to a separate commit at that point — bundling is forgivable once per "discovery moment", not as a habit.
 
+- **J6.5.** **Review-time tool-flagged dead code in same file** (added 2026-05-02 per iter-1 PR-1 review-fix sweep, commit `61e4265`). Extension to J6 covering a different surface than the original (which was test/build infra incidentally bundled with a different concern). When a review-time lint pass (pyflakes / ruff / etc.) flags pre-existing dead code in the SAME FILE the current commit is already touching for self-caused cleanup, the pre-existing dead code MAY be bundled into that same commit if **all four** conditions hold:
+  1. **Same-file boundary**: the pre-existing dead code is in the file the current commit is already modifying — NOT in another file the lint pass also happened to flag (those go in their own commit per J1, or invoke §K STOP-and-disclose if plan-external).
+  2. **Same class of issue**: e.g. dead imports flagged alongside the self-caused dead imports — not a different lint family that would require independent reasoning (a deprecated-API replacement is NOT same-class as an unused-import sweep, even if the same tool flagged both).
+  3. **Combined size cap**: total diff (self-caused + pre-existing) `< 20 LOC` (matches J6 size cap).
+  4. **Disclosure**: the commit body MUST annotate each dead item as either "PR-N-caused (commit SHA)" or "pre-existing dead since master (blame SHA + date)" so future audits reading `git blame` can correlate cleanly.
+
+  **Why this is an extension, not a violation, of J6**: original J6 forbids "production-code surface" in incidental fixes — that rule was scoped to test/build-infra fixes that surface during writing a different concern.  J6.5 covers a different surface entirely: review-time lint findings in production-code files that are ALREADY being touched for a parent concern.  Both share J6's spirit of "don't orphan a small sweep from the file it operates on."
+
+  **The broken-window argument** (per user, 2026-05-02): pyflakes has already flagged the line; leaving it because "I didn't cause it" is anti-J6 (sees-and-leaves), not pro-J6 (sees-and-closes).  Half-cleaned files (3 PR-N-caused dead removed, 3 pre-existing dead left) produce a worse audit signal than either fully-clean or fully-left — the half-state implies the cleanup was incomplete.
+
+  **Does NOT extend to**:
+  - **Other files** flagged by the same lint pass (own commit, or §K).
+  - **Behavior changes** dressed as "tool flagged it" (a deprecated-API call replacement is a behavior change, not a dead-code sweep).
+  - **Refactors** (rename / extract / move) — Tidy First (§J4) still applies; lint findings do NOT relax J4.
+
+  **First invocation**: iter-1 F.2 (commit `61e4265`) — share.py 6 imports cleaned (3 PR-1-caused via D.8 + E.1: `Optional`, `BaseModel`, `Product`; 3 pre-existing dead since master: `JSONResponse`, `Component`, `Organization`).  Recorded as ledger D18.
+
+  **Trigger for promotion to a separate commit**: if J6.5 invocations exceed 3 per PR (signaling lint baseline drift between iters), the next iteration MUST add an audit-time lint sweep as a separate planned stage rather than relying on opportunistic review-time invocation.
+
 ## I. Ops & deployment conventions
 
 - **I1.** Production deployment is `bash deploy/deploy.sh`; first-time uses `bash deploy/first-deploy.sh`
@@ -213,4 +232,7 @@ discipline are well-calibrated).
 ### Iter-1 additions (2026-04-29, post user Q1–Q10 answers)
 - **F7** — backend dev-only deps allowlist (`pytest`, `pytest-cov`, `hypothesis`)
 - **J1–J5** — Phase-8 commit discipline (default + structural exception + security carve-out)
+- **J6** (added 2026-04-30 mid-iter) — Phase-8 incidental-fix policy (test/build infra, < 20 LOC, surface-capped, disclosed)
+- **J6.5** (added 2026-05-02 mid-iter) — Review-time tool-flagged dead code in same file (extension to J6 covering production-code surface when already-touched-by-parent-concern)
+- **K** (added 2026-05-01 mid-iter) — STOP-on-factual-disagreement (single-reviewer mode: evidence > instructions)
 - See `architecture.md` §4.4 (no-over-abstraction red lines AR-1/2/3) and §4.5 (Wave-D alignment WD-1/2/3/4) — encoded as architecture decisions, listed here as cross-reference
