@@ -52,6 +52,7 @@
 | **D20** | **Phase 8 closure sanity-sweep findings + D16 措辭修訂 + `b6fa64e` 重新分類** — **Trigger**: F.5-audit 之前的 sanity sweep, §K invocation #4 (累計 iter-1 第 4 次).  **Discovery 1 (commit partition)**: `b6fa64e` (B.3 era, 2026-04-30) 動了 `domain/severity.py` docstring 18 行 + `invariants.md` + `ledger.md` D14 entry.  在嚴格 D16 措辭下這算 production commit, 使 PR-1 production count = 23 (超 T3-soft 1).  但 `b6fa64e` 的設計意圖在 D14 entry 內已明寫為「三處 codification (`invariants.md` 契約 + `severity.py` 呼叫站警告 + ledger 歷史紀錄)」— 把 docstring 警告跟它 implement 的契約綁同一 commit 是刻意, 不是 J1 違反.  **Resolution**: 採 (β) 修訂 D16 措辭把「same-commit codification of own audit-doc content」明確排除在 production count 外.  修訂後 PR-1 production = 22, T3-soft 未觸發.  修訂的具體措辭見上述 D16 entry 內 inline 修訂段.  **Discovery 2 (LOC growth)**: `backend/*.py` 從 master 13,476 LOC 漲到 15,025 LOC (+1,549, +11.5%), 超過 sanity sweep 預期的 ±5% 邊界.  **Decomposition**: ~1,097 LOC 是 Stage A 加的 test files (per AC-T1 ≥ 30 function-level + ≥ 75 HTTP characterization 接受標準), ~452 LOC 是 module skeleton + package overhead (D.1 - D.7 把 2102 LOC 一檔拆成 8 個 module 必然產生 docstring + import + `__init__.py` overhead), 其餘是 schema centralization (E.1 + E.2).  淨值: -2056 (`releases.py` shrink) + 1097 (tests) + 452 (split overhead) + balance ≈ +1549.  **Standing**: +11.5% backend LOC 是 plan 內預期成長, 不是 scope leak.  Plan 沒設 LOC budget bar, 我口頭給的 ±5% 是 sanity heuristic 不是契約.  **Forward action**: 不為 iter-1 追加 LOC budget (那是事後加 KPI), 但 future iter PR 估算時應顯式列出 expected LOC delta (test 新增 / module split overhead / schema centralization 三類分項), 讓 reviewer 有預期值對齊.  FU-1.013 紀錄此項.  **Cumulative §K invocations**: 4 (D.8 ×2 + F-stage post-execution + this sanity sweep).  **Standing**: permanent.  **Trigger to revoke**: never. | F.5-audit pre-commit sanity sweep 2026-05-02 + user (β) acceptance of D16 revision + (α') acceptance of LOC sub-finding | D14 + D16 (修訂) + D18 + ledger.md "Phase 8 closure" 段 (F.5-audit 內) + new FU-1.013 |
 | **D21** | **§K STOP-on-factual-disagreement fifth invocation (Phase 9 verification AC-T2 fail)** — Trigger: `verification.md` §1 AC-T2 measurement found `pytest --cov=app/services/usecases --cov=app/domain` reports 26%, vs the `refactor-plan.md` §6 hard-gate threshold of ≥ 30%.  Per §K K3 ("Grep / verification result outside expected range"), the pre-Phase-9 implicit premise "PR-1 is merge-ready" was contradicted by observable measurement.  **Decomposition**: domain layer at 100% across 49 statements; usecases layer at ~24% aggregate (988 statements / ~242 covered) — the miss is concentrated in 6 usecase modules whose endpoints are exercised only by 7 HTTP characterization tests (covering ~7 of ~37 endpoints in the surface).  **Resolution path (per verification.md §5.3)**: recommendation (b) — merge after addressing AC-T2.  ~5–10 additional characterization tests against currently-uncovered usecase endpoints (estimated < 200 LOC, no production-code change) should push coverage above 30%.  Decision on remediation path deferred to user (in-PR-1 fix vs accept-and-document); this verification commit does NOT itself address AC-T2 per "verification 不執行 merge / 不擴張 scope" discipline.  **Significance**: §K's first four invocations (D.8 share.py scope + D.8 share-token premise + F-stage post-execution + F.5-audit sanity sweep) all triggered DURING Phase-8 commit execution.  This fifth invocation is the first to trigger DURING Phase 9 verification — confirming §K applies across phase boundaries, not just within commit work.  K.6 (added in F.4-audit) said "K applies to all observable facts"; D21 is the first cross-phase application.  **Cumulative §K invocations in iter-1**: 5.  Per §K closing paragraph, 5-per-iter still in healthy band (not 0 = K is dead letter; not 10+ = plan too imprecise).  **Standing**: permanent.  **Trigger to revoke**: never. | Phase-9 verification AC-T2 measurement 2026-05-02 + verification.md §1 + §5.1 hard-blocker FAIL | `code-principles.md` §K + K.6 + `verification.md` §1 AC-T2 / §5.1 / §5.3 / §6 D21 reference + `refactor-plan.md` §6 acceptance gate (the hard-gate threshold this finding violates) |
 | **D22** | **PR-1 production budget T3-soft trigger acceptance (AC-T2 remediation)** — Trigger: Phase 9 verification 發現 AC-T2 fail (26% vs ≥ 30%).  Recommendation (b) 要求加 characterization tests 才能 merge.  預估 5-10 個 tests / < 200 LOC, 屬 `backend/tests/unit/` surface, 以 D16 strict reading 算 production commit.  加上去 PR-1 production = 23, 觸發 plan §3.4 的 T3-soft warning line (`> 22`).  **Decision (user 2026-05-02)**: 接受 T3-soft trigger 一次, 允許 PR-1 production count 觸及 23.  **Rationale**: (a) T3-soft 本意是強制 reviewer re-evaluate scope, 不是硬 block; (b) 這個 +1 commit 是 Phase 9 倒回頭發現的 verification gap, 不是 new feature scope expansion, 屬 plan §6 acceptance gate 自我修正範圍; (c) AC-T2 是 hard blocker, 選擇「接受 partial success 不補測試」會違反 §K (retroactive softening of hard gate); (d) 不補測試的代價 (test coverage 留在 26% 進 PR-2 / iter-2) 比觸發 T3-soft 大得多 — 後續 PR 會繼承這個 coverage debt.  T3-soft 觸發的標準動作 per plan §3.4 「scope re-evaluation」已執行: re-evaluation 結論為「補測試 in-PR-1 是正確選擇, 不 split into followup PR」.  **Future budget hygiene**: 此次 T3-soft 接受僅限 AC-T2 補測試 commit 一次; 若補測試後又發現需要再補其他項目使 production count > 23, 觸發 T3-hard (`> 25`), 即使僅 +1, 也必須 §K STOP + disclose 重新裁示, 不可連續 retroactive 接受.  **Cumulative T-trigger invocations in iter-1**: 1 (此次, 首次).  **Actual G.1 outcome**: commit `b9dbf19` added 10 tests + 1 fixture (216 LOC); pytest unit cold 154 passed / 1 skipped; coverage 26% → 36% (+10 pts, AC-T2 PASS with 6-pt margin); test_all.py cold 54/54 PASS; production count 22 → 23 as predicted.  **Standing**: 此次接受是 PR-1 specific; 規則未來統一適用 — 任何 hard-blocker remediation 觸發 T3-soft 屬接受範圍, 任何新 feature scope 觸發 T3-soft 仍走標準 STOP path.  **Trigger to revoke**: never. | Phase 9 verification recommendation (b) acceptance + user 2026-05-02 explicit裁示 | D16 + D16 revision (D20) + `verification.md` §1 AC-T2 / §5.3 / §6 Phase 9 final update + D21 + `refactor-plan.md` §3.4 trigger thresholds + §6 acceptance gate + G.1 commit `b9dbf19` (補測試 commit) + this G.2 audit-doc commit |
+| **D23** | **§K STOP-on-factual-disagreement sixth invocation (Phase 10 ADR 0003 pre-write factual error)** — Trigger: Phase 10 ADR 0003 prep.  User's spec for ADR 0003 referenced `backend/app/services/osv.py` (twice in instruction text).  Pre-write grep evidence: `ls backend/app/services/ | grep osv` returned 0 matches; `grep -rn "OSV" backend/app/services/vuln_scanner.py` confirmed the OSV `_query_batch` + `OSV_BATCH_URL` + phase-1-batch / phase-2-parallel implementation lives in `vuln_scanner.py:2-15, 30, 107-149, 146+`.  `CLAUDE.md` service registry also lists `vuln_scanner.py | OSV.dev /v1/query per PURL` as the canonical service file.  **Invocation classification**: §K K1 ("User instruction has a factual premise error about file contents").  Per K.6 ("§K applies to all observable facts"), file-existence is a directly verifiable fact via `ls`.  **Decomposition**: user's mental model carried `services/osv.py` (likely from a hypothetical naming convention or old planning doc); reality preserved `vuln_scanner.py` filename for git-blame continuity (see ADR-0003 Context section paragraph 3).  **Resolution**: option (α) — agent updates ADR 0003 references to `vuln_scanner.py`, ADR substantive decision (cite-only strategy + benchmark deferred to PR-2) unchanged.  Options (β) renaming the production file to match user's mental model and (γ) skipping ADR 0003 entirely both rejected — (β) violates Phase 10 "audit-doc only" scope and would trigger T3-hard, (γ) costs the second ADR in iter-1 closure (dim 12 target action).  **Significance**: §K invocation #6, second cross-phase invocation (after D21 in Phase 9).  All 6 invocations correctly blocked an instruction that, if executed naively, would fix an error in production-commit form (this case: ADR with non-existent filename reference, polluting future audit grep).  **Cumulative §K invocations in iter-1**: 6.  Per §K closing paragraph "the cumulative count of K invocations per iter is itself a useful signal", 6-per-iter remains in healthy band (not 0 = K is dead letter; not 10+ = plan too imprecise to follow).  **Standing**: permanent.  **Trigger to revoke**: never. | Phase 10 ADR 0003 pre-write grep 2026-05-02 + user (α) acceptance | `code-principles.md` §K + K.6 + Phase-10.1 commit `f516d84` body + `.knowledge/decisions/0003-osv-batch-strategy.md` Context section paragraph 3 (the corrected references) |
 | **D7** | Phase-8 commit discipline **relaxed**: god-router/god-component splits MAY use multi-commit-per-PR | Q4 + practical: local Windows dev, no per-commit CI loop; Linux kernel patch-series practice supports atomic-PR / mid-PR-commit safety boundary. Security commits exempt. | `code-principles.md` §J |
 | **D8** | Iteration cadence: **plan now, execute over multiple sessions** along Wave D's edges | Q4 confirmation | implicit; affects Phase 7 sizing |
 | **D9** | **Out of scope this iter**: extra=forbid / RFC 7807 (Q6), structured logging / Prometheus / OTel (Q7), SEC-027 mitigation (Q8) | Q6/Q7/Q8 | followups |
@@ -138,3 +139,157 @@ K.6 (K applies to all observable facts).
 - `releases.py` LOC: 2,101 → 45 (-97.9%)
 
 **Phase 9 entry condition**: user explicit "go Phase 9".  Not auto-triggered.
+
+---
+
+## PR-1 Final Ledger Consolidation Index (Phase 10 closure, 2026-05-02)
+
+PR-1 (`refactor/iter-1-god-router-split`) closes here at HEAD = the
+Phase-10.3 audit-doc commit landing this index.  Branch state: 41 commits
+ahead of master; working tree clean; all 15 hard blockers PASS;
+recommendation (a) ready-to-merge confirmed unchanged from Phase 9 closure.
+
+### Decisions chronological summary (D1 - D23)
+
+| Entry | Phase | Topic | Production commit ref | Cross-ref |
+|-------|-------|-------|----------------------|-----------|
+| D1  | Phase 0 calibration | API contract regime: lenient | — | `invariants.md` §V |
+| D2  | Phase 0 calibration | Add pytest dev-dep | A.1 `017d409` | `code-principles.md` §F7 |
+| D3  | Phase 0 calibration | Split releases.py BEFORE Wave D sprint #3 | (planning; executed Stage D) | `architecture.md` §4.5 WD-1/2/3/4 |
+| D4  | Phase 0 calibration | Adopt Hexagonal-leaning target + 3 no-over-abstraction red lines | — | `architecture.md` §4.4 AR-1/2/3 |
+| D5  | Phase 0 calibration | Phase 5 perf scope narrowed to 4 hot-spots | — | `recon.md` §6 |
+| D6  | Phase 0 calibration | Hot-spot list (N+1 / PDF / OSV / ReleaseDetail.jsx) | — | `recon.md` §6 |
+| D6.3-correction | Phase 5 | OSV cite-only (no re-measure) | — | `performance-audit.md` |
+| D7  | Phase 0 calibration | Phase-8 multi-commit-per-PR exception for god-router splits | — | `code-principles.md` §J |
+| D8  | Phase 0 calibration | Iteration cadence: plan now, execute multi-session | — | implicit; affects Phase 7 sizing |
+| D9  | Phase 0 calibration | Out of scope this iter: extra=forbid / RFC 7807 / structured logging / SEC-027 | — | followups |
+| D10 | Phase 0 calibration | sbom.db at repo root: investigated non-issue | — | `known-debt.md` |
+| D11 | Stage D close | **First (and only) deliberate contract evolution** under D1 lenient (ARCH-1.003 403→404 evolution) | D.8 `c3ac0a1` | `architecture-audit.md` ARCH-1.003 + `refactor-plan.md` §3.9 |
+| D12 | Stage A.3 | In-memory SQLite StaticPool incidental fix (J6 first invocation) | A.3 `510ec8d` | `code-principles.md` §J6 |
+| D13 | Pre-flight | Wave D issue creation locked behind PR-1 merge | — | `architecture.md` §4.5 WD-2 |
+| D14 | Stage B.3 | INV-D1 SEVERITY_ORDER -1 default invariant (3-place codification) | B.3 `a34ab09` | `invariants.md` §VII.1 + `domain/severity.py` docstring |
+| D15 | Stage C.0 | J6 fallback to separate commit (PackagePresence inner-key contract) | C.0 `c2f0335` | `code-principles.md` §J6 + commit `36eb68e` body |
+| D16 | Stage C end | PR-1 commit budget calculation rule (revised 2026-05-02 per D20) | — | `refactor-plan.md` §6 |
+| D17 | Stage D.8 | enrich_ghsa _active_enrichments race window strict improvement | D.8 `c3ac0a1` | commit body "Subtle behavior change" + `invariants.md` §I.1 |
+| D18 | Stage F | F-stage review-fix sweep + §J6.5 principle extension | F.1 `aa14009` + F.2 `61e4265` (+ F.3 `6f03f9f` audit-doc) | `code-principles.md` §J6.5 |
+| D19 | F.4-audit | §K invocation #3 (F-stage post-execution git-history mismatch) + K.6 footnote | F.4-audit `55e53d8` | `code-principles.md` §K + K.6 |
+| D20 | F.5-audit | Phase 8 closure sanity-sweep + D16 revision + b6fa64e reclass | F.5-audit `e0c3008` | D16 revision + `refactor-plan.md` §10 FU-1.013 |
+| D21 | Phase 9 | §K invocation #5 (Phase 9 verification AC-T2 fail discovery) | Phase-9 `15ad717` | `verification.md` §1 AC-T2 / §5.3 |
+| D22 | Phase 9 | T3-soft trigger acceptance for AC-T2 remediation (first T-trip in iter-1) | G.1 `b9dbf19` (test commit) + G.2 `17e0641` (audit-doc) | `verification.md` §5.2 + plan §3.4 |
+| D23 | Phase 10 | §K invocation #6 (ADR 0003 file-name correction `services/osv.py` → `vuln_scanner.py`) | Phase-10.1 `f516d84` (ADR commit) | `code-principles.md` §K + K.6 + `0003-osv-batch-strategy.md` Context paragraph 3 |
+
+### Followups index (FU-1.001 - FU-1.013)
+
+| FU | Topic | Iter-2 promotion rule |
+|----|-------|----------------------|
+| FU-1.001 | Tighten `update_notes` / `update_version` validation (Pydantic min/max) | Deferred per Q-P7-3 (E.2 chose behavior-equivalence) |
+| FU-1.002 | Extend SDLC-001 enforcement to flag legacy `_assert_vuln_org` (last legacy caller in `vulnerabilities.py`) | Same iter as the vulnerabilities.py refactor (deps-based detection design from FU-1.011) |
+| FU-1.003 | Anti-corruption layer for OSV / NVD / EPSS / KEV / GHSA response shapes (typed DTOs) | When second consumer of any external API surfaces |
+| FU-1.004 | Move CycloneDX XML / SPDX JSON construction to `services/exporters/` package | Iter-2 if `reports.py` 469 LOC re-split happens |
+| FU-1.005 | Suppression timezone enforcement (reject naive datetime in `__post_init__`) | Iter-2 — pair with suppress-endpoint Suppression value-object wiring |
+| FU-1.006 | Suppression `reason` length / charset constraints | Same iter as FU-1.005 |
+| FU-1.007 | Suppression `suppressed_by` user_id existence check (cross-table FK) | Same iter as FU-1.005 |
+| FU-1.008 | Suppression cross-row uniqueness (no two active suppressions on same vuln_id) | Same iter as FU-1.005 |
+| FU-1.009 | Audit existing ORM data for Suppression invariant-1 violations | Pair with the suppress-endpoint rewrite (whoever wires Suppression onto write path) |
+| FU-1.010 | Audit `download_shared_sbom` (public share-token endpoint) for ARCH-1.003 root-cause completeness | Decision needed: is `download_shared_sbom` an org-scoped endpoint with oracle risk? |
+| FU-1.011 | Extend SDLC-001 enforcement test to cover share-token endpoints (AST-based whitelist) | Same iter as FU-1.010 |
+| FU-1.012 | `stats.py:169` pre-existing dead local `inc_counts = {}` cleanup | Opportunistic — bundled into iter-2's first audit lint-pass if §J6.5 promotion threshold (`> 3 invocations per PR`) trips |
+| FU-1.013 | Phase 7 plan template addition for "LOC delta forecast" subsection | Plan-stage must-do for iter-2 (template change, not followup-as-task) |
+
+### Maturity score evolution (12 dimensions, post-G.1)
+
+| # | Dim | Pre | Post-PR-1 | Δ | Target | Hit/Miss |
+|---|-----|----:|----------:|--:|-------:|----------|
+| 1  | Architecture clarity   | 5 | 6 | +1 | +2 | **Miss** (conservative; AC-A1-A4 PASS but lifecycle.py 13-endpoints + reports.py 469 LOC density mid) |
+| 2  | Domain purity          | 3 | 6 | +3 | +3 | Hit |
+| 3  | Abstraction discipline | 7 | 7 | 0  | 0  | Hold (AR-1/2/3 not violated) |
+| 4  | Readability density    | 7 | 8 | +1 | +1 | Hit |
+| 5  | Error handling         | 5 | 5 | 0  | +1 | **Miss** (broad-except 10 → 12 net; CODE-1.011 not addressed) |
+| 6  | Test quality           | 3 | 6 | +3 | +3 | Hit (post-G.1; was Miss pre-G.1 with score 5) |
+| 7  | Observability          | 4 | 4 | 0  | 0  | Hold (out of scope per Q7) |
+| 8  | Performance awareness  | 5 | 5 | 0  | +1 | **Miss** (no benchmark scripts committed; ADR-0003 records the cite-only choice) |
+| 9  | API design             | 6 | 7 | +1 | +1 | Hit (schemas centralization + ARCH-1.003) |
+| 10 | Dependency hygiene     | 8 | 8 | 0  | 0  | Hold (only pytest-dev added) |
+| 11 | Build & tooling        | 7 | 7 | 0  | 0  | Hold |
+| 12 | Doc density            | 9 | 9 | 0  | 0  | Hold (massive audit-doc; 2 ADRs added in Phase 10 — partial completion of "2-3 new ADRs" target action) |
+
+```
+Sum:        69 → 78  (Δ +9)
+Weighted Δ: +0.75
+```
+
+Per `calibration.md` §3.4 composite outcome rules: **PARTIAL SUCCESS**
+(band [+0.5, +0.8); ≥ +0.8 = full success; < +0.5 = fail).
+
+**Maturity honesty footer**: maturity weighted Δ recorded as +0.75 above
+is the post-G.1 verification result.  Phase 10 audit-doc commits
+(Phase-10.1 / .2 / .3) are documentation-only and do NOT change any
+maturity dimension score (per dim 12 evaluation methodology — ADRs are
+signal, not source, of doc density score; the source is the broader
+audit-doc body landed across all phases).  The +0.75 partial-success
+classification stands as the iter-1 closing maturity record.  Future
+iter-2 / PR-2 inherits the 3 explicit misses (dim 1 / 5 / 8) for
+remediation.
+
+### ADRs added in iter-1
+
+| ADR | Title | Decision summary |
+|-----|-------|------------------|
+| 0001 | FastAPI dependency upgrade | Pre-PR-1 (2026-04-25), unchanged |
+| 0002 | Lifespan migration | Pre-PR-1 (2026-04-25), unchanged |
+| **0003** | OSV batch query strategy — cite-only, not actionable | Cite existing optimization; defer `bench_osv.py` reproducer to PR-2; root cause of dim 8 miss; commit `f516d84` |
+| **0004** | `releases.py` god-router decomposition strategy | 4-layer architecture (api shell + 6 usecase modules + domain + schemas); Stage D 8-commit execution; commit `a56624c` |
+
+### §K invocation log (cumulative iter-1: 6)
+
+| # | Trigger | Resolution | Ledger ref |
+|---|---------|------------|------------|
+| 1 | D.8 share.py local helper scope discovery (pre-flight) | (i) include in D.8 atomically | D11 context |
+| 2 | D.8 share-token premise factual disagreement (instruction phase) | (α) simple-path migration with `Depends(require_release_in_scope)` | D11 context |
+| 3 | F-stage post-execution git-history mismatch ("go F.1" when F.1-3 already on HEAD) | (α) accept Stage F as-is + re-issue report in new format | D19 |
+| 4 | F.5-audit pre-commit sanity sweep — partition mismatch (b6fa64e MIXED) + LOC drift | (β) D16 revision + (α') accept LOC sub-finding | D20 |
+| 5 | Phase 9 verification AC-T2 fail (26% < 30%) | (i) full 10-test remediation via G.1 | D21 + D22 |
+| 6 | Phase 10 ADR 0003 pre-write filename error (`services/osv.py` → `vuln_scanner.py`) | (α) update ADR references to actual file | D23 |
+
+**6-per-iter signal commentary**: per §K closing meta-rule "the cumulative
+count of K invocations per iter is itself a useful signal" — 6 invocations
+across one PR remains in healthy band (not 0 = K is dead letter; not 10+
+= plan too imprecise to follow).  All 6 correctly blocked an instruction
+that, if executed naively, would have fixed an error in production-commit
+form.  Notable: 2 of 6 (#3 + #6) fired across phase boundaries (F-stage→
+sanity-sweep, Phase-10 ADR pre-write), confirming K.6 ("§K applies to
+all observable facts, not only code contents") covers cross-phase work.
+
+### T-trigger invocation log (cumulative iter-1: 1)
+
+| # | Trigger | Outcome | Ledger ref |
+|---|---------|---------|------------|
+| 1 | G.1 commit pushing production count 22 → 23 (T3-soft `> 22`) | One-time acceptance, AC-T2 remediation scope only; future hard-blocker remediation under same rule, future feature scope still requires §K STOP | D22 |
+
+### Phase 10 closure conditions
+
+- [x] All 15 hard blockers PASS (`verification.md` §5.1)
+- [x] Maturity weighted Δ recorded (`verification.md` §2: +0.75 partial success accepted)
+- [x] All ADRs drafted (0003 in Phase-10.1 `f516d84`; 0004 in Phase-10.2 `a56624c`)
+- [x] Ledger consolidated (this section in Phase-10.3)
+- [x] §K invocation log complete (6 entries above; D-entry references attached)
+- [x] T-trigger log complete (1 entry above; D22 reference attached)
+- [x] No production code change since AC-T2 remediation (`git diff b9dbf19..HEAD -- backend/ frontend/ tools/` empty; working tree clean throughout Phase 10)
+
+### Phase 10 close
+
+Phase 10 closes here.  HEAD = the Phase-10.3 commit landing this index.
+Branch state: **41 commits ahead of master; working tree clean; all hard
+blockers PASS; recommendation (a) ready-to-merge confirmed unchanged from
+Phase 9 closure** (`verification.md` §5.3).
+
+Merge action remains a **separate user decision**:
+- Push target: `origin` / `audit-mirror` / both
+- GitHub PR creation strategy (no PR / PR for review / PR for merge)
+- Merge strategy: merge commit / rebase / squash (note: 39+ commits with
+  load-bearing audit-doc cross-refs — squash would destroy the chain;
+  merge commit preserves history and is the recommended default)
+
+**Merge entry condition**: user explicit "go merge" or equivalent.
+
+PR-1 ready for merge.  Merge action awaits user "go merge".
