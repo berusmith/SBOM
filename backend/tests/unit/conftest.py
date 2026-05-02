@@ -107,3 +107,62 @@ def client(db_session):
             yield c
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def seeded_release_with_sbom_and_component(db_session, tmp_path):
+    """Seed orgA + prodA + Release with sbom_file_path + 1 Component.
+
+    Promoted to conftest.py in PR-2 Stage K.2a (2026-05-02) per Q-PR2-3 (a) —
+    originally defined in test_releases_http_chars.py as part of PR-1 G.1
+    (commit b9dbf19).  Now consumed by both Set 5 of test_releases_http_chars.py
+    AND test_reports_csaf.py (Stage K.2b).  Single shared fixture avoids
+    duplication.
+
+    Used by tests targeting endpoints that require BOTH a real SBOM file on disk
+    AND at least one component row (e.g. sbom-quality, csaf — both raise 400 if
+    no components found via _lookup_components_for_release).
+
+    Distinct from seeded_orga_release fixture in test_releases_http_chars.py
+    (no SBOM, no components — used by Set 3 cross-org tests + Set 5 tests that
+    don't require SBOM data).
+    """
+    import hashlib
+    import json as _json
+
+    from app.models.component import Component
+    from app.models.organization import Organization
+    from app.models.product import Product
+    from app.models.release import Release
+
+    sbom_data = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
+        "metadata": {"component": {"name": "test-app", "version": "1.0.0"}},
+        "components": [
+            {"name": "lodash", "version": "4.17.20", "purl": "pkg:npm/lodash@4.17.20"},
+        ],
+    }
+    sbom_bytes = _json.dumps(sbom_data).encode("utf-8")
+    sbom_path = tmp_path / "test_sbom.json"
+    sbom_path.write_bytes(sbom_bytes)
+
+    orgA = Organization(id="orgA", name="OrgA")
+    prodA = Product(id="prodA", organization_id="orgA", name="ProdA")
+    rel = Release(
+        id="rel-with-sbom",
+        product_id="prodA",
+        version="1.0.0",
+        sbom_file_path=str(sbom_path),
+        sbom_hash=hashlib.sha256(sbom_bytes).hexdigest(),
+    )
+    comp = Component(
+        id="comp-1",
+        release_id="rel-with-sbom",
+        name="lodash",
+        version="4.17.20",
+        purl="pkg:npm/lodash@4.17.20",
+    )
+    db_session.add_all([orgA, prodA, rel, comp])
+    db_session.commit()
+    return "rel-with-sbom"
