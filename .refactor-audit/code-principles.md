@@ -247,6 +247,73 @@ preference statements; route them through normal design discussion,
 NOT §K STOP.  **First invocation under K.6 framing**: F-stage 2026-05-02
 (D19); recorded in §K invocation count.
 
+**K.7 — Misdiagnosis-pattern probing axes** (added 2026-05-02 per
+iter-1 D24+D25+D26 jointly).  When §K STOP fires due to a probe /
+verification result mismatching the user's stated mental model, the
+agent must distinguish **3 sub-patterns** of misdiagnosis before
+proposing a resolution.  Probing one axis does not validate the
+others.
+
+**K.7.1 — Existence misdiagnosis** (motivated by ledger D24):
+agent infers "target X does not exist" from N probes, but probes
+share a single identity that lacks access to X.  Same-identity
+probe redundancy is along the wrong axis — N=4 same-identity 404s
+carry the same evidence weight as N=1.
+
+  *Probe correctly*:
+  (i) Try same probe with a *different* identity (e.g. anonymous +
+      authenticated; berusmith + ninjat6).
+  (ii) Ask user to verify existence out-of-band (e.g. browser,
+       alternative tool) before accepting "does not exist".
+
+  *Concrete example*: D24 — `gh repo view ninjat6/SBOM-audit-private`
+  returned 404 from berusmith account; repo did exist as private
+  repo accessible only to ninjat6.
+
+**K.7.2 — Purpose misdiagnosis** (motivated by ledger D25):
+agent confirms target X exists, then assumes X's *purpose* matches
+the agent's mental model without verification.  Existence ≠ purpose.
+
+  *Probe correctly*:
+  (i) Read out-of-band signals about target's design intent (e.g.
+      `~/.gitconfig` aliases, README, ADR records).
+  (ii) Look for *asymmetry* between agent's assumed action and
+       target's actual structure (e.g. non-fast-forward error →
+       branch may be independent rather than a mirror).
+
+  *Concrete example*: D25 — `audit-mirror/master` exists, but
+  assuming it should track `origin/master` was wrong; it's an
+  independent audit-only branch with subtree-push semantics.
+
+**K.7.3 — Category misdiagnosis** (motivated by ledger D26):
+agent accepts a finding's category from prose context (e.g. "CSAF
+fix mentioned in perf discussion → CSAF is perf work"), without
+verifying via canonical source.
+
+  *Probe correctly*:
+  (i) Grep the canonical audit-doc files (`code-audit.md`,
+      `performance-audit.md`, `architecture-audit.md`) for the
+      finding ID — the file containing the entry is the
+      authoritative category source.
+  (ii) Treat user prose category claims as "needs verification",
+       not "confirmed".
+
+  *Concrete example*: D26 — user spec called CSAF namespace fix a
+  "performance" target; grep confirmed `performance-audit.md` had
+  0 CSAF refs; canonical source is `code-audit.md:247-257`
+  CODE-1.013 (Bug, P2).
+
+**K.7 closing meta-rule**: when §K fires from any user-mental-model
+mismatch, **probe each of K.7.1 / K.7.2 / K.7.3 independently**
+rather than assuming the first explanation suffices.  The 3 axes
+are orthogonal — confirming existence does not validate purpose;
+confirming purpose does not validate category.
+
+**Cumulative iter-1 §K invocations leveraging K.7 retroactively**:
+D24 (K.7.1), D25 (K.7.2), D26 (K.7.3).  PR-2 Stage M codifies
+this principle for future iters.  **Standing**: permanent.
+**Trigger to revoke**: never.
+
 ---
 
 ### Iter-1 additions (2026-04-29, post user Q1–Q10 answers)
@@ -255,4 +322,6 @@ NOT §K STOP.  **First invocation under K.6 framing**: F-stage 2026-05-02
 - **J6** (added 2026-04-30 mid-iter) — Phase-8 incidental-fix policy (test/build infra, < 20 LOC, surface-capped, disclosed)
 - **J6.5** (added 2026-05-02 mid-iter) — Review-time tool-flagged dead code in same file (extension to J6 covering production-code surface when already-touched-by-parent-concern)
 - **K** (added 2026-05-01 mid-iter) — STOP-on-factual-disagreement (single-reviewer mode: evidence > instructions)
+- **K.6** (added 2026-05-02 mid-iter) — §K applies to all observable facts, not only code contents
+- **K.7** (added 2026-05-02 mid-iter, PR-2 Stage M) — Misdiagnosis-pattern probing axes (3 sub-patterns: existence / purpose / category)
 - See `architecture.md` §4.4 (no-over-abstraction red lines AR-1/2/3) and §4.5 (Wave-D alignment WD-1/2/3/4) — encoded as architecture decisions, listed here as cross-reference
