@@ -37,6 +37,13 @@ router = APIRouter(tags=["share"])
 # below) that does its own share-token resolution; that auth path is a separate
 # concern covered by FU-1.010 / FU-1.011 followups, not D.8 scope.
 
+# Unified failure response for the public share-token endpoint
+# (download_shared_sbom).  All 4 negative branches (token-not-found /
+# token-expired / release-deleted / SBOM-file-missing) share this message
+# and return 404 to prevent oracle-style discrimination of which branch
+# fired (FU-1.010 / PR-3 P.2, audit doc §4 — pr3-share-token-audit.md).
+_INVALID_LINK_MSG = "連結無效、已過期或已被撤銷"
+
 _INTERNAL_PREFIXES = ("internal://", "private://", "pkg:internal/", "pkg:private/")
 
 
@@ -185,7 +192,7 @@ def revoke_share_link(
 def download_shared_sbom(token: str, db: Session = Depends(get_db)):
     lk = db.query(SbomShareLink).filter(SbomShareLink.token == token).first()
     if not lk:
-        raise HTTPException(status_code=404, detail="連結不存在或已被撤銷")
+        raise HTTPException(status_code=404, detail=_INVALID_LINK_MSG)
 
     now = datetime.now(timezone.utc)
     if lk.expires_at:
@@ -193,15 +200,15 @@ def download_shared_sbom(token: str, db: Session = Depends(get_db)):
         if exp.tzinfo is None:
             exp = exp.replace(tzinfo=timezone.utc)
         if exp < now:
-            raise HTTPException(status_code=410, detail="此分享連結已過期")
+            raise HTTPException(status_code=404, detail=_INVALID_LINK_MSG)
 
     release = db.query(Release).filter(Release.id == lk.release_id).first()
     if not release:
-        raise HTTPException(status_code=404, detail="版本不存在")
+        raise HTTPException(status_code=404, detail=_INVALID_LINK_MSG)
 
     sbom = _load_sbom(release)
     if not sbom:
-        raise HTTPException(status_code=404, detail="SBOM 檔案不存在")
+        raise HTTPException(status_code=404, detail=_INVALID_LINK_MSG)
 
     sbom = _apply_mask(sbom, lk.mask_internal)
 
